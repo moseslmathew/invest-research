@@ -856,6 +856,8 @@ function useLongPress(
 ) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const touchHasMoved = useRef(false);
 
   const start = (item: WatchlistItem) => {
     isLongPressRef.current = false;
@@ -879,13 +881,46 @@ function useLongPress(
     if (timerRef.current) clearTimeout(timerRef.current);
   };
 
+  const handleTouchStart = (item: WatchlistItem, e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    touchHasMoved.current = false;
+    start(item);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const touch = e.touches[0];
+    const diffX = Math.abs(touch.clientX - touchStartPos.current.x);
+    const diffY = Math.abs(touch.clientY - touchStartPos.current.y);
+    if (diffX > 8 || diffY > 8) {
+      touchHasMoved.current = true;
+      cancel();
+    }
+  };
+
+  const handleTouchEnd = (item: WatchlistItem, e: React.TouchEvent) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (touchHasMoved.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (!isLongPressRef.current) {
+      onClick(item);
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   return (item: WatchlistItem) => ({
     onMouseDown: () => start(item),
     onMouseUp: (e: any) => end(item, e),
     onMouseLeave: cancel,
-    onTouchStart: () => start(item),
-    onTouchEnd: (e: any) => end(item, e),
-    onTouchMove: cancel,
+    onTouchStart: (e: React.TouchEvent) => handleTouchStart(item, e),
+    onTouchEnd: (e: React.TouchEvent) => handleTouchEnd(item, e),
+    onTouchMove: handleTouchMove,
     style: { cursor: "pointer", userSelect: "none" as const, WebkitUserSelect: "none" as const }
   });
 }
