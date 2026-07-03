@@ -229,6 +229,7 @@ interface TableProps {
   quotes?: Record<string, Quote>;
   quotesLoading?: boolean;
   onSelectStock: (item: WatchlistItem) => void;
+  onLongPress?: (item: WatchlistItem) => void;
   filterInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -542,34 +543,6 @@ function NewsDrawer({
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {onRemove && (
-              <button
-                className="wl-chip"
-                onClick={onRemove}
-                style={{
-                  background: "rgba(239, 68, 68, 0.08)",
-                  color: "rgb(239, 68, 68)",
-                  border: "1px solid rgba(239, 68, 68, 0.2)",
-                  fontSize: "12.5px",
-                  fontWeight: 600,
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  transition: "background 0.15s",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
-                }}
-              >
-                🗑️ Remove
-              </button>
-            )}
             <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
               ✕
             </button>
@@ -877,6 +850,46 @@ function NewsDrawer({
   );
 }
 
+function useLongPress(
+  onClick: (item: WatchlistItem) => void,
+  onLongPress?: (item: WatchlistItem) => void
+) {
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = useRef(false);
+
+  const start = (item: WatchlistItem) => {
+    isLongPressRef.current = false;
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (onLongPress) onLongPress(item);
+    }, 600);
+  };
+
+  const end = (item: WatchlistItem, e: any) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!isLongPressRef.current) {
+      onClick(item);
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const cancel = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+
+  return (item: WatchlistItem) => ({
+    onMouseDown: () => start(item),
+    onMouseUp: (e: any) => end(item, e),
+    onMouseLeave: cancel,
+    onTouchStart: () => start(item),
+    onTouchEnd: (e: any) => end(item, e),
+    onTouchMove: cancel,
+    style: { cursor: "pointer", userSelect: "none" as const, WebkitUserSelect: "none" as const }
+  });
+}
+
 function CompanyCell({
   symbol,
   name,
@@ -910,7 +923,9 @@ function MarketTable({
   quotes = {},
   quotesLoading = false,
   onSelectStock,
+  onLongPress,
 }: TableProps) {
+  const bindLongPress = useLongPress(onSelectStock, onLongPress);
   const [filterText, setFilterText] = useState("");
   const [sortField, setSortField] = useState<"price" | "change" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -1019,7 +1034,7 @@ function MarketTable({
                   <tr
                     key={item.id}
                     className={removing.has(item.id) ? "row-removing" : ""}
-                    onClick={() => onSelectStock(item)}
+                    {...bindLongPress(item)}
                   >
                     <td>
                       <CompanyCell
@@ -1148,8 +1163,10 @@ function ResearchTable({
   quotes,
   quotesLoading,
   onSelectStock,
+  onLongPress,
   filterInputRef,
 }: TableProps) {
+  const bindLongPress = useLongPress(onSelectStock, onLongPress);
   const [filterText, setFilterText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
@@ -1305,7 +1322,7 @@ function ResearchTable({
             <div
               key={item.id}
               className={`ai-row ${removing.has(item.id) ? "row-removing" : ""}`}
-              onClick={() => onSelectStock(item)}
+              {...bindLongPress(item)}
             >
               {/* 2. Tier Badge */}
               <div className="ai-col-tier">
@@ -1461,6 +1478,7 @@ export default function Dashboard({
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<WatchlistItem | null>(null);
+  const [activeLongPressItem, setActiveLongPressItem] = useState<WatchlistItem | null>(null);
   const [, startDelete] = useTransition();
 
   const [addState, addAction, isAddPending] = useActionState<ActionState, FormData>(
@@ -1904,6 +1922,7 @@ export default function Dashboard({
             quotes={quotes}
             quotesLoading={quotesLoading}
             onSelectStock={setSelectedStock}
+            onLongPress={setActiveLongPressItem}
           />
         ) : (
           <ResearchTable
@@ -1916,6 +1935,7 @@ export default function Dashboard({
             quotes={quotes}
             quotesLoading={quotesLoading}
             onSelectStock={setSelectedStock}
+            onLongPress={setActiveLongPressItem}
             filterInputRef={searchInputRef}
           />
         )}
@@ -1949,6 +1969,118 @@ export default function Dashboard({
           setSelectedStock(null);
         } : undefined}
       />
+
+      {activeLongPressItem && (
+        <>
+          <div
+            className="drawer-backdrop"
+            style={{ zIndex: 100 }}
+            onClick={() => setActiveLongPressItem(null)}
+          />
+          <div
+            className="longpress-drawer"
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: "fixed",
+              bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "calc(100% - 32px)",
+              maxWidth: "400px",
+              background: "var(--surface-solid)",
+              border: "1px solid var(--border)",
+              borderRadius: "20px",
+              boxShadow: "0 20px 40px rgba(15, 23, 42, 0.2)",
+              padding: "20px",
+              zIndex: 101,
+              animation: "slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+              <div>
+                <h3 style={{ fontSize: "17px", fontWeight: 700, margin: 0, color: "var(--text)" }}>
+                  {activeLongPressItem.name || activeLongPressItem.symbol}
+                </h3>
+                <span className="ticker" style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>
+                  {activeLongPressItem.symbol}
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveLongPressItem(null)}
+                style={{
+                  border: "none",
+                  background: "var(--bg)",
+                  color: "var(--muted)",
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: "12px",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <button
+                onClick={() => {
+                  removeItem(activeLongPressItem.id);
+                  setActiveLongPressItem(null);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  background: "rgba(239, 68, 68, 0.06)",
+                  color: "rgb(239, 68, 68)",
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(239, 68, 68, 0.12)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "rgba(239, 68, 68, 0.06)"}
+              >
+                🗑️ Delete from Watchlist
+              </button>
+              <button
+                onClick={() => {
+                  alert("Rearrange feature: drag/drop to reorder (coming soon!)");
+                  setActiveLongPressItem(null);
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg)",
+                  color: "var(--text)",
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(15, 23, 42, 0.04)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg)"}
+              >
+                ↕️ Rearrange Item
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
