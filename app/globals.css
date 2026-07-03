@@ -1763,11 +1763,11 @@ th.col-num-r {
 }
 
 .ai-scroll-hint {
-  position: absolute;
-  bottom: 20px;
+  position: fixed;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  z-index: 20;
+  z-index: 35;
   display: flex;
   align-items: center;
   pointer-events: none;
