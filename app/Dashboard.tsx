@@ -350,11 +350,17 @@ function getUpcomingEvents(symbol: string) {
   });
 }
 
-function getInsiderTrades(symbol: string) {
+function getInsiderTrades(symbol: string, currentPrice?: number | null) {
   const seed = symbol.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const isIndian = symbol.endsWith(".NS") || symbol.endsWith(".BO");
 
-  const names = [
+  // Establish base price: use actual live price if available, fallback to seed-based estimation
+  let basePrice = currentPrice;
+  if (!basePrice || basePrice <= 0) {
+    basePrice = ((seed * 17) % 800) + 150;
+  }
+
+  let names = [
     { name: "Sanjay Kumar", role: "CEO & Director" },
     { name: "Anita Sharma", role: "Chief Financial Officer" },
     { name: "Rajesh Patel", role: "Independent Director" },
@@ -365,19 +371,64 @@ function getInsiderTrades(symbol: string) {
     { name: "Robert Chen", role: "Director" },
   ];
 
+  const lowerSymbol = symbol.toLowerCase();
+  if (lowerSymbol.includes("ather")) {
+    names = [
+      { name: "Tarun Mehta", role: "CEO & Co-Founder" },
+      { name: "Swapnil Jain", role: "CTO & Co-Founder" },
+      { name: "Deepak M", role: "Chief Financial Officer" },
+      { name: "Ravneet Phokela", role: "Chief Business Officer" },
+    ];
+  } else if (lowerSymbol.includes("adani")) {
+    names = [
+      { name: "Karan Adani", role: "Managing Director" },
+      { name: "Ashwani Gupta", role: "Chief Executive Officer" },
+      { name: "Gautam Adani", role: "Chairman & Director" },
+      { name: "Deepak Maheshwari", role: "Chief Financial Officer" },
+    ];
+  } else if (lowerSymbol.includes("groww")) {
+    names = [
+      { name: "Lalit Keshre", role: "CEO & Co-Founder" },
+      { name: "Harsh Jain", role: "COO & Co-Founder" },
+      { name: "Neeraj Singh", role: "CTO & Co-Founder" },
+      { name: "Ishan Bansal", role: "Co-Founder" },
+    ];
+  } else if (lowerSymbol.includes("aapl")) {
+    names = [
+      { name: "Tim Cook", role: "Chief Executive Officer" },
+      { name: "Luca Maestri", role: "Chief Financial Officer" },
+      { name: "Jeff Williams", role: "Chief Operating Officer" },
+      { name: "Deirdre O'Brien", role: "SVP Retail + People" },
+    ];
+  } else if (lowerSymbol.includes("nvda")) {
+    names = [
+      { name: "Jensen Huang", role: "CEO & Co-Founder" },
+      { name: "Colette Kress", role: "Chief Financial Officer" },
+      { name: "Jay Puri", role: "EVP Worldwide Field Operations" },
+      { name: "Debora Shoquist", role: "EVP Operations" },
+    ];
+  } else if (lowerSymbol.includes("msft")) {
+    names = [
+      { name: "Satya Nadella", role: "Chairman & CEO" },
+      { name: "Amy Hood", role: "Chief Financial Officer" },
+      { name: "Brad Smith", role: "Vice Chair & President" },
+      { name: "Kathleen Hogan", role: "Chief People Officer" },
+    ];
+  }
+
   const trades = [];
   const tradeCount = (seed % 2) + 2; // 2 or 3 trades
   
   for (let i = 0; i < tradeCount; i++) {
     const nameObj = names[(seed + i) % names.length];
-    const executiveName = isIndian 
-      ? `${names[(seed + i) % 4].name} (${names[(seed + i) % 4].role})`
-      : `${names[4 + ((seed + i) % 4)].name} (${names[4 + ((seed + i) % 4)].role})`;
+    const executiveName = `${nameObj.name} (${nameObj.role})`;
 
     const isBuy = (seed + i) % 3 === 0;
     const action = isBuy ? "Buy" : "Sale";
     
-    const sharesNum = ((seed * (i + 1)) % 40 + 5) * 1000;
+    // Vary the quantity randomly based on stock price (lower price => higher volume)
+    const baseSharesMultiplier = basePrice > 1000 ? 5 : basePrice > 500 ? 10 : 25;
+    const sharesNum = ((seed * (i + 1)) % 10 + 2) * 100 * baseSharesMultiplier;
     const shares = `${sharesNum.toLocaleString()} shares`;
     
     const months = ["April", "May", "June"];
@@ -385,8 +436,10 @@ function getInsiderTrades(symbol: string) {
     const day = ((seed + i * 7) % 28) + 1;
     const date = `${month} ${day}, 2026`;
 
-    const priceVal = ((seed * (i + 2)) % 300) + 50;
-    const price = isIndian ? `₹${priceVal.toLocaleString("en-IN")}` : `$${priceVal}`;
+    // Vary the price slightly around the real market price (e.g. ±1% to ±5%)
+    const variancePct = 1 + (((seed + i * 13) % 9) - 4) / 100; // e.g. 0.96 to 1.04
+    const priceVal = Math.round(basePrice * variancePct * 10) / 10;
+    const price = isIndian ? `₹${priceVal.toLocaleString("en-IN")}` : `$${priceVal.toLocaleString()}`;
 
     const valueVal = priceVal * sharesNum;
     let valueStr = "";
@@ -778,7 +831,8 @@ function NewsDrawer({
 
           {activeTab === "events" && (() => {
             const events = getUpcomingEvents(stock.symbol);
-            const insiderTrades = getInsiderTrades(stock.symbol);
+            const currentPrice = quotes?.[stock.symbol]?.price || null;
+            const insiderTrades = getInsiderTrades(stock.symbol, currentPrice);
             return (
               <div className="events-section" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div>
