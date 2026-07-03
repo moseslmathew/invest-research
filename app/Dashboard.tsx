@@ -856,25 +856,18 @@ function useLongPress(
 ) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef(false);
+  const longPressFired = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const touchHasMoved = useRef(false);
 
   const start = (item: WatchlistItem) => {
     isLongPressRef.current = false;
+    longPressFired.current = false;
     timerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
+      longPressFired.current = true;
       if (onLongPress) onLongPress(item);
     }, 600);
-  };
-
-  const end = (item: WatchlistItem, e: any) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (!isLongPressRef.current) {
-      onClick(item);
-    } else {
-      e.preventDefault();
-      e.stopPropagation();
-    }
   };
 
   const cancel = () => {
@@ -899,28 +892,24 @@ function useLongPress(
     }
   };
 
-  const handleTouchEnd = (item: WatchlistItem, e: React.TouchEvent) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (touchHasMoved.current) {
+  const handleRowClick = (item: WatchlistItem, e: React.MouseEvent) => {
+    if (longPressFired.current || touchHasMoved.current) {
       e.preventDefault();
       e.stopPropagation();
+      longPressFired.current = false; // reset
       return;
     }
-    if (!isLongPressRef.current) {
-      onClick(item);
-    } else {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    cancel();
+    onClick(item);
   };
 
   return (item: WatchlistItem) => ({
+    onClick: (e: React.MouseEvent) => handleRowClick(item, e),
     onMouseDown: () => start(item),
-    onMouseUp: (e: any) => end(item, e),
     onMouseLeave: cancel,
     onTouchStart: (e: React.TouchEvent) => handleTouchStart(item, e),
-    onTouchEnd: (e: React.TouchEvent) => handleTouchEnd(item, e),
     onTouchMove: handleTouchMove,
+    onTouchEnd: () => cancel(),
     style: { cursor: "pointer", userSelect: "none" as const, WebkitUserSelect: "none" as const }
   });
 }
