@@ -2208,12 +2208,7 @@ th.col-num-r {
   background: transparent !important;
 }
 
-/* Hide header row columns on mobile screens similarly to table rows */
-@media (max-width: 768px) {
-  .ai-header-row {
-    display: none !important;
-  }
-}
+
 
 /* Compact & Seamless Search Panel */
 .search-panel {
