@@ -1884,7 +1884,9 @@ export default function Dashboard({
               }`}
               onClick={() => {
                 selectMarket(m.id);
-                selectView("watchlist");
+                if (view !== "trending") {
+                  selectView("watchlist");
+                }
                 setSidebarOpen(false);
               }}
             >
