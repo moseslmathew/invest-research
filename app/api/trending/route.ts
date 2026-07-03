@@ -262,7 +262,10 @@ Respond ONLY with a JSON object matching this structure:
     }
 
     const parsed = JSON.parse(content);
-    return NextResponse.json({ stocks: parsed.stocks || [] });
+    if (!Array.isArray(parsed.stocks) || parsed.stocks.length === 0) {
+      return NextResponse.json({ stocks: market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS });
+    }
+    return NextResponse.json({ stocks: parsed.stocks });
   } catch (err) {
     console.error("Trending fetch error:", err);
     return NextResponse.json({ stocks: market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS });
