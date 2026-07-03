@@ -1002,7 +1002,7 @@ function TrendingTable({
                   sector: null,
                   notes: s.rationale,
                   sort_order: null,
-                  created_at: new Date().toISOString()
+                  created_at: ""
                 };
 
                 return (
