@@ -101,6 +101,9 @@ body {
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* --- Sidebar --- */
@@ -1534,13 +1537,24 @@ th.col-num-r {
    ============================================================ */
 @media (max-width: 900px) {
   .app {
-    grid-template-columns: 1fr;
+    grid-template-columns: 100%;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   .sidebar {
     display: none;
   }
   .main {
-    padding: 20px 18px 92px;
+    padding: 20px 16px 92px;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  .company-name,
+  .col-company {
+    white-space: normal !important;
   }
   .brand.mini {
     display: flex;
