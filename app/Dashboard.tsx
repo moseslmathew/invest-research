@@ -935,7 +935,7 @@ function TrendingTable({
   if (loading) {
     return (
       <div className="panel empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-        <span className="search-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
+        <span className="inline-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
         <p style={{ marginTop: "16px", color: "#64748b" }}>Analyzing news & loading trending stock performance...</p>
       </div>
     );
