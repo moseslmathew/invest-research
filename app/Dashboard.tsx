@@ -1263,6 +1263,13 @@ function ResearchTable({
         )}
       </div>
       <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
+        {canScrollRight && (
+          <div className="ai-scroll-hint">
+            <div className="ai-scroll-hint-pill">
+              Swipe Right <span>➔</span>
+            </div>
+          </div>
+        )}
         <div ref={scrollRef} className="ai-list-scroll" onScroll={checkScroll}>
           <div className="ai-list">
         {/* Table Header Row */}
@@ -1358,39 +1365,6 @@ function ResearchTable({
         })}
       </div>
     </div>
-    {canScrollRight && (
-      <div className="ai-scroll-hint" style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: "70px",
-        background: "linear-gradient(to left, var(--bg) 20%, transparent)",
-        pointerEvents: "none",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        paddingRight: "8px",
-        zIndex: 10,
-      }}>
-        <span style={{
-          background: "var(--surface-solid)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-          color: "var(--muted)",
-          padding: "4px 8px",
-          borderRadius: "20px",
-          fontSize: "11px",
-          fontWeight: 700,
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          marginRight: "4px",
-        }}>
-          Swipe ➔
-        </span>
-      </div>
-    )}
   </div>
 
       {filteredItems.length === 0 && (
