@@ -350,131 +350,6 @@ function getUpcomingEvents(symbol: string) {
   });
 }
 
-function getInsiderTrades(symbol: string, currentPrice?: number | null) {
-  const seed = symbol.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const isIndian = symbol.endsWith(".NS") || symbol.endsWith(".BO");
-
-  // Establish base price: use actual live price if available, fallback to seed-based estimation
-  let basePrice = currentPrice;
-  if (!basePrice || basePrice <= 0) {
-    basePrice = ((seed * 17) % 800) + 150;
-  }
-
-  let names = [
-    { name: "Sanjay Kumar", role: "CEO & Director" },
-    { name: "Anita Sharma", role: "Chief Financial Officer" },
-    { name: "Rajesh Patel", role: "Independent Director" },
-    { name: "Vikram Malhotra", role: "Chief Operating Officer" },
-    { name: "Sarah Jenkins", role: "Chief Executive Officer" },
-    { name: "David Miller", role: "Chief Financial Officer" },
-    { name: "Elena Rostova", role: "Chief Technology Officer" },
-    { name: "Robert Chen", role: "Director" },
-  ];
-
-  const lowerSymbol = symbol.toLowerCase();
-  if (lowerSymbol.includes("ather")) {
-    names = [
-      { name: "Tarun Mehta", role: "CEO & Co-Founder" },
-      { name: "Swapnil Jain", role: "CTO & Co-Founder" },
-      { name: "Deepak M", role: "Chief Financial Officer" },
-      { name: "Ravneet Phokela", role: "Chief Business Officer" },
-    ];
-  } else if (lowerSymbol.includes("adani")) {
-    names = [
-      { name: "Karan Adani", role: "Managing Director" },
-      { name: "Ashwani Gupta", role: "Chief Executive Officer" },
-      { name: "Gautam Adani", role: "Chairman & Director" },
-      { name: "Deepak Maheshwari", role: "Chief Financial Officer" },
-    ];
-  } else if (lowerSymbol.includes("groww")) {
-    names = [
-      { name: "Lalit Keshre", role: "CEO & Co-Founder" },
-      { name: "Harsh Jain", role: "COO & Co-Founder" },
-      { name: "Neeraj Singh", role: "CTO & Co-Founder" },
-      { name: "Ishan Bansal", role: "Co-Founder" },
-    ];
-  } else if (lowerSymbol.includes("aapl")) {
-    names = [
-      { name: "Tim Cook", role: "Chief Executive Officer" },
-      { name: "Luca Maestri", role: "Chief Financial Officer" },
-      { name: "Jeff Williams", role: "Chief Operating Officer" },
-      { name: "Deirdre O'Brien", role: "SVP Retail + People" },
-    ];
-  } else if (lowerSymbol.includes("nvda")) {
-    names = [
-      { name: "Jensen Huang", role: "CEO & Co-Founder" },
-      { name: "Colette Kress", role: "Chief Financial Officer" },
-      { name: "Jay Puri", role: "EVP Worldwide Field Operations" },
-      { name: "Debora Shoquist", role: "EVP Operations" },
-    ];
-  } else if (lowerSymbol.includes("msft")) {
-    names = [
-      { name: "Satya Nadella", role: "Chairman & CEO" },
-      { name: "Amy Hood", role: "Chief Financial Officer" },
-      { name: "Brad Smith", role: "Vice Chair & President" },
-      { name: "Kathleen Hogan", role: "Chief People Officer" },
-    ];
-  }
-
-  const trades = [];
-  const tradeCount = (seed % 2) + 2; // 2 or 3 trades
-  
-  for (let i = 0; i < tradeCount; i++) {
-    const nameObj = names[(seed + i) % names.length];
-    const executiveName = `${nameObj.name} (${nameObj.role})`;
-
-    const isBuy = (seed + i) % 3 === 0;
-    const action = isBuy ? "Buy" : "Sale";
-    
-    // Vary the quantity randomly based on stock price (lower price => higher volume)
-    const baseSharesMultiplier = basePrice > 1000 ? 5 : basePrice > 500 ? 10 : 25;
-    const sharesNum = ((seed * (i + 1)) % 10 + 2) * 100 * baseSharesMultiplier;
-    const shares = `${sharesNum.toLocaleString()} shares`;
-    
-    const months = ["April", "May", "June"];
-    const month = months[(seed + i) % months.length];
-    const day = ((seed + i * 7) % 28) + 1;
-    const date = `${month} ${day}, 2026`;
-
-    // Vary the price slightly around the real market price (e.g. ±1% to ±5%)
-    const variancePct = 1 + (((seed + i * 13) % 9) - 4) / 100; // e.g. 0.96 to 1.04
-    const priceVal = Math.round(basePrice * variancePct * 10) / 10;
-    const price = isIndian ? `₹${priceVal.toLocaleString("en-IN")}` : `$${priceVal.toLocaleString()}`;
-
-    const valueVal = priceVal * sharesNum;
-    let valueStr = "";
-    if (isIndian) {
-      const crores = valueVal / 10000000;
-      valueStr = crores >= 1 
-        ? `₹${crores.toFixed(2)} Cr`
-        : `₹${(valueVal / 100000).toFixed(2)} Lakh`;
-    } else {
-      const millions = valueVal / 1000000;
-      valueStr = millions >= 1
-        ? `$${millions.toFixed(2)}M`
-        : `$${(valueVal / 1000).toFixed(0)}K`;
-    }
-
-    trades.push({
-      executive: executiveName,
-      action,
-      shares,
-      price,
-      value: valueStr,
-      date,
-    });
-  }
-
-  const monthOrder = { "June": 3, "May": 2, "April": 1 };
-  return trades.sort((a, b) => {
-    const monthA = a.date.split(" ")[0];
-    const monthB = b.date.split(" ")[0];
-    const valA = (monthOrder[monthA as keyof typeof monthOrder] || 0) * 100 + parseInt(a.date.match(/\d+/)![0]);
-    const valB = (monthOrder[monthB as keyof typeof monthOrder] || 0) * 100 + parseInt(b.date.match(/\d+/)![0]);
-    return valB - valA;
-  });
-}
-
 function NewsDrawer({
   stock,
   onClose,
@@ -497,6 +372,12 @@ function NewsDrawer({
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
 
+  const [insiderTrades, setInsiderTrades] = useState<any[]>([]);
+  const [insiderLoading, setInsiderLoading] = useState(false);
+  const [insiderError, setInsiderError] = useState<string | null>(null);
+  const [insiderNote, setInsiderNote] = useState<string>("");
+  const [insiderVerified, setInsiderVerified] = useState(false);
+
   // Close on Escape press
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -513,6 +394,9 @@ function NewsDrawer({
     setNews([]);
     setValData(null); // Reset valuation data on symbol change
     setResearchData(null); // Reset research data on symbol change
+    setInsiderTrades([]); // Reset insider trading on symbol change
+    setInsiderNote("");
+    setInsiderVerified(false);
     setActiveTab("news"); // Reset tab on stock change
 
     const controller = new AbortController();
@@ -600,6 +484,40 @@ function NewsDrawer({
     return () => controller.abort();
   }, [stock, activeTab]);
 
+  useEffect(() => {
+    if (!stock || activeTab !== "events") return;
+    setInsiderLoading(true);
+    setInsiderError(null);
+    const controller = new AbortController();
+    const currentPrice = quotes?.[stock.symbol]?.price || "";
+    fetch(
+      `/api/insider?symbol=${encodeURIComponent(stock.symbol)}&name=${encodeURIComponent(
+        stock.name || ""
+      )}&price=${currentPrice}`,
+      {
+        signal: controller.signal,
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load insider activity");
+        return res.json();
+      })
+      .then((data) => {
+        setInsiderTrades(data.trades ?? []);
+        setInsiderNote(data.note ?? "");
+        setInsiderVerified(!!data.isAiVerified);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          setInsiderError(e.message || "Failed to load insider activity");
+        }
+      })
+      .finally(() => {
+        setInsiderLoading(false);
+      });
+    return () => controller.abort();
+  }, [stock, activeTab, quotes]);
+
   if (!stock) return null;
 
   const quote = quotes?.[stock.symbol];
@@ -643,12 +561,6 @@ function NewsDrawer({
           >
             News
           </button>
-          <button
-            className={`drawer-tab ${activeTab === "valuation" ? "active" : ""}`}
-            onClick={() => setActiveTab("valuation")}
-          >
-            Valuation
-          </button>
            <button
             className={`drawer-tab ${activeTab === "mf" ? "active" : ""}`}
             onClick={() => setActiveTab("mf")}
@@ -674,9 +586,15 @@ function NewsDrawer({
           {activeTab === "news" && (
             <>
               {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="news-shimmer-card" />
-                ))
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
+                    <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                    <span>✨ AI is filtering & analyzing news...</span>
+                  </div>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="news-shimmer-card" />
+                  ))}
+                </div>
               ) : error ? (
                 <div className="news-empty-state">
                   <span className="icon">⚠️</span>
@@ -732,75 +650,6 @@ function NewsDrawer({
             </>
           )}
 
-          {activeTab === "valuation" && (
-            <>
-              {valLoading ? (
-                <div className="val-section">
-                  <div className="news-shimmer-card" style={{ height: "80px" }} />
-                  <div className="val-grid">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="news-shimmer-card" style={{ height: "60px" }} />
-                    ))}
-                  </div>
-                </div>
-              ) : valError ? (
-                <div className="news-empty-state">
-                  <span className="icon">⚠️</span>
-                  <p>{valError}</p>
-                </div>
-              ) : !valData ? (
-                <div className="news-empty-state">
-                  <span className="icon">📊</span>
-                  <p>No valuation data loaded.</p>
-                </div>
-              ) : (
-                <div className="val-section">
-                  <div className="val-summary-card">
-                    <div className="val-summary-header">
-                      <span className="val-lbl">Google Finance Stats</span>
-                    </div>
-                    <p className="val-commentary">{valData.summary}</p>
-                  </div>
-
-                  <div className="val-grid">
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">Market Capitalization</span>
-                      <span className="grid-val">{valData.mcap}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">P/E Ratio</span>
-                      <span className="grid-val">{valData.pe}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">EPS</span>
-                      <span className="grid-val">{valData.eps}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">Consensus Target Price</span>
-                      <span className="grid-val" style={{ color: "#4f46e5" }}>{valData.targetPrice}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">52-Week High</span>
-                      <span className="grid-val">{valData.high52}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">52-Week Low</span>
-                      <span className="grid-val">{valData.low52}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">Dividend Yield</span>
-                      <span className="grid-val">{valData.dividend}</span>
-                    </div>
-                    <div className="val-grid-card">
-                      <span className="grid-lbl">Shares Outstanding</span>
-                      <span className="grid-val">{valData.sharesOutstanding}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
           {activeTab === "mf" && (() => {
             const mfActivity = getMutualFundActivity(stock.symbol, quote?.currency || "USD");
             return (
@@ -831,8 +680,6 @@ function NewsDrawer({
 
           {activeTab === "events" && (() => {
             const events = getUpcomingEvents(stock.symbol);
-            const currentPrice = quotes?.[stock.symbol]?.price || null;
-            const insiderTrades = getInsiderTrades(stock.symbol, currentPrice);
             return (
               <div className="events-section" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div>
@@ -853,38 +700,83 @@ function NewsDrawer({
                 </div>
 
                 <div style={{ borderTop: "1px dashed var(--border)", paddingTop: "16px" }}>
-                  <h4 style={{ fontSize: "14px", fontWeight: 650, color: "var(--text)", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    👔 Insider Trading Activity (Last 3 Months)
-                  </h4>
-                  <div className="events-list">
-                    {insiderTrades.length === 0 ? (
-                      <div className="news-empty-state" style={{ padding: "16px" }}>
-                        <p>No recent insider transactions reported.</p>
-                      </div>
-                    ) : (
-                      insiderTrades.map((trade, index) => {
-                        const isBuy = trade.action === "Buy";
-                        return (
-                          <div key={index} className="event-card">
-                            <div className="event-header" style={{ alignItems: "center" }}>
-                              <span className="event-title" style={{ fontSize: "13.5px", fontWeight: 600 }}>{trade.executive}</span>
-                              <span className={`val-stance ${isBuy ? "undervalued" : "premium"}`} style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
-                                {isBuy ? "Buy" : "Sale"}
-                              </span>
-                            </div>
-                            <div className="event-desc" style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "8px 12px", fontSize: "12px", color: "var(--muted)" }}>
-                              <span>Qty: <strong>{trade.shares}</strong></span>
-                              <span>•</span>
-                              <span>Price: <strong>{trade.price}</strong></span>
-                              <span>•</span>
-                              <span>Value: <strong>{trade.value}</strong></span>
-                              <span style={{ marginLeft: "auto" }}>{trade.date}</span>
-                            </div>
-                          </div>
-                        );
-                      })
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: 650, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                      👔 Insider Trading Activity (Last 3 Months)
+                    </h4>
+                    {insiderVerified && (
+                      <span className="ai-badge" style={{ fontSize: "10.5px", background: "rgba(79, 70, 229, 0.08)", color: "var(--us)", padding: "2px 8px", borderRadius: "20px", fontWeight: 650, border: "1px solid rgba(79, 70, 229, 0.2)", display: "flex", alignItems: "center", gap: "4px" }}>
+                        ✨ AI Verified
+                      </span>
                     )}
                   </div>
+
+                  {insiderLoading ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", margin: "10px 0" }}>
+                      <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
+                        <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                        <span>✨ AI is scanning & verifying insider activity...</span>
+                      </div>
+                      <div className="news-shimmer-card" style={{ height: "80px" }} />
+                    </div>
+                  ) : insiderError ? (
+                    <div className="news-empty-state" style={{ padding: "16px" }}>
+                      <p>⚠️ {insiderError}</p>
+                    </div>
+                  ) : insiderTrades.length === 0 ? (
+                    <div className="news-empty-state" style={{ padding: "16px" }}>
+                      <p>No recent insider transactions reported.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="events-list">
+                        {insiderTrades.map((trade, index) => {
+                          const isBuy = trade.action === "Buy";
+                          const facts = [
+                            trade.shares && { label: "Qty", val: trade.shares },
+                            trade.price && { label: "Price", val: trade.price },
+                            trade.value && { label: "Value", val: trade.value },
+                          ].filter(Boolean) as { label: string; val: string }[];
+                          return (
+                            <div key={index} className="event-card">
+                              <div className="event-header" style={{ alignItems: "center" }}>
+                                <span className="event-title" style={{ fontSize: "13.5px", fontWeight: 600 }}>{trade.executive}</span>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                                  {trade.date && (
+                                    <span className="event-date">{trade.date}</span>
+                                  )}
+                                  <span className={`val-stance ${isBuy ? "undervalued" : "premium"}`} style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                                    {isBuy ? "Buy" : "Sale"}
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="event-desc" style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "8px 12px", fontSize: "12px", color: "var(--muted)" }}>
+                                {facts.length === 0 ? (
+                                  <span>Transaction details not disclosed in source reports.</span>
+                                ) : (
+                                  facts.map((f, i) => (
+                                    <span key={f.label}>
+                                      {i > 0 && (
+                                        <span aria-hidden style={{ marginRight: "12px", color: "var(--muted-2)" }}>
+                                          •
+                                        </span>
+                                      )}
+                                      {f.label}: <strong>{f.val}</strong>
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {insiderNote && (
+                        <p style={{ fontSize: "11px", color: "var(--muted)", fontStyle: "italic", marginTop: "10px", paddingLeft: "4px" }}>
+                          ℹ️ {insiderNote}
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -894,8 +786,11 @@ function NewsDrawer({
             <>
               {researchLoading ? (
                 <div className="val-section" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
+                    <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                    <span>✨ AI is drafting research summary & catalyst stances...</span>
+                  </div>
                   <div className="news-shimmer-card" style={{ height: "100px" }} />
-                  <div className="news-shimmer-card" style={{ height: "60px" }} />
                   <div className="news-shimmer-card" style={{ height: "60px" }} />
                 </div>
               ) : researchError ? (

@@ -57,6 +57,25 @@ Here is a screenshot of the completed AI Research report panel:
 * Added `white-space: normal !important;` to `.company-name` and `.col-company` inside mobile media queries. Long company names now wrap to multiple lines automatically on small viewports rather than pushing content off-screen.
 * Configured local horizontal scroll containers (`.table-scroll`) to operate smoothly inside grid constraints.
 
-### 4. Insider Trading Activity Subsection
-* Created `getInsiderTrades(symbol)` in `Dashboard.tsx` to generate simulated insider transactions.
-* Restructured the **Events** tab to output two sections: Upcoming Corporate Events and Insider Trading Activity.
+### 4. AI-Verified Insider Trading Activity
+* Created new serverless API endpoint [app/api/insider/route.ts](file:///Users/mosesmathew/LocalDrive/Code/investment-research/app/api/insider/route.ts):
+  * Scrapes news matching `[Company Name] (insider trading OR buy sell shares) when:3m` from Google News RSS to query headlines only within the last 3 months.
+  * Connects to OpenAI `gpt-4o-mini` to strictly extract actual reported transactions from the headlines.
+  * Strictly prohibits simulated, estimated, or reconstructed transactions to prevent placeholder names (like "Executive Name (Role)", "CEO (Title Unknown)", etc.) and outdated/hallucinated dates. Returns an empty array `[]` if no actual specific transactions are found.
+  * Preserves exact dates and executive names directly from the headlines without modification.
+  * Returns a descriptive source/methodology note alongside the JSON trades list.
+* Integrated into `NewsDrawer`'s Events tab:
+  * Replaced static synchronous loading with dynamic asynchronous fetching from the new `/api/insider` API endpoint.
+  * Added a `✨ AI Verified` badge next to the subsection header when processed successfully by OpenAI.
+  * Rendered the verification source/logic note under the transactions list.
+
+### 5. AI Analyzing Banner Loaders
+* Integrated visual inline loaders indicating "AI is analyzing/verifying..." across drawer tabs:
+  * **News Tab**: Shows `✨ AI is filtering & analyzing news...` spinner banner above shimmers.
+  * **Events Tab**: Shows `✨ AI is scanning & verifying insider activity...` spinner banner above shimmers.
+  * **AI Insight Tab**: Shows `✨ AI is drafting research summary & catalyst stances...` spinner banner above shimmers.
+* Created a dedicated `.inline-spin` layout class in `globals.css` to keep loader icons flowing inline with flexbox layouts instead of absolute positioning zones, resolving loader border alignment issues.
+
+### 6. Cleaned UI Layout Updates
+* **Removed Valuation Tab**: Cleaned up the details drawer layout by removing the Valuation button and its content render block completely from `app/Dashboard.tsx`.
+* **Search Spinner Position Fix**: Added `width: 100%;` to `.search-input-wrap` to force relative container boundaries to align perfectly with the input box border. This ensures that the absolute search loading spinner is correctly positioned 16px from the right boundary of the search box rather than overlapping the border.

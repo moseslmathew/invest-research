@@ -752,6 +752,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 .search-ico {
   position: absolute;
@@ -788,6 +789,16 @@ body {
   border-top-color: var(--us);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+}
+.inline-spin {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--us);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
 @keyframes spin {
   to {
