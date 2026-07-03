@@ -9,6 +9,8 @@ interface NewsArticle {
   link: string;
   time: number;
   thumbnail: string | null;
+  sentiment?: "bullish" | "bearish" | "neutral";
+  valueRationale?: string;
 }
 
 export async function GET(req: Request) {
@@ -24,14 +26,19 @@ export async function GET(req: Request) {
   }
 
   try {
-    // Google News RSS feed search
+    // Google News RSS feed search - Fetch up to 15 articles to filter down
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
+    
+    // Add custom User-Agent to prevent 403 blocks from Google News RSS feed
     const res = await fetch(url, {
       next: { revalidate: 300 }, // Cache results for 5 minutes
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      }
     });
 
     if (!res.ok) {
-      return NextResponse.json({ error: "Upstream error" }, { status: 502 });
+      return NextResponse.json({ error: "Upstream news search error" }, { status: 502 });
     }
 
     const xml = await res.text();
@@ -39,7 +46,7 @@ export async function GET(req: Request) {
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
 
-    while ((match = itemRegex.exec(xml)) !== null && articles.length < 8) {
+    while ((match = itemRegex.exec(xml)) !== null && articles.length < 15) {
       const itemContent = match[1];
       const rawTitle = itemContent.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "";
       const link = itemContent.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
@@ -85,7 +92,118 @@ export async function GET(req: Request) {
       });
     }
 
-    return NextResponse.json({ articles });
+    if (articles.length === 0) {
+      return NextResponse.json({ articles: [] });
+    }
+
+    // Connect OpenAI to filter & analyze news sentiment
+    const apiKey = process.env.OPENAI_API_KEY || "";
+    const isMock = !apiKey || apiKey === "your-api-key-here" || apiKey.startsWith("YOUR_") || apiKey.trim() === "";
+
+    if (isMock) {
+      // Local Heuristic Filter & Mock Sentiment Fallback
+      const filtered: NewsArticle[] = articles.slice(0, 6).map((art) => {
+        const ltitle = art.title.toLowerCase();
+        let sentiment: "bullish" | "bearish" | "neutral" = "neutral";
+        let rationale = "[Demo Mode] General industry update or sector correlation.";
+
+        if (ltitle.includes("grow") || ltitle.includes("rise") || ltitle.includes("profit") || ltitle.includes("bull") || ltitle.includes("beat")) {
+          sentiment = "bullish";
+          rationale = "[Demo Mode] Positive financials or catalysts indicating potential demand expansion.";
+        } else if (ltitle.includes("fall") || ltitle.includes("drop") || ltitle.includes("loss") || ltitle.includes("bear") || ltitle.includes("slip")) {
+          sentiment = "bearish";
+          rationale = "[Demo Mode] Negative correction or catalyst showing potential margin compression.";
+        } else {
+          rationale = "[Demo Mode] Typical operational news or analyst rating confirmation.";
+        }
+
+        return {
+          ...art,
+          sentiment,
+          valueRationale: rationale,
+        };
+      });
+
+      return NextResponse.json({ articles: filtered });
+    }
+
+    // Call OpenAI GPT-4o-mini to filter articles and determine sentiment
+    const prompt = `You are a financial analyst filtering and evaluating news for the stock: ${symbol} (${name}).
+Below is a list of recent raw news articles fetched from search feeds.
+Your goals:
+1. Filter out duplicates, irrelevant mentions, and low-value clickbait. Only select articles that add real value (e.g. key financials, major partnerships, product releases, regulatory actions, leadership shifts).
+2. For each kept article, determine the sentiment ('bullish', 'bearish', or 'neutral') and write a 1-sentence business value rationale.
+
+Raw Articles:
+${JSON.stringify(articles.map(a => ({ uuid: a.uuid, title: a.title, publisher: a.publisher })), null, 2)}
+
+Respond ONLY with a JSON object matching this structure:
+{
+  "articles": [
+    {
+      "uuid": "string",
+      "sentiment": "bullish" | "bearish" | "neutral",
+      "valueRationale": "A concise 1-sentence explanation of why this news is valuable/impactful for the company."
+    }
+  ]
+}`;
+
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are a professional financial research analyst." },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+      }),
+    });
+
+    if (!apiRes.ok) {
+      const errText = await apiRes.text();
+      throw new Error(`OpenAI API error: ${errText}`);
+    }
+
+    const resData = await apiRes.json();
+    const content = resData.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    const aiArticles: { uuid: string; sentiment: "bullish" | "bearish" | "neutral"; valueRationale: string }[] = parsed.articles || [];
+
+    // Map AI analysis back to matching original articles
+    const filteredArticles: NewsArticle[] = [];
+    for (const aiArt of aiArticles) {
+      const original = articles.find(a => a.uuid === aiArt.uuid);
+      if (original) {
+        filteredArticles.push({
+          ...original,
+          sentiment: aiArt.sentiment,
+          valueRationale: aiArt.valueRationale,
+        });
+      }
+    }
+
+    // If OpenAI returns empty or parsing errors, return raw slice
+    if (filteredArticles.length === 0) {
+      return NextResponse.json({
+        articles: articles.slice(0, 6).map(a => ({
+          ...a,
+          sentiment: "neutral",
+          valueRationale: "Relevance validation failed. Listed as general industry news.",
+        }))
+      });
+    }
+
+    return NextResponse.json({ articles: filteredArticles });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

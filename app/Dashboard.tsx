@@ -249,6 +249,8 @@ interface NewsArticle {
   link: string;
   time: number;
   thumbnail: string | null;
+  sentiment?: "bullish" | "bearish" | "neutral";
+  valueRationale?: string;
 }
 
 function fmtRelativeTime(unixSec: number): string {
@@ -640,23 +642,37 @@ function NewsDrawer({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="news-item-card"
+                    style={{ textDecoration: "none", display: "block" }}
                   >
-                    <div className="news-item-txt">
-                      <h3 className="news-item-title">{item.title}</h3>
-                      <div className="news-item-meta">
-                        <span>{item.publisher}</span>
-                        <span className="news-dot">•</span>
-                        <span>{fmtRelativeTime(item.time)}</span>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start", width: "100%", justifyContent: "space-between" }}>
+                      <div className="news-item-txt" style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+                          <span className="news-item-meta" style={{ margin: 0 }}>{item.publisher}</span>
+                          <span className="news-dot" style={{ margin: 0 }}>•</span>
+                          <span className="news-item-meta" style={{ margin: 0 }}>{fmtRelativeTime(item.time)}</span>
+                          {item.sentiment && (
+                            <span className={`val-stance ${item.sentiment === "bullish" ? "undervalued" : item.sentiment === "bearish" ? "premium" : "neutral"}`} style={{ fontSize: "10px", padding: "1px 6px", borderRadius: "4px", fontWeight: 700, textTransform: "capitalize" }}>
+                              {item.sentiment === "bullish" ? "🟢 Bullish" : item.sentiment === "bearish" ? "🔴 Bearish" : "⚪ Neutral"}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="news-item-title" style={{ fontSize: "13.5px", fontWeight: 600, color: "var(--text)", lineHeight: 1.4, margin: 0 }}>{item.title}</h3>
+                        {item.valueRationale && (
+                          <div className="news-item-rationale" style={{ marginTop: "8px", fontSize: "12px", color: "var(--muted)", fontStyle: "italic", borderLeft: "2px solid var(--border)", paddingLeft: "8px" }}>
+                            💡 {item.valueRationale}
+                          </div>
+                        )}
                       </div>
+                      {item.thumbnail && (
+                        <img
+                          src={item.thumbnail}
+                          alt=""
+                          className="news-item-thumb"
+                          loading="lazy"
+                          style={{ width: "60px", height: "60px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }}
+                        />
+                      )}
                     </div>
-                    {item.thumbnail && (
-                      <img
-                        src={item.thumbnail}
-                        alt=""
-                        className="news-item-thumb"
-                        loading="lazy"
-                      />
-                    )}
                   </a>
                 ))
               )}
