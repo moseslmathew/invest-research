@@ -978,22 +978,6 @@ function MarketTable({
 
   return (
     <div className="panel table-panel">
-      <div className="table-search-bar">
-        <div className="search-input-wrapper">
-          <Icon name="search" className="search-ico" />
-          <input
-            type="text"
-            placeholder="Search by company, ticker, or sector..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-          />
-          {filterText && (
-            <button className="clear-btn" onClick={() => setFilterText("")} aria-label="Clear search">
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
       {filteredItems.length === 0 ? (
         <div className="panel empty" style={{ border: "none", boxShadow: "none", margin: 0, padding: "24px 0" }}>
           <div className="ico">🔍</div>
@@ -1285,32 +1269,6 @@ function ResearchTable({
 
   return (
     <div className="panel table-panel ai-table-panel">
-      <div className="table-search-bar ai-filter-bar">
-        <div className="search-input-wrapper">
-          <Icon name="search" className="search-ico" />
-          <input
-            ref={filterInputRef}
-            type="text"
-            placeholder="Filter by company, ticker, sector, tier, or notes..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-          />
-          {filterText ? (
-            <button className="clear-btn" onClick={() => setFilterText("")} aria-label="Clear filter">
-              ✕
-            </button>
-          ) : (
-            <span className="filter-kbd" aria-hidden>
-              ⌘K
-            </span>
-          )}
-        </div>
-        {filterText && (
-          <span className="filter-count">
-            {filteredItems.length} {filteredItems.length === 1 ? "match" : "matches"}
-          </span>
-        )}
-      </div>
       <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
         {canScrollRight && (
           <div className="ai-scroll-hint">
