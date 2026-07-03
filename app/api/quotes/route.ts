@@ -61,18 +61,11 @@ async function fetchGoogleFinance(symbol: string): Promise<{ price: number; chan
   }
 }
 
-async function fetchYahooFinanceChart(symbol: string, range = "3mo"): Promise<{
-  price: number;
-  change: number;
-  changePct: number;
-  currency: string;
-  time: number | null;
-  change3mPct: number | null;
-} | null> {
+async function fetchYahooFinanceLive(symbol: string): Promise<{ price: number; change: number; changePct: number; currency: string; time: number | null } | null> {
   try {
     const url =
       `https://query1.finance.yahoo.com/v8/finance/chart/` +
-      `${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
+      `${encodeURIComponent(symbol)}?range=1d&interval=1d`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; LuminaResearch/1.0)" },
       next: { revalidate: 60 },
@@ -87,30 +80,44 @@ async function fetchYahooFinanceChart(symbol: string, range = "3mo"): Promise<{
       return null;
     }
     const change = price - prev;
-
-    let change3mPct: number | null = null;
-    if (range === "3mo") {
-      const closePrices = result?.indicators?.quote?.[0]?.close || [];
-      let startPrice: number | null = null;
-      for (const p of closePrices) {
-        if (p !== null && Number.isFinite(p) && p > 0) {
-          startPrice = p;
-          break;
-        }
-      }
-      if (startPrice && startPrice > 0) {
-        change3mPct = ((price - startPrice) / startPrice) * 100;
-      }
-    }
-
     return {
       price,
       change,
       changePct: (change / prev) * 100,
       currency: String(meta?.currency ?? "USD"),
       time: Number(meta?.regularMarketTime) || null,
-      change3mPct,
     };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchYahooFinance3M(symbol: string): Promise<number | null> {
+  try {
+    const url =
+      `https://query1.finance.yahoo.com/v8/finance/chart/` +
+      `${encodeURIComponent(symbol)}?range=3mo&interval=1d`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LuminaResearch/1.0)" },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as any;
+    const result = data.chart?.result?.[0];
+    const meta = result?.meta;
+    const price = Number(meta?.regularMarketPrice);
+    const closePrices = result?.indicators?.quote?.[0]?.close || [];
+    let startPrice: number | null = null;
+    for (const p of closePrices) {
+      if (p !== null && Number.isFinite(p) && p > 0) {
+        startPrice = p;
+        break;
+      }
+    }
+    if (price && startPrice && startPrice > 0) {
+      return ((price - startPrice) / startPrice) * 100;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -125,62 +132,50 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
     return [symbol, cached];
   }
 
-  // Determine if we need to fetch historical 3M change
-  const needHist = !cached || (now - cached.histTimestamp >= HIST_TTL_MS);
-  
   let liveQuote: any = null;
-  let fetchedFromYahoo = false;
 
-  if (needHist) {
-    // If we need historical 3M change, we MUST hit Yahoo Finance (with range=3mo)
-    const yf = await fetchYahooFinanceChart(symbol, "3mo");
-    if (yf) {
-      liveQuote = yf;
-      fetchedFromYahoo = true;
-    }
-  }
-
-  // 2. If we didn't fetch from Yahoo yet, or if it failed, get the live quote
-  if (!liveQuote) {
-    // Alternating between Google Finance and Yahoo Finance (1d range) to load-balance hits
+  // 2. Fetch live quote if stale or missing
+  if (!cached || (now - cached.liveTimestamp >= LIVE_TTL_MS)) {
     const useGoogle = Math.random() > 0.5;
     if (useGoogle) {
       liveQuote = await fetchGoogleFinance(symbol);
     }
     
-    // Fallback if google failed or if we chose Yahoo
     if (!liveQuote) {
-      liveQuote = await fetchYahooFinanceChart(symbol, "1d");
-      fetchedFromYahoo = true;
+      liveQuote = await fetchYahooFinanceLive(symbol);
     }
     
-    // Final fallback if Yahoo 1d failed
     if (!liveQuote && !useGoogle) {
       liveQuote = await fetchGoogleFinance(symbol);
     }
+  } else {
+    liveQuote = {
+      price: cached.price,
+      change: cached.change,
+      changePct: cached.changePct,
+      currency: cached.currency,
+      time: cached.time,
+    };
   }
 
   if (!liveQuote) {
-    // If all fetch attempts failed, return cached value if any, or null
     return cached ? [symbol, cached] : null;
   }
 
-  // Resolve 3M change percentage
+  // 3. Fetch/Resolve 3M change percentage if stale or missing
   let change3mPct: number | null | undefined = null;
   let histTimestamp = cached ? cached.histTimestamp : 0;
 
-  if (fetchedFromYahoo && liveQuote.change3mPct != null) {
-    change3mPct = liveQuote.change3mPct;
-    histTimestamp = now;
+  if (!cached || (now - cached.histTimestamp >= HIST_TTL_MS)) {
+    const val3m = await fetchYahooFinance3M(symbol);
+    if (val3m != null) {
+      change3mPct = val3m;
+      histTimestamp = now;
+    } else if (cached) {
+      change3mPct = cached.change3mPct;
+    }
   } else if (cached) {
     change3mPct = cached.change3mPct;
-  } else {
-    // If we have no cached 3M performance yet and didn't fetch from Yahoo, fetch it now
-    const yfHist = await fetchYahooFinanceChart(symbol, "3mo");
-    if (yfHist) {
-      change3mPct = yfHist.change3mPct;
-      histTimestamp = now;
-    }
   }
 
   const quote: Quote = {
@@ -192,7 +187,6 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
     change3mPct,
   };
 
-  // Cache the result
   quoteCache[symbol] = {
     ...quote,
     liveTimestamp: now,
