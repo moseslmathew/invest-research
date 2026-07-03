@@ -189,16 +189,6 @@ function RowActions({
     <div className="row-actions" ref={ref} onClick={(e) => e.stopPropagation()}>
       <button
         type="button"
-        className={`icon-btn star ${favorited ? "on" : ""}`}
-        onClick={onToggleFav}
-        title={favorited ? "Unfavorite" : "Favorite"}
-        aria-label={favorited ? `Unfavorite ${symbol}` : `Favorite ${symbol}`}
-        aria-pressed={favorited}
-      >
-        <Icon name="star" filled={favorited} />
-      </button>
-      <button
-        type="button"
         className="icon-btn"
         onClick={() => setOpen((o) => !o)}
         title="More"
@@ -354,10 +344,12 @@ function NewsDrawer({
   stock,
   onClose,
   quotes,
+  onRemove,
 }: {
   stock: WatchlistItem | null;
   onClose: () => void;
   quotes?: Record<string, Quote>;
+  onRemove?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research">("news");
   const [news, setNews] = useState<NewsArticle[]>([]);
@@ -549,9 +541,39 @@ function NewsDrawer({
               </div>
             )}
           </div>
-          <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
-            ✕
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {onRemove && (
+              <button
+                className="wl-chip"
+                onClick={onRemove}
+                style={{
+                  background: "rgba(239, 68, 68, 0.08)",
+                  color: "rgb(239, 68, 68)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                }}
+              >
+                🗑️ Remove
+              </button>
+            )}
+            <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="drawer-tabs">
@@ -869,7 +891,6 @@ function CompanyCell({
       <div className="company-txt">
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <span className="company-name">{name || symbol}</span>
-          {name && <span className="ticker" style={{ fontSize: "11px", padding: "1px 6px", borderRadius: "5px" }}>{symbol}</span>}
         </div>
         {sector && <span className="company-sub">{sector}</span>}
       </div>
@@ -965,7 +986,6 @@ function MarketTable({
           <table className={`wl-table ${market === "IN" ? "in" : "us"}`}>
             <thead>
               <tr>
-                <th className="col-num">#</th>
                 <th>Company</th>
                 <th
                   className="col-num-r sortable"
@@ -989,7 +1009,6 @@ function MarketTable({
                     </span>
                   )}
                 </th>
-                <th className="col-act" aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
@@ -1002,7 +1021,6 @@ function MarketTable({
                     className={removing.has(item.id) ? "row-removing" : ""}
                     onClick={() => onSelectStock(item)}
                   >
-                    <td className="col-num">{i + 1}</td>
                     <td>
                       <CompanyCell
                         symbol={item.symbol}
@@ -1016,9 +1034,6 @@ function MarketTable({
                           <span className="price-val">
                             {fmtPrice(q.price, q.currency)}
                           </span>
-                          {q.time && (
-                            <span className="price-date">{fmtDate(q.time)}</span>
-                          )}
                         </div>
                       ) : quotesLoading ? (
                         <span className="shimmer" />
@@ -1044,15 +1059,6 @@ function MarketTable({
                       ) : (
                         <span className="muted">—</span>
                       )}
-                    </td>
-                    <td className="col-act">
-                      <RowActions
-                        symbol={item.symbol}
-                        favorited={favorites.has(item.symbol)}
-                        removing={removing.has(item.id)}
-                        onToggleFav={() => onToggleFav(item.symbol)}
-                        onRemove={() => onRemove(item.id)}
-                      />
                     </td>
                   </tr>
                 );
@@ -1239,7 +1245,6 @@ function ResearchTable({
       <div className="ai-list">
         {/* Table Header Row */}
         <div className="ai-row ai-header-row">
-          <div className="ai-col-index">#</div>
           <div className="ai-col-tier">Tier</div>
           <div className="ai-col-company">Company</div>
           <div className="ai-col-price">
@@ -1273,9 +1278,6 @@ function ResearchTable({
               className={`ai-row ${removing.has(item.id) ? "row-removing" : ""}`}
               onClick={() => onSelectStock(item)}
             >
-              {/* 1. Index Number */}
-              <div className="ai-col-index">{indexNum}</div>
-
               {/* 2. Tier Badge */}
               <div className="ai-col-tier">
                 <TierBadge tier={item.tier} />
@@ -1283,8 +1285,7 @@ function ResearchTable({
               <div className="ai-col-company">
                 <div className="ai-co-info">
                   <span className="ai-co-name">
-                    {item.name || item.symbol}{" "}
-                    <span className="ai-co-ticker-inline">{item.symbol}</span>
+                    {item.name || item.symbol}
                   </span>
                   <span className="ai-co-sub">{headline}</span>
                 </div>
@@ -1912,6 +1913,10 @@ export default function Dashboard({
         stock={selectedStock}
         onClose={() => setSelectedStock(null)}
         quotes={quotes}
+        onRemove={selectedStock ? () => {
+          removeItem(selectedStock.id);
+          setSelectedStock(null);
+        } : undefined}
       />
     </div>
   );
