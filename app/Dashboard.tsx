@@ -1017,15 +1017,7 @@ function TrendingTable({
                       #{idx + 1}
                     </td>
                     <td onClick={() => onSelectStock(dummyItem)} style={{ cursor: "pointer" }}>
-                      <div className="co-cell">
-                        <span className="co-avatar" style={avatarStyle(s.symbol)}>
-                          {initials(s.symbol)}
-                        </span>
-                        <div>
-                          <div className="co-name">{s.name}</div>
-                          <div className="co-sym">{s.symbol}</div>
-                        </div>
-                      </div>
+                      <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>{s.name}</span>
                     </td>
                     <td className="col-num-r" style={{ fontWeight: "600" }}>{priceStr}</td>
                     <td className={`col-num-r ${changeClass}`} style={{ fontWeight: "500" }}>{changeStr}</td>
