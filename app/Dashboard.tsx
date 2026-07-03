@@ -2051,32 +2051,6 @@ export default function Dashboard({
               >
                 🗑️ Delete from Watchlist
               </button>
-              <button
-                onClick={() => {
-                  alert("Rearrange feature: drag/drop to reorder (coming soon!)");
-                  setActiveLongPressItem(null);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
-                  color: "var(--text)",
-                  borderRadius: "12px",
-                  fontWeight: 600,
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  transition: "background 0.2s",
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(15, 23, 42, 0.04)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg)"}
-              >
-                ↕️ Rearrange Item
-              </button>
             </div>
           </div>
         </>
