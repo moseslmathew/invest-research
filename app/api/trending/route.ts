@@ -141,10 +141,13 @@ export async function GET(req: Request) {
   const market = (searchParams.get("market") || "US") as Market;
 
   try {
+    const usQuery = "site:cnbc.com OR site:bloomberg.com OR site:reuters.com OR site:wsj.com OR site:marketwatch.com";
+    const inQuery = "site:economictimes.indiatimes.com OR site:moneycontrol.com OR site:livemint.com OR site:business-standard.com";
+
     const url =
       market === "IN"
-        ? "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-IN&gl=IN&ceid=IN:en"
-        : "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en";
+        ? `https://news.google.com/rss/search?q=${encodeURIComponent(inQuery)}&hl=en-IN&gl=IN&ceid=IN:en`
+        : `https://news.google.com/rss/search?q=${encodeURIComponent(usQuery)}&hl=en-US&gl=US&ceid=US:en`;
 
     const res = await fetch(url, {
       next: { revalidate: 1800 },
