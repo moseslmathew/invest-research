@@ -1705,7 +1705,6 @@ th.col-num-r {
   }
 }
 
-/* --- Seamless filter bar inside the AI panel --- */
 .ai-table-panel .ai-filter-bar {
   padding: 0 0 16px !important;
   background: transparent !important;
@@ -1765,8 +1764,9 @@ th.col-num-r {
 
 .ai-scroll-hint {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
   display: flex;
   align-items: center;
