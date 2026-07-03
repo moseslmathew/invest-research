@@ -2208,7 +2208,61 @@ th.col-num-r {
   background: transparent !important;
 }
 
+/* Sentiment Badges */
+.sent-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  border-radius: 9999px;
+  text-align: center;
+  min-width: 70px;
+}
 
+.sent-bullish {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.sent-bearish {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.sent-neutral {
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+/* Action Badges/Buttons */
+.added-badge {
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.add-to-wl-btn {
+  background: var(--surface-solid);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-to-wl-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #6366f1;
+}
+
+.trending-row:hover {
+  background: rgba(15, 23, 42, 0.015);
+}
 
 /* Compact & Seamless Search Panel */
 .search-panel {

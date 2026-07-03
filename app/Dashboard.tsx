@@ -19,7 +19,7 @@ export interface MarketData {
   items: Record<number, WatchlistItem[]>;
 }
 
-type View = "watchlist" | "ai";
+type View = "watchlist" | "ai" | "trending";
 
 const MARKETS: { id: Market; label: string; flag: string; code: string }[] = [
   { id: "US", label: "United States", flag: "🇺🇸", code: "US" },
@@ -37,6 +37,7 @@ const NAV: {
 }[] = [
   { id: "watchlist", label: "Watchlist", icon: "bookmark", view: "watchlist" },
   { id: "ai", label: "AI Stocks", icon: "sparkles", view: "ai" },
+  { id: "trending", label: "Trending", icon: "trending", view: "trending" },
 ];
 
 const MARKET_STORE_KEY = "lumina.market";
@@ -914,6 +915,153 @@ function useLongPress(
   });
 }
 
+function TrendingTable({
+  stocks,
+  loading,
+  market,
+  onAddStock,
+  onSelectStock,
+  activeWatchlistItems = [],
+}: {
+  stocks: any[];
+  loading: boolean;
+  market: Market;
+  onAddStock: (symbol: string, name: string) => void;
+  onSelectStock: (stock: WatchlistItem) => void;
+  activeWatchlistItems?: WatchlistItem[];
+}) {
+  const currencySymbol = market === "US" ? "$" : "₹";
+
+  if (loading) {
+    return (
+      <div className="panel empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+        <span className="search-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
+        <p style={{ marginTop: "16px", color: "#64748b" }}>Analyzing news & loading trending stock performance...</p>
+      </div>
+    );
+  }
+
+  if (stocks.length === 0) {
+    return (
+      <div className="panel empty">
+        <div className="ico">📰</div>
+        <p>No trending stocks found in recent business headlines.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel table-panel ai-table-panel">
+      <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
+        <div className="table-scroll">
+          <table className={`wl-table ${market === "IN" ? "in" : "us"}`}>
+            <thead>
+              <tr>
+                <th style={{ width: "60px", textAlign: "center" }}>Rank</th>
+                <th>Company</th>
+                <th className="col-num-r">Price</th>
+                <th className="col-num-r">Change</th>
+                <th className="col-num-r">3M Change</th>
+                <th style={{ width: "110px", textAlign: "center" }}>Sentiment</th>
+                <th style={{ minWidth: "240px" }}>Why in News</th>
+                <th style={{ width: "90px", textAlign: "center" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stocks.map((s, idx) => {
+                const isAdded = activeWatchlistItems.some(
+                  (item) => item.symbol.toUpperCase() === s.symbol.toUpperCase()
+                );
+                
+                const priceVal = s.price;
+                const changeVal = s.change;
+                const changePctVal = s.changePct;
+                const change3mVal = s.change3mPct;
+
+                const priceStr = priceVal != null ? `${currencySymbol}${priceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
+                
+                let changeClass = "";
+                let changeStr = "—";
+                if (changeVal != null && changePctVal != null) {
+                  changeClass = changeVal >= 0 ? "up" : "down";
+                  const direction = changeVal >= 0 ? "↑" : "↓";
+                  changeStr = `${direction} ${Math.abs(changePctVal).toFixed(2)}%`;
+                }
+
+                let change3mClass = "";
+                let change3mStr = "—";
+                if (change3mVal != null) {
+                  change3mClass = change3mVal >= 0 ? "up" : "down";
+                  const direction = change3mVal >= 0 ? "↑" : "↓";
+                  change3mStr = `${direction} ${Math.abs(change3mVal).toFixed(2)}%`;
+                }
+
+                const sentimentClass = s.sentiment === "bullish" ? "sent-bullish" : s.sentiment === "bearish" ? "sent-bearish" : "sent-neutral";
+
+                const dummyItem: WatchlistItem = {
+                  id: -1,
+                  symbol: s.symbol,
+                  name: s.name,
+                  market: market,
+                  watchlist_id: -1,
+                  tier: null,
+                  sector: null,
+                  notes: s.rationale,
+                  sort_order: null,
+                  created_at: new Date().toISOString()
+                };
+
+                return (
+                  <tr key={s.symbol} className="trending-row">
+                    <td style={{ textAlign: "center", fontWeight: "600", color: "#64748b" }}>
+                      #{idx + 1}
+                    </td>
+                    <td onClick={() => onSelectStock(dummyItem)} style={{ cursor: "pointer" }}>
+                      <div className="co-cell">
+                        <span className="co-avatar" style={avatarStyle(s.symbol)}>
+                          {initials(s.symbol)}
+                        </span>
+                        <div>
+                          <div className="co-name">{s.name}</div>
+                          <div className="co-sym">{s.symbol}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="col-num-r" style={{ fontWeight: "600" }}>{priceStr}</td>
+                    <td className={`col-num-r ${changeClass}`} style={{ fontWeight: "500" }}>{changeStr}</td>
+                    <td className={`col-num-r ${change3mClass}`} style={{ fontWeight: "500" }}>{change3mStr}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={`sent-badge ${sentimentClass}`}>
+                        {s.sentiment}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: "12px", color: "#475569", lineHeight: "1.4" }}>{s.rationale}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {isAdded ? (
+                        <span className="added-badge">✓ Added</span>
+                      ) : (
+                        <button
+                          className="add-to-wl-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddStock(s.symbol, s.name);
+                          }}
+                        >
+                          ➕ Add
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CompanyCell({
   symbol,
   name,
@@ -1521,6 +1669,7 @@ export default function Dashboard({
   const [selectedStock, setSelectedStock] = useState<WatchlistItem | null>(null);
   const [activeLongPressItem, setActiveLongPressItem] = useState<WatchlistItem | null>(null);
   const [, startDelete] = useTransition();
+  const [, startAdd] = useTransition();
 
   const [addState, addAction, isAddPending] = useActionState<ActionState, FormData>(
     addItemAction,
@@ -1626,6 +1775,74 @@ export default function Dashboard({
     [items]
   );
   const { quotes, loading: quotesLoading } = useQuotes(quoteSymbols);
+
+  // States & hooks for Trending stocks in news
+  const [trendingRaw, setTrendingRaw] = useState<any[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
+
+  useEffect(() => {
+    if (view !== "trending") return;
+    setTrendingLoading(true);
+    const ctrl = new AbortController();
+    fetch(`/api/trending?market=${market}`, { signal: ctrl.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        setTrendingRaw(data.stocks || []);
+      })
+      .catch(() => {})
+      .finally(() => setTrendingLoading(false));
+
+    return () => ctrl.abort();
+  }, [view, market]);
+
+  const trendingSymbols = useMemo(
+    () => trendingRaw.map((s) => s.symbol),
+    [trendingRaw]
+  );
+  
+  const { quotes: trendingQuotes, loading: trendingQuotesLoading } = useQuotes(
+    view === "trending" ? trendingSymbols : []
+  );
+
+  const trendingStocks = useMemo(() => {
+    return trendingRaw.map((s) => {
+      const q = trendingQuotes[s.symbol];
+      return {
+        ...s,
+        price: q?.price,
+        change: q?.change,
+        changePct: q?.changePct,
+        change3mPct: q?.change3mPct,
+      };
+    });
+  }, [trendingRaw, trendingQuotes]);
+
+  function handleAddTrendingStock(symbol: string, name: string) {
+    let targetListId = currentListId;
+    let listName = "";
+    
+    if (!targetListId) {
+      if (personalLists.length > 0) {
+        targetListId = personalLists[0].id;
+      } else {
+        listName = market === "US" ? "US Watchlist" : "India Watchlist";
+      }
+    }
+
+    const fd = new FormData();
+    fd.append("market", market);
+    if (targetListId) {
+      fd.append("watchlistId", String(targetListId));
+    } else {
+      fd.append("listName", listName);
+    }
+    fd.append("symbol", symbol);
+    fd.append("name", name);
+
+    startAdd(async () => {
+      await addAction(fd);
+    });
+  }
 
   const activePersonalList = personalLists.find((l) => l.id === activeList);
   const flag = market === "US" ? "🇺🇸" : "🇮🇳";
@@ -1835,7 +2052,7 @@ export default function Dashboard({
         )}
 
         {/* Search card */}
-        {view !== "ai" && (
+        {view !== "ai" && view !== "trending" && (
           <div className="panel search-panel">
             <form
               ref={addFormRef}
@@ -1942,7 +2159,16 @@ export default function Dashboard({
             );
           })()}
 
-        {view === "watchlist" && currentListId == null ? (
+        {view === "trending" ? (
+          <TrendingTable
+            stocks={trendingStocks}
+            loading={trendingLoading || trendingQuotesLoading}
+            market={market}
+            onAddStock={handleAddTrendingStock}
+            onSelectStock={setSelectedStock}
+            activeWatchlistItems={items}
+          />
+        ) : view === "watchlist" && currentListId == null ? (
           <div className="panel empty">
             <div className="ico">🗂️</div>
             <p>No watchlists yet — create one above to get started.</p>
