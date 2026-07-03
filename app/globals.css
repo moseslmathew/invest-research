@@ -1519,8 +1519,11 @@ th.col-num-r {
   width: 21px;
   height: 21px;
 }
-.bottom-item.active {
+.bottom-nav.us .bottom-item.active {
   color: var(--us);
+}
+.bottom-nav.in .bottom-item.active {
+  color: var(--in);
 }
 .bottom-item:disabled {
   opacity: 0.7;
@@ -2067,75 +2070,10 @@ th.col-num-r {
 }
 
 /* ============================================================
-   Mobile Hamburger & Sidebar Drawer Styles
+   Mobile Hamburger & Sidebar Drawer Styles (Removed)
    ============================================================ */
 .hamburger-btn {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .hamburger-btn {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    width: 22px;
-    height: 16px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin-right: 12px;
-    z-index: 60;
-  }
-  
-  .hamburger-btn .bar {
-    width: 22px;
-    height: 2px;
-    background-color: #0f172a;
-    border-radius: 2px;
-    transition: all 0.25s ease-in-out;
-  }
-  
-  .hamburger-btn.open .bar:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
-  }
-  
-  .hamburger-btn.open .bar:nth-child(2) {
-    opacity: 0;
-  }
-  
-  .hamburger-btn.open .bar:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
-  }
-
-  .sidebar {
-    display: flex !important; /* Override display: none on mobile when drawer is active */
-    position: fixed;
-    top: 0;
-    left: -260px;
-    width: 252px;
-    height: 100vh;
-    z-index: 50;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 40px rgba(15, 23, 42, 0);
-  }
-  
-  .sidebar-open .sidebar {
-    transform: translateX(260px);
-    box-shadow: 0 0 40px rgba(15, 23, 42, 0.15);
-  }
-  
-  .sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 45;
-    animation: fadeIn 0.2s ease;
-  }
+  display: none !important;
 }
 
 @keyframes fadeIn {

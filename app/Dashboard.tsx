@@ -35,6 +35,7 @@ const NAV: {
   view?: View;
   soon?: boolean;
 }[] = [
+  { id: "watchlist", label: "Watchlist", icon: "bookmark", view: "watchlist" },
   { id: "ai", label: "AI Stocks", icon: "sparkles", view: "ai" },
 ];
 
@@ -1687,16 +1688,6 @@ export default function Dashboard({
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <button
-              type="button"
-              className={`hamburger-btn ${sidebarOpen ? "open" : ""}`}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label="Toggle menu"
-            >
-              <span className="bar"></span>
-              <span className="bar"></span>
-              <span className="bar"></span>
-            </button>
             <div className="logo">L</div>
             <div>
               <h1>Lumina</h1>
@@ -1934,7 +1925,7 @@ export default function Dashboard({
       </div>
 
       {/* ---------- Bottom nav (mobile) ---------- */}
-      <nav className="bottom-nav" aria-label="Primary">
+      <nav className={`bottom-nav ${market.toLowerCase()}`} aria-label="Primary">
         {NAV.filter((n) => n.id !== "settings").map((item) => (
           <button
             key={item.id}
