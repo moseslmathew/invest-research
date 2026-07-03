@@ -927,10 +927,10 @@ function MarketTable({
 }: TableProps) {
   const bindLongPress = useLongPress(onSelectStock, onLongPress);
   const [filterText, setFilterText] = useState("");
-  const [sortField, setSortField] = useState<"price" | "change" | null>(null);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const handleSort = (field: "price" | "change") => {
+  const handleSort = (field: "price" | "change" | "change3m") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -967,6 +967,9 @@ function MarketTable({
       } else if (sortField === "change") {
         valA = qA ? qA.changePct : -999;
         valB = qB ? qB.changePct : -999;
+      } else if (sortField === "change3m") {
+        valA = qA?.change3mPct != null ? qA.change3mPct : -999;
+        valB = qB?.change3mPct != null ? qB.change3mPct : -999;
       }
       if (valA === valB) return 0;
       return sortOrder === "asc" ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
@@ -1024,6 +1027,17 @@ function MarketTable({
                     </span>
                   )}
                 </th>
+                <th
+                  className="col-num-r sortable"
+                  onClick={() => handleSort("change3m")}
+                >
+                  3M Change
+                  {sortField === "change3m" && (
+                    <span className="sort-indicator">
+                      {sortOrder === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1067,6 +1081,21 @@ function MarketTable({
                           <span className="chg-abs">
                             {up ? "+" : "−"}
                             {fmtPrice(Math.abs(q.change), q.currency)}
+                          </span>
+                        </div>
+                      ) : quotesLoading ? (
+                        <span className="shimmer" />
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td className="col-num-r">
+                      {q && q.change3mPct != null ? (
+                        <div className={`chg ${q.change3mPct >= 0 ? "up" : "down"}`}>
+                          <span className="chg-pct">
+                            <Icon name={q.change3mPct >= 0 ? "arrowUp" : "arrowDown"} />
+                            {q.change3mPct >= 0 ? "+" : ""}
+                            {q.change3mPct.toFixed(2)}%
                           </span>
                         </div>
                       ) : quotesLoading ? (
@@ -1170,7 +1199,7 @@ function ResearchTable({
   const [filterText, setFilterText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const [sortField, setSortField] = useState<"price" | "change" | null>(null);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1193,7 +1222,7 @@ function ResearchTable({
     };
   }, [items, filterText, currentPage, showAll]);
 
-  const handleSort = (field: "price" | "change") => {
+  const handleSort = (field: "price" | "change" | "change3m") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -1232,6 +1261,9 @@ function ResearchTable({
       } else if (sortField === "change") {
         valA = qA ? qA.changePct : -999;
         valB = qB ? qB.changePct : -999;
+      } else if (sortField === "change3m") {
+        valA = qA?.change3mPct != null ? qA.change3mPct : -999;
+        valB = qB?.change3mPct != null ? qB.change3mPct : -999;
       }
       if (valA === valB) return 0;
       return sortOrder === "asc" ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
@@ -1312,6 +1344,16 @@ function ResearchTable({
               )}
             </span>
           </div>
+          <div className="ai-col-change3m">
+            <span className="sortable-header" onClick={() => handleSort("change3m")}>
+              3M Chg
+              {sortField === "change3m" && (
+                <span className="sort-indicator">
+                  {sortOrder === "asc" ? "▲" : "▼"}
+                </span>
+              )}
+            </span>
+          </div>
           <div className="ai-col-sector">Sector</div>
           <div className="ai-col-notes">Why Strategic</div>
         </div>
@@ -1362,6 +1404,23 @@ function ResearchTable({
                         </span>
                       )}
                     </div>
+                  );
+                })()}
+              </div>
+
+              {/* 3M Change Column */}
+              <div className="ai-col-change3m">
+                {quotesLoading && !quotes?.[item.symbol] ? (
+                  <span className="price-loading">...</span>
+                ) : (() => {
+                  const q = quotes?.[item.symbol];
+                  if (!q || q.change3mPct == null) return <span className="muted">—</span>;
+                  const isUp = q.change3mPct >= 0;
+                  return (
+                    <span className={`ai-price-change ${isUp ? "up" : "down"}`} style={{ fontSize: "14px", fontWeight: 700 }}>
+                      {isUp ? "+" : ""}
+                      {q.change3mPct.toFixed(2)}%
+                    </span>
                   );
                 })()}
               </div>

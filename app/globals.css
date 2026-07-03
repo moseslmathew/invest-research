@@ -1805,7 +1805,7 @@ th.col-num-r {
   padding: 16px 0;
   border-bottom: 1px solid rgba(15, 23, 42, 0.05);
   transition: background 0.15s ease;
-  min-width: 900px;
+  min-width: 1000px;
   width: 100%;
 }
 
@@ -1891,6 +1891,13 @@ th.col-num-r {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.ai-col-change3m {
+  width: 100px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .ai-sector-text {
