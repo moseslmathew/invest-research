@@ -957,22 +957,16 @@ function TrendingTable({
           <table className={`wl-table ${market === "IN" ? "in" : "us"}`}>
             <thead>
               <tr>
-                <th style={{ width: "60px", textAlign: "center" }}>Rank</th>
                 <th>Company</th>
                 <th className="col-num-r">Price</th>
                 <th className="col-num-r">Change</th>
                 <th className="col-num-r">3M Change</th>
                 <th style={{ width: "110px", textAlign: "center" }}>Sentiment</th>
                 <th style={{ minWidth: "240px" }}>Why in News</th>
-                <th style={{ width: "90px", textAlign: "center" }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {stocks.map((s, idx) => {
-                const isAdded = activeWatchlistItems.some(
-                  (item) => item.symbol.toUpperCase() === s.symbol.toUpperCase()
-                );
-                
                 const priceVal = s.price;
                 const changeVal = s.change;
                 const changePctVal = s.changePct;
@@ -1012,11 +1006,8 @@ function TrendingTable({
                 };
 
                 return (
-                  <tr key={s.symbol} className="trending-row">
-                    <td style={{ textAlign: "center", fontWeight: "600", color: "#64748b" }}>
-                      #{idx + 1}
-                    </td>
-                    <td onClick={() => onSelectStock(dummyItem)} style={{ cursor: "pointer" }}>
+                  <tr key={s.symbol} className="trending-row" onClick={() => onSelectStock(dummyItem)} style={{ cursor: "pointer" }}>
+                    <td>
                       <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>{s.name}</span>
                     </td>
                     <td className="col-num-r" style={{ fontWeight: "600" }}>{priceStr}</td>
@@ -1028,21 +1019,6 @@ function TrendingTable({
                       </span>
                     </td>
                     <td style={{ fontSize: "12px", color: "#475569", lineHeight: "1.4" }}>{s.rationale}</td>
-                    <td style={{ textAlign: "center" }}>
-                      {isAdded ? (
-                        <span className="added-badge">✓ Added</span>
-                      ) : (
-                        <button
-                          className="add-to-wl-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAddStock(s.symbol, s.name);
-                          }}
-                        >
-                          ➕ Add
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 );
               })}
