@@ -1242,7 +1242,8 @@ function ResearchTable({
           </span>
         )}
       </div>
-      <div className="ai-list">
+      <div className="ai-list-scroll">
+        <div className="ai-list">
         {/* Table Header Row */}
         <div className="ai-row ai-header-row">
           <div className="ai-col-tier">Tier</div>
@@ -1335,6 +1336,7 @@ function ResearchTable({
           );
         })}
       </div>
+    </div>
 
       {filteredItems.length === 0 && (
         <div className="panel empty" style={{ borderTop: "1px solid var(--border)", borderRadius: "0 0 12px 12px", boxShadow: "none" }}>
