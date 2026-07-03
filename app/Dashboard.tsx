@@ -1156,6 +1156,26 @@ function ResearchTable({
   const [sortField, setSortField] = useState<"price" | "change" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollRight(scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    // Delay slightly to allow layout calculations to finish
+    const timer = setTimeout(checkScroll, 100);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [items, filterText, currentPage, showAll]);
+
   const handleSort = (field: "price" | "change") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
@@ -1242,8 +1262,9 @@ function ResearchTable({
           </span>
         )}
       </div>
-      <div className="ai-list-scroll">
-        <div className="ai-list">
+      <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
+        <div ref={scrollRef} className="ai-list-scroll" onScroll={checkScroll}>
+          <div className="ai-list">
         {/* Table Header Row */}
         <div className="ai-row ai-header-row">
           <div className="ai-col-tier">Tier</div>
@@ -1337,6 +1358,40 @@ function ResearchTable({
         })}
       </div>
     </div>
+    {canScrollRight && (
+      <div className="ai-scroll-hint" style={{
+        position: "absolute",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: "70px",
+        background: "linear-gradient(to left, var(--bg) 20%, transparent)",
+        pointerEvents: "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        paddingRight: "8px",
+        zIndex: 10,
+      }}>
+        <span style={{
+          background: "var(--surface-solid)",
+          border: "1px solid var(--border)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+          color: "var(--muted)",
+          padding: "4px 8px",
+          borderRadius: "20px",
+          fontSize: "11px",
+          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          marginRight: "4px",
+        }}>
+          Swipe ➔
+        </span>
+      </div>
+    )}
+  </div>
 
       {filteredItems.length === 0 && (
         <div className="panel empty" style={{ borderTop: "1px solid var(--border)", borderRadius: "0 0 12px 12px", boxShadow: "none" }}>
