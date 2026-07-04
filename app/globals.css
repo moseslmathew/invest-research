@@ -106,6 +106,23 @@ body {
   overflow-x: hidden;
 }
 
+@media (min-width: 901px) {
+  .app {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .main {
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  .main::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
+
 /* --- Sidebar --- */
 .sidebar {
   position: sticky;
@@ -1660,6 +1677,49 @@ th.col-num-r {
   gap: 10px;
   flex-wrap: wrap;
 }
+
+/* Trending: last-updated label + manual refresh button under the hero copy. */
+.trending-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.trending-updated {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.trending-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.trending-refresh:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-strong);
+}
+.trending-refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.trending-refresh svg {
+  width: 14px;
+  height: 14px;
+}
+.trending-refresh svg.spin {
+  animation: spin 0.8s linear infinite;
+}
 .ai-stat {
   display: flex;
   flex-direction: column;
@@ -1692,6 +1752,15 @@ th.col-num-r {
   letter-spacing: 0.05em;
   color: var(--muted);
 }
+/* Market switch shown inside a page hero (e.g. Trending) alongside stat
+   pills — kept compact (flag + code) and vertically centered against the
+   taller stat cards. */
+.hero-market-seg {
+  align-self: center;
+}
+.hero-market-seg .seg-code {
+  display: inline;
+}
 @media (max-width: 768px) {
   .ai-hero {
     padding: 18px;
@@ -1702,6 +1771,13 @@ th.col-num-r {
   .ai-stat {
     flex: 1;
     min-width: 0;
+  }
+}
+@media (max-width: 900px) {
+  /* The app bar already carries the market switch on mobile; avoid a
+     second, redundant control inside the hero. */
+  .hero-market-seg {
+    display: none;
   }
 }
 
@@ -1772,6 +1848,12 @@ th.col-num-r {
   align-items: center;
   pointer-events: none;
 }
+/* Swipe affordance is mobile-only; desktop rows never scroll horizontally. */
+@media (min-width: 901px) {
+  .ai-scroll-hint {
+    display: none;
+  }
+}
 
 .ai-scroll-hint-pill {
   background: linear-gradient(135deg, #6366f1, #4f46e5);
@@ -1803,24 +1885,38 @@ th.col-num-r {
   display: flex;
   align-items: center;
   padding: 16px 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+  border-bottom: 1px solid var(--border);
   transition: background 0.15s ease;
-  min-width: 1000px;
   width: 100%;
+}
+/* Force a wide row (with horizontal scroll) only on small screens. On
+   desktop the row fills its container so there's no scroll or swipe hint. */
+@media (max-width: 900px) {
+  .ai-row {
+    min-width: 1000px;
+  }
 }
 
 .ai-row:hover {
-  background: rgba(99, 102, 241, 0.02);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 .ai-col-index {
   width: 40px;
   font-weight: 700;
   font-size: 16px;
-  color: #475569;
+  color: var(--text-2);
 }
 
 .ai-col-tier {
+  width: 110px;
+  display: flex;
+  align-items: center;
+}
+
+/* Trending list's leading column — same slot/width as the tier badge,
+   holding a sentiment pill instead. */
+.ai-col-sentiment {
   width: 110px;
   display: flex;
   align-items: center;
@@ -1844,7 +1940,7 @@ th.col-num-r {
 .ai-co-name {
   font-size: 14.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1853,8 +1949,8 @@ th.col-num-r {
 .ai-co-ticker-inline {
   font-size: 10px;
   font-weight: 700;
-  color: #64748b;
-  background: rgba(15, 23, 42, 0.06);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
   padding: 1px 5px;
   border-radius: 4px;
   margin-left: 6px;
@@ -1864,7 +1960,7 @@ th.col-num-r {
 
 .ai-co-sub {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -1879,8 +1975,8 @@ th.col-num-r {
 .ai-ticker {
   font-size: 12px;
   font-weight: 700;
-  background: rgba(15, 23, 42, 0.04);
-  color: #475569;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: var(--text-2);
   padding: 4px 10px;
   border-radius: 6px;
   font-family: monospace;
@@ -1903,7 +1999,7 @@ th.col-num-r {
 .ai-sector-text {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--text-2);
 }
 
 .ai-col-notes {
@@ -1924,10 +2020,25 @@ th.col-num-r {
 
 .ai-notes-text {
   font-size: 13px;
-  color: #475569;
+  color: var(--text-2);
   line-height: 1.5;
   font-weight: 500;
   word-break: break-word;
+}
+
+/* Publisher attribution chip inside a trending row's "Why in News" cell. */
+.ai-notes-source {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .ai-col-action {
@@ -2029,7 +2140,7 @@ th.col-num-r {
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--muted);
 }
 
 .sparkles-purple {
@@ -2059,8 +2170,8 @@ th.col-num-r {
   border-radius: 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #64748b;
-  background: rgba(15, 23, 42, 0.02);
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
 }
 
 .pag-btn.num.active {
@@ -2081,7 +2192,7 @@ th.col-num-r {
   border-radius: 6px;
   font-size: 18px;
   font-weight: 700;
-  color: #475569;
+  color: var(--text-2);
 }
 
 .pag-btn.prev:disabled,
@@ -2092,7 +2203,7 @@ th.col-num-r {
 
 .pag-ellipsis {
   padding: 0 4px;
-  color: #94a3b8;
+  color: var(--muted-2);
   font-size: 13px;
   font-weight: 700;
 }
@@ -2163,7 +2274,7 @@ th.col-num-r {
 .ai-price {
   font-size: 13.5px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .ai-price-change {
@@ -2180,7 +2291,7 @@ th.col-num-r {
 }
 
 .price-loading {
-  color: #94a3b8;
+  color: var(--muted-2);
   font-size: 13px;
 }
 
@@ -2197,7 +2308,7 @@ th.col-num-r {
 .ai-header-row {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   border-bottom: 2px solid rgba(15, 23, 42, 0.08) !important;

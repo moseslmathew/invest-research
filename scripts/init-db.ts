@@ -26,7 +26,16 @@ async function main() {
   await sql`ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS sector TEXT`;
   await sql`ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS sort_order INTEGER`;
 
-  console.log("✅ watchlist table is ready.");
+  // Daily-refreshed cache of AI-ranked trending stocks, keyed by market.
+  await sql`
+    CREATE TABLE IF NOT EXISTS trending_cache (
+      market      TEXT PRIMARY KEY CHECK (market IN ('US', 'IN')),
+      stocks      JSONB NOT NULL,
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  console.log("✅ watchlist + trending_cache tables are ready.");
 }
 
 main().catch((err) => {

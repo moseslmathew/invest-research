@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
 import {
@@ -25,6 +25,20 @@ const MARKETS: { id: Market; label: string; flag: string; code: string }[] = [
   { id: "US", label: "United States", flag: "🇺🇸", code: "US" },
   { id: "IN", label: "India", flag: "🇮🇳", code: "IN" },
 ];
+
+// Compact "3h ago" / "just now" label for the trending cache timestamp.
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "recently";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "recently";
+  const diffMin = Math.round((Date.now() - then) / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.round(diffHr / 24);
+  return diffDay === 1 ? "yesterday" : `${diffDay}d ago`;
+}
 
 // Primary navigation. `view` items switch sections; `soon` items are shown to
 // match the product surface but aren't built yet.
@@ -915,13 +929,14 @@ function useLongPress(
   });
 }
 
-function TrendingTable({
+/* Trending list — same card-row chrome as the AI Stocks ResearchTable
+   (sentiment badge in place of a tier badge, no sector column since
+   trending picks aren't categorized). */
+function TrendingList({
   stocks,
   loading,
   market,
-  onAddStock,
   onSelectStock,
-  activeWatchlistItems = [],
 }: {
   stocks: any[];
   loading: boolean;
@@ -930,13 +945,72 @@ function TrendingTable({
   onSelectStock: (stock: WatchlistItem) => void;
   activeWatchlistItems?: WatchlistItem[];
 }) {
-  const currencySymbol = market === "US" ? "$" : "₹";
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAll, setShowAll] = useState(false);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollRight(scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 100);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [stocks, currentPage, showAll]);
+
+  const handleSort = (field: "price" | "change" | "change3m") => {
+    if (sortField === field) {
+      if (sortOrder === "desc") {
+        setSortOrder("asc");
+      } else {
+        setSortField(null);
+      }
+    } else {
+      setSortField(field);
+      setSortOrder("desc");
+    }
+  };
+
+  const sortedStocks = useMemo(() => {
+    if (!sortField) return stocks;
+    return [...stocks].sort((a, b) => {
+      const key = sortField === "change" ? "changePct" : sortField === "change3m" ? "change3mPct" : "price";
+      const valA = a[key] != null ? a[key] : -Infinity;
+      const valB = b[key] != null ? b[key] : -Infinity;
+      if (valA === valB) return 0;
+      return sortOrder === "asc" ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+    });
+  }, [stocks, sortField, sortOrder]);
+
+  const pageSize = 10;
+  const totalPages = Math.ceil(sortedStocks.length / pageSize);
+  const displayedStocks = showAll
+    ? sortedStocks
+    : sortedStocks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [stocks]);
+
+  const startIdx = (currentPage - 1) * pageSize + 1;
+  const endIdx = Math.min(currentPage * pageSize, sortedStocks.length);
 
   if (loading) {
     return (
       <div className="panel empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
         <span className="inline-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
-        <p style={{ marginTop: "16px", color: "#64748b" }}>Analyzing news & loading trending stock performance...</p>
+        <p style={{ marginTop: "16px", color: "var(--muted)" }}>Analyzing news & loading trending stock performance...</p>
       </div>
     );
   }
@@ -944,7 +1018,9 @@ function TrendingTable({
   if (stocks.length === 0) {
     return (
       <div className="panel empty">
-        <div className="ico">📰</div>
+        <div className="ico">
+          <Icon name="trending" />
+        </div>
         <p>No trending stocks found in recent business headlines.</p>
       </div>
     );
@@ -953,78 +1029,167 @@ function TrendingTable({
   return (
     <div className="panel table-panel ai-table-panel">
       <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
-        <div className="table-scroll">
-          <table className={`wl-table ${market === "IN" ? "in" : "us"}`}>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th className="col-num-r">Price</th>
-                <th className="col-num-r">Change</th>
-                <th className="col-num-r">3M Change</th>
-                <th style={{ width: "110px", textAlign: "center" }}>Sentiment</th>
-                <th style={{ minWidth: "240px" }}>Why in News</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stocks.map((s, idx) => {
-                const priceVal = s.price;
-                const changeVal = s.change;
-                const changePctVal = s.changePct;
-                const change3mVal = s.change3mPct;
+        {canScrollRight && (
+          <div className="ai-scroll-hint">
+            <div className="ai-scroll-hint-pill">
+              Swipe Right <span>➔</span>
+            </div>
+          </div>
+        )}
+        <div ref={scrollRef} className="ai-list-scroll" onScroll={checkScroll}>
+          <div className="ai-list">
+            <div className="ai-row ai-header-row">
+              <div className="ai-col-sentiment">Sentiment</div>
+              <div className="ai-col-company">Company</div>
+              <div className="ai-col-price">
+                <span className="sortable-header" onClick={() => handleSort("price")}>
+                  Price
+                  {sortField === "price" && (
+                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
+                <span className="sortable-header-divider">/</span>
+                <span className="sortable-header" onClick={() => handleSort("change")}>
+                  Chg
+                  {sortField === "change" && (
+                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
+              </div>
+              <div className="ai-col-change3m">
+                <span className="sortable-header" onClick={() => handleSort("change3m")}>
+                  3M Chg
+                  {sortField === "change3m" && (
+                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
+              </div>
+              <div className="ai-col-notes">Why in News</div>
+            </div>
 
-                const priceStr = priceVal != null ? `${currencySymbol}${priceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
-                
-                let changeClass = "";
-                let changeStr = "—";
-                if (changeVal != null && changePctVal != null) {
-                  changeClass = changeVal >= 0 ? "up" : "down";
-                  const direction = changeVal >= 0 ? "↑" : "↓";
-                  changeStr = `${direction} ${Math.abs(changePctVal).toFixed(2)}%`;
-                }
+            {displayedStocks.map((s) => {
+              const sentimentClass =
+                s.sentiment === "bullish" ? "sent-bullish" : s.sentiment === "bearish" ? "sent-bearish" : "sent-neutral";
 
-                let change3mClass = "";
-                let change3mStr = "—";
-                if (change3mVal != null) {
-                  change3mClass = change3mVal >= 0 ? "up" : "down";
-                  const direction = change3mVal >= 0 ? "↑" : "↓";
-                  change3mStr = `${direction} ${Math.abs(change3mVal).toFixed(2)}%`;
-                }
+              const dummyItem: WatchlistItem = {
+                id: -1,
+                symbol: s.symbol,
+                name: s.name,
+                market,
+                watchlist_id: -1,
+                tier: null,
+                sector: null,
+                notes: s.rationale,
+                sort_order: null,
+                created_at: "",
+              };
 
-                const sentimentClass = s.sentiment === "bullish" ? "sent-bullish" : s.sentiment === "bearish" ? "sent-bearish" : "sent-neutral";
+              return (
+                <div key={s.symbol} className="ai-row" onClick={() => onSelectStock(dummyItem)}>
+                  <div className="ai-col-sentiment">
+                    <span className={`sent-badge ${sentimentClass}`}>{s.sentiment}</span>
+                  </div>
 
-                const dummyItem: WatchlistItem = {
-                  id: -1,
-                  symbol: s.symbol,
-                  name: s.name,
-                  market: market,
-                  watchlist_id: -1,
-                  tier: null,
-                  sector: null,
-                  notes: s.rationale,
-                  sort_order: null,
-                  created_at: ""
-                };
+                  <div className="ai-col-company">
+                    <div className="ai-co-info">
+                      <span className="ai-co-name">{s.name}</span>
+                      <span className="ai-co-sub">{s.symbol}</span>
+                    </div>
+                  </div>
 
-                return (
-                  <tr key={s.symbol} className="trending-row" onClick={() => onSelectStock(dummyItem)} style={{ cursor: "pointer" }}>
-                    <td>
-                      <span style={{ fontWeight: "600", color: "var(--text-primary)" }}>{s.name}</span>
-                    </td>
-                    <td className="col-num-r" style={{ fontWeight: "600" }}>{priceStr}</td>
-                    <td className={`col-num-r ${changeClass}`} style={{ fontWeight: "500" }}>{changeStr}</td>
-                    <td className={`col-num-r ${change3mClass}`} style={{ fontWeight: "500" }}>{change3mStr}</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className={`sent-badge ${sentimentClass}`}>
-                        {s.sentiment}
+                  <div className="ai-col-price">
+                    {s.price == null ? (
+                      <span className="price-loading">...</span>
+                    ) : (
+                      <div className="ai-price-wrap">
+                        <span className="ai-price">
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: market === "US" ? "USD" : "INR",
+                            maximumFractionDigits: 2,
+                          }).format(s.price)}
+                        </span>
+                        {s.changePct != null && (
+                          <span className={`ai-price-change ${s.change >= 0 ? "up" : "down"}`}>
+                            {s.change >= 0 ? "+" : ""}
+                            {s.changePct.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="ai-col-change3m">
+                    {s.change3mPct == null ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      <span
+                        className={`ai-price-change ${s.change3mPct >= 0 ? "up" : "down"}`}
+                        style={{ fontSize: "14px", fontWeight: 700 }}
+                      >
+                        {s.change3mPct >= 0 ? "+" : ""}
+                        {s.change3mPct.toFixed(2)}%
                       </span>
-                    </td>
-                    <td style={{ fontSize: "12px", color: "#475569", lineHeight: "1.4" }}>{s.rationale}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    )}
+                  </div>
+
+                  <div className="ai-col-notes">
+                    <span className="ai-notes-bullet">✦</span>
+                    <span className="ai-notes-text">
+                      {s.rationale}
+                      {s.source && (
+                        <span className="ai-notes-source">{s.source}</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      </div>
+
+      <div className="ai-footer">
+        <div className="ai-footer-info">
+          <Icon name="trending" className="sparkles-purple" />
+          <span>
+            Showing {showAll ? `1 to ${sortedStocks.length}` : `${startIdx} to ${endIdx}`} of {sortedStocks.length} stocks
+          </span>
+        </div>
+
+        {!showAll && totalPages > 1 && (
+          <div className="ai-pagination">
+            <button
+              type="button"
+              className="pag-btn prev"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            >
+              ‹
+            </button>
+            {Array.from({ length: totalPages }, (_, idx) => {
+              const pageNum = idx + 1;
+              return (
+                <button
+                  key={pageNum}
+                  type="button"
+                  className={`pag-btn num ${currentPage === pageNum ? "active" : ""}`}
+                  onClick={() => setCurrentPage(pageNum)}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="pag-btn next"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            >
+              ›
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1747,21 +1912,47 @@ export default function Dashboard({
   // States & hooks for Trending stocks in news
   const [trendingRaw, setTrendingRaw] = useState<any[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingRefreshing, setTrendingRefreshing] = useState(false);
+  const [trendingUpdatedAt, setTrendingUpdatedAt] = useState<string | null>(null);
+
+  // Warm the server-side (DB) cache in the background on first load so the
+  // Trending tab is instant when opened. Cheap — a cache hit returns instantly
+  // and the expensive AI pass only runs once per day.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch(`/api/trending?market=${market}`, { signal: ctrl.signal }).catch(() => {});
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadTrending = useCallback(
+    (force = false) => {
+      const ctrl = new AbortController();
+      if (force) setTrendingRefreshing(true);
+      else setTrendingLoading(true);
+      fetch(`/api/trending?market=${market}${force ? "&refresh=1" : ""}`, {
+        signal: ctrl.signal,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          setTrendingRaw(data.stocks || []);
+          setTrendingUpdatedAt(data.updatedAt || null);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setTrendingLoading(false);
+          setTrendingRefreshing(false);
+        });
+      return () => ctrl.abort();
+    },
+    [market]
+  );
 
   useEffect(() => {
     if (view !== "trending") return;
-    setTrendingLoading(true);
-    const ctrl = new AbortController();
-    fetch(`/api/trending?market=${market}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        setTrendingRaw(data.stocks || []);
-      })
-      .catch(() => {})
-      .finally(() => setTrendingLoading(false));
-
-    return () => ctrl.abort();
-  }, [view, market]);
+    const abort = loadTrending(false);
+    return abort;
+  }, [view, market, loadTrending]);
 
   const trendingSymbols = useMemo(
     () => trendingRaw.map((s) => s.symbol),
@@ -2129,8 +2320,95 @@ export default function Dashboard({
             );
           })()}
 
+        {view === "trending" &&
+          (() => {
+            const priced = trendingStocks.filter((s) => s.price != null);
+            const gainers = priced.filter((s) => s.change >= 0).length;
+            const avgMove = priced.length
+              ? priced.reduce((sum, s) => sum + s.changePct, 0) / priced.length
+              : null;
+            return (
+              <section className="ai-hero">
+                <div className="ai-hero-left">
+                  <div className="ai-hero-badge">
+                    <Icon name="trending" />
+                  </div>
+                  <div className="ai-hero-txt">
+                    <h2>Trending Stocks</h2>
+                    <p>
+                      Companies most discussed across major business outlets over
+                      the past two weeks.
+                    </p>
+                    <div className="trending-meta">
+                      <span className="trending-updated">
+                        Updated {formatRelativeTime(trendingUpdatedAt)}
+                      </span>
+                      <button
+                        type="button"
+                        className="trending-refresh"
+                        onClick={() => loadTrending(true)}
+                        disabled={trendingRefreshing || trendingLoading}
+                        aria-label="Refresh trending stocks"
+                      >
+                        <Icon
+                          name="refresh"
+                          className={trendingRefreshing ? "spin" : undefined}
+                        />
+                        <span>{trendingRefreshing ? "Refreshing…" : "Refresh"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="ai-hero-stats">
+                  <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                    {MARKETS.map((m) => (
+                      <button
+                        key={m.id}
+                        role="tab"
+                        aria-selected={market === m.id}
+                        className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                          market === m.id ? "active" : ""
+                        }`}
+                        onClick={() => selectMarket(m.id)}
+                      >
+                        <span className="flag" aria-hidden>
+                          {m.flag}
+                        </span>
+                        <span className="seg-code">{m.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ai-stat">
+                    <span className="ai-stat-val">{trendingStocks.length}</span>
+                    <span className="ai-stat-lbl">
+                      {trendingStocks.length === 1 ? "Stock" : "Stocks"}
+                    </span>
+                  </div>
+                  <div className="ai-stat">
+                    <span className={`ai-stat-val ${priced.length ? "up" : ""}`}>
+                      {priced.length ? gainers : "—"}
+                    </span>
+                    <span className="ai-stat-lbl">Up today</span>
+                  </div>
+                  <div className="ai-stat">
+                    <span
+                      className={`ai-stat-val ${
+                        avgMove == null ? "" : avgMove >= 0 ? "up" : "down"
+                      }`}
+                    >
+                      {avgMove == null
+                        ? "—"
+                        : `${avgMove >= 0 ? "+" : ""}${avgMove.toFixed(2)}%`}
+                    </span>
+                    <span className="ai-stat-lbl">Avg move</span>
+                  </div>
+                </div>
+              </section>
+            );
+          })()}
+
         {view === "trending" ? (
-          <TrendingTable
+          <TrendingList
             stocks={trendingStocks}
             loading={trendingLoading || trendingQuotesLoading}
             market={market}
