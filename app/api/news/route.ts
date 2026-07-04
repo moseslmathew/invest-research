@@ -96,6 +96,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ articles: [] });
     }
 
+    // Show the most recent coverage first everywhere. Sorting the raw pool up
+    // front means the mock slice picks the latest articles; the AI path is
+    // re-sorted again after filtering (below) since it returns in its own order.
+    const byLatest = (a: NewsArticle, b: NewsArticle) => (b.time ?? 0) - (a.time ?? 0);
+    articles.sort(byLatest);
+
     // Connect OpenAI to filter & analyze news sentiment
     const apiKey = process.env.OPENAI_API_KEY || "";
     const isMock = !apiKey || apiKey === "your-api-key-here" || apiKey.startsWith("YOUR_") || apiKey.trim() === "";
@@ -203,6 +209,8 @@ Respond ONLY with a JSON object matching this structure:
       });
     }
 
+    // Re-sort: the AI returns articles in its own order, so order by recency.
+    filteredArticles.sort(byLatest);
     return NextResponse.json({ articles: filteredArticles });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

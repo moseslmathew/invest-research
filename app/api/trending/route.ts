@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import type { Market } from "@/lib/db";
 
-export const runtime = "edge";
+// Node.js runtime (not edge): a cold recompute can make several sequential
+// model passes over a widening news window, which exceeds the edge time limit.
+export const runtime = "nodejs";
+export const maxDuration = 120;
 
 interface TrendingStock {
   symbol: string;
@@ -12,6 +15,9 @@ interface TrendingStock {
   source?: string;
   // How many distinct articles in the last-month sample mentioned this company.
   newsCount?: number;
+  // The actual matched headlines (title + publishing channel) that make up
+  // newsCount, so the UI can show which outlets the coverage was drawn from.
+  newsMentions?: Headline[];
 }
 
 interface Headline {
@@ -23,8 +29,23 @@ interface Headline {
 // recomputes (a manual refresh via ?refresh=1 bypasses this immediately).
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// How far back to look for trending coverage (Google News `when:` window).
-const NEWS_WINDOW = "when:30d";
+// How far back to look for trending coverage (Google News `when:` window). We
+// prefer the most recent month, but progressively widen the lookback until we
+// have enough well-covered names to fill the list (see TARGET_COUNT).
+const NEWS_WINDOWS = ["when:30d", "when:90d", "when:180d"] as const;
+
+// A stock only counts as "trending" if it's referenced across at least this
+// many distinct articles in the sampled coverage.
+const MIN_NEWS_COUNT = 3;
+
+// We aim to show at least this many trending stocks; widening the news window
+// is how we reach the target when a single month is too quiet.
+const TARGET_COUNT = 10;
+
+// Size of the deduped headline sample fed to the analyst + mention counter. A
+// larger pool gives more reliable per-stock mention counts (so the 3+ trending
+// threshold has enough signal to reach TARGET_COUNT names).
+const MAX_HEADLINES = 400;
 
 // Business-news domains aggregated per market (Google News `site:` filters).
 const US_SOURCES = [
@@ -84,12 +105,28 @@ const MOCK_IN_STOCKS: TrendingStock[] = [
   { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", sentiment: "bullish", rationale: "Rides on recent mobile tariff revisions and rising 5G adoption in rural sectors.", source: "Business Standard" },
 ];
 
+// Display names of the outlets we cite in the placeholder ("mock") list, used
+// to synthesize a plausible set of referencing channels per stock.
+const MOCK_CHANNELS = {
+  US: ["CNBC", "Bloomberg", "Reuters", "The Wall Street Journal", "MarketWatch", "Barron's", "Yahoo Finance"],
+  IN: ["CNBC-TV18", "ET NOW", "Moneycontrol", "The Economic Times", "Mint", "Business Standard", "Zee Business"],
+};
+
 const mockFor = (market: Market): TrendingStock[] =>
-  (market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS).map((s, i) => ({
-    ...s,
-    // Plausible descending mention counts for the placeholder list.
-    newsCount: s.newsCount ?? 12 - i,
-  }));
+  (market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS).map((s, i) => {
+    const count = s.newsCount ?? 12 - i;
+    const channels = MOCK_CHANNELS[market === "IN" ? "IN" : "US"];
+    // Fan the count out across distinct channels (leading with the stock's own
+    // headline source) so the popover has realistic outlet attribution.
+    const ordered = s.source
+      ? [s.source, ...channels.filter((c) => c !== s.source)]
+      : channels;
+    const newsMentions: Headline[] = Array.from({ length: count }, (_, k) => ({
+      title: k === 0 ? s.rationale : `${s.name} in focus — ${ordered[k % ordered.length]} market coverage`,
+      source: ordered[k % ordered.length],
+    }));
+    return { ...s, newsCount: count, newsMentions };
+  });
 
 /* ---------- DB cache (best-effort; degrades gracefully) ---------- */
 
@@ -176,35 +213,46 @@ function parseItems(xml: string): Headline[] {
 // genuinely trending names (not just index heavyweights), site-filtered groups
 // for each outlet, and a best-effort social (X/Twitter) query — then merge and
 // dedupe for the widest possible coverage.
-async function fetchHeadlines(market: Market): Promise<Headline[]> {
+async function fetchHeadlines(market: Market, window: string): Promise<Headline[]> {
   const sources = market === "IN" ? IN_SOURCES : US_SOURCES;
   const locale = market === "IN" ? "hl=en-IN&gl=IN&ceid=IN:en" : "hl=en-US&gl=US&ceid=US:en";
 
   // Bias toward stocks that are actually moving/being talked about.
   const movers =
     market === "IN"
-      ? `(Nifty OR Sensex OR "share price" OR stock) (surges OR jumps OR rallies OR plunges OR crashes OR buzzing OR multibagger OR "52-week high" OR "hits record" OR results OR upgrade OR downgrade) ${NEWS_WINDOW}`
-      : `(stocks OR shares OR Nasdaq) (surges OR jumps OR rallies OR plunges OR "52-week high" OR earnings OR guidance OR upgrade OR downgrade) ${NEWS_WINDOW}`;
+      ? `(Nifty OR Sensex OR "share price" OR stock) (surges OR jumps OR rallies OR plunges OR crashes OR buzzing OR multibagger OR "52-week high" OR "hits record" OR results OR upgrade OR downgrade) ${window}`
+      : `(stocks OR shares OR Nasdaq) (surges OR jumps OR rallies OR plunges OR "52-week high" OR earnings OR guidance OR upgrade OR downgrade) ${window}`;
   const general =
     market === "IN"
-      ? `(Indian stock market OR Sensex OR Nifty OR NSE) ${NEWS_WINDOW}`
-      : `(US stock market OR Wall Street OR earnings) ${NEWS_WINDOW}`;
+      ? `(Indian stock market OR Sensex OR Nifty OR NSE) ${window}`
+      : `(US stock market OR Wall Street OR earnings) ${window}`;
+  // A second movers pass with different catalyst verbs widens per-stock
+  // coverage so mention counts reflect how heavily a name is really covered.
+  const catalysts =
+    market === "IN"
+      ? `(stock OR shares) (results OR earnings OR "order win" OR deal OR acquisition OR "brokerage" OR "target price" OR "buy call" OR "block deal" OR IPO OR listing) ${window}`
+      : `(stock OR shares) (earnings OR guidance OR "price target" OR analyst OR upgrade OR downgrade OR deal OR acquisition OR buyback OR "all-time high") ${window}`;
+  // Explicit top-gainers/losers roundups tend to name several trending tickers.
+  const gainers =
+    market === "IN"
+      ? `("top gainers" OR "top losers" OR "buzzing stocks" OR "stocks to watch" OR "stocks in focus") ${window}`
+      : `("top gainers" OR "top losers" OR "stocks to watch" OR "stocks moving" OR "biggest movers") ${window}`;
   // X/Twitter is not well indexed by Google News; this is best-effort and may
   // return little without a dedicated X API.
   const social =
     market === "IN"
-      ? `(Nifty OR Sensex OR stock OR shares) (site:x.com OR site:twitter.com) ${NEWS_WINDOW}`
-      : `(stocks OR shares OR earnings) (site:x.com OR site:twitter.com) ${NEWS_WINDOW}`;
+      ? `(Nifty OR Sensex OR stock OR shares) (site:x.com OR site:twitter.com) ${window}`
+      : `(stocks OR shares OR earnings) (site:x.com OR site:twitter.com) ${window}`;
 
   // Small site: OR groups return more reliably than one long OR chain.
   const CHUNK = 4;
   const siteQueries: string[] = [];
   for (let i = 0; i < sources.length; i += CHUNK) {
     const group = sources.slice(i, i + CHUNK);
-    siteQueries.push(`(${group.map((s) => `site:${s}`).join(" OR ")}) ${NEWS_WINDOW}`);
+    siteQueries.push(`(${group.map((s) => `site:${s}`).join(" OR ")}) ${window}`);
   }
 
-  const queries = [movers, general, social, ...siteQueries];
+  const queries = [movers, catalysts, gainers, general, social, ...siteQueries];
   const urls = queries.map(
     (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&${locale}`
   );
@@ -230,7 +278,7 @@ async function fetchHeadlines(market: Market): Promise<Headline[]> {
       if (seen.has(key)) continue;
       seen.add(key);
       headlines.push(h);
-      if (headlines.length >= 70) return headlines;
+      if (headlines.length >= MAX_HEADLINES) return headlines;
     }
   }
   return headlines;
@@ -245,14 +293,20 @@ const NAME_STOPWORDS = new Set([
   "pharmaceuticals", "labs", "laboratories", "&",
 ]);
 
-// Count how many distinct sampled articles mention a company. We match on the
+// Collect the distinct sampled articles that mention a company. We match on the
 // ticker base (e.g. HCLTECH) and on the distinctive words of the company name,
-// so "HCL Technologies Ltd" is still found in "HCL Tech jumps 7%".
-function countMentions(stock: TrendingStock, headlines: Headline[]): number {
+// so "HCL Technologies Ltd" is still found in "HCL Tech jumps 7%". The returned
+// headlines (title + publishing channel) are what the News column count is
+// built from, letting the UI reveal which outlets the coverage came from.
+function collectMentions(stock: TrendingStock, headlines: Headline[]): Headline[] {
   const needles = new Set<string>();
 
+  // Only match on the ticker base when it's distinctive enough (>= 3 chars).
+  // Short bases like "ON" (onsemi) or "MU" (Micron) are common English words
+  // and would match nearly every headline; those names are matched via the
+  // company name below instead.
   const base = stock.symbol.replace(/\.(NS|BO)$/i, "").toLowerCase();
-  if (base.length >= 2) needles.add(base);
+  if (base.length >= 3) needles.add(base);
 
   const words = stock.name
     .toLowerCase()
@@ -265,43 +319,46 @@ function countMentions(stock: TrendingStock, headlines: Headline[]): number {
   if (core) needles.add(core);
   if (words[0] && words[0].length >= 4) needles.add(words[0]);
 
-  let count = 0;
+  // Match on whole words/phrases only — a substring test would count "on" inside
+  // "iron" or "micron" inside unrelated text, wildly inflating the tally.
+  const patterns = [...needles].map(
+    (n) => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`)
+  );
+
+  const matches: Headline[] = [];
   for (const h of headlines) {
     const t = h.title.toLowerCase();
-    for (const n of needles) {
-      if (t.includes(n)) {
-        count++;
-        break;
-      }
-    }
+    if (patterns.some((re) => re.test(t))) matches.push(h);
   }
-  // The stock was, by construction, drawn from this coverage, so floor at 1.
-  return Math.max(1, count);
+  return matches;
 }
 
 /* ---------- AI extraction ---------- */
 
-// Returns fresh trending picks, or null on failure. `mock` indicates the
-// result is placeholder data (no OpenAI key), which we don't persist.
-async function computeTrending(
-  market: Market
-): Promise<{ stocks: TrendingStock[]; mock: boolean } | null> {
-  const apiKey = process.env.OPENAI_API_KEY || "";
-  const isMock =
-    !apiKey ||
-    apiKey === "your-api-key-here" ||
-    apiKey.startsWith("YOUR_") ||
-    apiKey.trim() === "";
-  if (isMock) return { stocks: mockFor(market), mock: true };
+// Human-readable label for a Google News `when:Nd` window, e.g. "90 DAYS
+// (three months)", used in the analyst prompt.
+function windowLabel(window: string): string {
+  const days = parseInt(window.replace(/\D/g, ""), 10) || 30;
+  const months = Math.round(days / 30);
+  const word = ["", "one", "two", "three", "four", "five", "six"][months] || `${months}`;
+  return `${days} DAYS (${months <= 1 ? "one month" : `${word} months`})`;
+}
 
-  const headlines = await fetchHeadlines(market);
-  if (headlines.length === 0) return null;
-
-  const prompt = `You are a financial analyst reviewing the LAST 30 DAYS (one month) of business-news headlines aggregated from 10+ financial outlets, TV channels and market-commentary desks for the market: ${
+// Run one analyst pass over a sampled window of headlines: ask the model for the
+// trending names, count how many distinct articles reference each, keep only
+// those clearing MIN_NEWS_COUNT, and return them ranked by coverage (desc).
+async function analyzePicks(
+  market: Market,
+  headlines: Headline[],
+  apiKey: string,
+  window: string
+): Promise<TrendingStock[]> {
+  const label = windowLabel(window);
+  const prompt = `You are a financial analyst reviewing the LAST ${label} of business-news headlines aggregated from 10+ financial outlets, TV channels and market-commentary desks for the market: ${
     market === "US" ? "United States (US)" : "India (IN)"
   }.
 
-From the headlines below (each tagged with the outlet that published it), identify the 10 publicly traded companies that are genuinely TRENDING right now — i.e. the ones seeing the most coverage, the biggest price moves, or the most investor buzz over the past month.
+From the headlines below (each tagged with the outlet that published it), identify up to 20 publicly traded companies that are genuinely TRENDING — i.e. the ones seeing the most coverage, the biggest price moves, or the most investor buzz over this period.
 
 Ranking rules:
 - Weigh companies that RECUR across multiple headlines and multiple different outlets far more heavily than one-off mentions.
@@ -317,9 +374,9 @@ For each company provide:
 4. A concise 1-sentence rationale grounded in the actual headlines for why it's trending.
 5. "source": the outlet that published the single most relevant headline for this company. Use EXACTLY one of the outlet names shown in the "source" fields below — do not invent a source. If unsure, use the source of the headline your rationale is based on.
 
-Only include real, currently listed companies you can confidently map to a ticker. Return exactly up to 10, most prominent first.
+Only include real, currently listed companies you can confidently map to a ticker. Return up to 20, most prominent first.
 
-Headlines (last 30 days):
+Headlines (last ${label}):
 ${JSON.stringify(headlines, null, 2)}
 
 Respond ONLY with JSON:
@@ -345,23 +402,91 @@ Respond ONLY with JSON:
       temperature: 0.3,
     }),
   });
-  if (!apiRes.ok) return null;
+  if (!apiRes.ok) return [];
 
   const resData = await apiRes.json();
   const content = resData.choices?.[0]?.message?.content;
-  if (!content) return null;
+  if (!content) return [];
 
   const parsed = JSON.parse(content);
-  if (!Array.isArray(parsed.stocks) || parsed.stocks.length === 0) return null;
+  if (!Array.isArray(parsed.stocks) || parsed.stocks.length === 0) return [];
 
   // Only trust a source the model actually saw in the feed; drop hallucinations.
   const validSources = new Map(
     headlines.filter((h) => h.source).map((h) => [h.source.toLowerCase(), h.source])
   );
-  const stocks: TrendingStock[] = parsed.stocks.slice(0, 10).map((s: TrendingStock) => {
-    const canonical = s.source ? validSources.get(s.source.trim().toLowerCase()) : undefined;
-    return { ...s, source: canonical, newsCount: countMentions(s, headlines) };
-  });
+  const scored: TrendingStock[] = parsed.stocks
+    .slice(0, 20)
+    .map((s: TrendingStock) => {
+      const canonical = s.source ? validSources.get(s.source.trim().toLowerCase()) : undefined;
+      const mentions = collectMentions(s, headlines);
+      return {
+        ...s,
+        source: canonical,
+        newsCount: mentions.length,
+        newsMentions: mentions,
+      };
+    });
+
+  // The model can list the same company twice (e.g. under slightly different
+  // names); keep one row per ticker so the UI has unique keys.
+  const bySymbol = new Map<string, TrendingStock>();
+  for (const s of scored) {
+    const key = s.symbol.trim().toUpperCase();
+    const existing = bySymbol.get(key);
+    if (!existing || (s.newsCount ?? 0) > (existing.newsCount ?? 0)) bySymbol.set(key, s);
+  }
+
+  // Ranked by coverage (desc). The caller applies the MIN_NEWS_COUNT threshold
+  // and back-fills from the tail if a market is short of TARGET_COUNT names.
+  return [...bySymbol.values()].sort(
+    (a: TrendingStock, b: TrendingStock) => (b.newsCount ?? 0) - (a.newsCount ?? 0)
+  );
+}
+
+// Returns fresh trending picks, or null on failure. `mock` indicates the
+// result is placeholder data (no OpenAI key), which we don't persist. We start
+// from the most recent month and widen the news window only as needed to reach
+// TARGET_COUNT well-covered names, so results stay as recent as possible.
+async function computeTrending(
+  market: Market
+): Promise<{ stocks: TrendingStock[]; mock: boolean } | null> {
+  const apiKey = process.env.OPENAI_API_KEY || "";
+  const isMock =
+    !apiKey ||
+    apiKey === "your-api-key-here" ||
+    apiKey.startsWith("YOUR_") ||
+    apiKey.trim() === "";
+  if (isMock) return { stocks: mockFor(market), mock: true };
+
+  const qualifies = (s: TrendingStock) => (s.newsCount ?? 0) >= MIN_NEWS_COUNT;
+
+  // Widen the window until one pass yields enough genuinely trending (3+) names,
+  // keeping the pass with the most such names as our working set.
+  let best: TrendingStock[] = [];
+  let bestQualifying = 0;
+  for (const window of NEWS_WINDOWS) {
+    const headlines = await fetchHeadlines(market, window);
+    if (headlines.length === 0) continue;
+    const picks = await analyzePicks(market, headlines, apiKey, window);
+    const qualifying = picks.filter(qualifies).length;
+    if (qualifying > bestQualifying) {
+      bestQualifying = qualifying;
+      best = picks;
+    }
+    if (bestQualifying >= TARGET_COUNT) break;
+  }
+
+  if (best.length === 0) return null;
+
+  // Prefer the 3+ names; if a market is short of TARGET_COUNT, back-fill with the
+  // next best-covered names (2 mentions, then 1) so the list always reaches 10.
+  const trending = best.filter(qualifies);
+  const stocks =
+    trending.length >= TARGET_COUNT
+      ? trending
+      : [...trending, ...best.filter((s) => !qualifies(s))].slice(0, TARGET_COUNT);
+
   return { stocks, mock: false };
 }
 

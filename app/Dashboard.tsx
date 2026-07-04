@@ -19,7 +19,7 @@ export interface MarketData {
   items: Record<number, WatchlistItem[]>;
 }
 
-type View = "watchlist" | "ai" | "trending";
+type View = "watchlist" | "ai" | "trending" | "headlines";
 
 const MARKETS: { id: Market; label: string; flag: string; code: string }[] = [
   { id: "US", label: "United States", flag: "🇺🇸", code: "US" },
@@ -52,6 +52,7 @@ const NAV: {
   { id: "watchlist", label: "Watchlist", icon: "bookmark", view: "watchlist" },
   { id: "ai", label: "AI Stocks", icon: "sparkles", view: "ai" },
   { id: "trending", label: "Trending", icon: "trending", view: "trending" },
+  { id: "headlines", label: "Headlines", icon: "newspaper", view: "headlines" },
 ];
 
 const MARKET_STORE_KEY = "lumina.market";
@@ -951,6 +952,8 @@ function TrendingList({
     "price" | "change" | "change3m" | "news" | null
   >(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Stock whose news-source breakdown popover is open (clicking the News count).
+  const [newsPopoverStock, setNewsPopoverStock] = useState<any | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -1084,7 +1087,7 @@ function TrendingList({
               <div className="ai-col-notes">Why in News</div>
             </div>
 
-            {displayedStocks.map((s) => {
+            {displayedStocks.map((s, i) => {
               const sentimentClass =
                 s.sentiment === "bullish" ? "sent-bullish" : s.sentiment === "bearish" ? "sent-bearish" : "sent-neutral";
 
@@ -1102,7 +1105,7 @@ function TrendingList({
               };
 
               return (
-                <div key={s.symbol} className="ai-row" onClick={() => onSelectStock(dummyItem)}>
+                <div key={`${s.symbol}-${i}`} className="ai-row" onClick={() => onSelectStock(dummyItem)}>
                   <div className="ai-col-sentiment">
                     <span className={`sent-badge ${sentimentClass}`}>{s.sentiment}</span>
                   </div>
@@ -1151,12 +1154,21 @@ function TrendingList({
                   </div>
 
                   <div className="ai-col-news">
-                    <span
-                      className="news-count"
-                      title={`Mentioned in ${s.newsCount ?? "—"} news articles over the past month`}
-                    >
-                      {s.newsCount ?? "—"}
-                    </span>
+                    {s.newsCount ? (
+                      <button
+                        type="button"
+                        className="news-count news-count-btn"
+                        title={`Referenced across ${s.newsCount} news article${s.newsCount === 1 ? "" : "s"} — click to see the channels`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNewsPopoverStock(s);
+                        }}
+                      >
+                        {s.newsCount}
+                      </button>
+                    ) : (
+                      <span className="news-count">—</span>
+                    )}
                   </div>
 
                   <div className="ai-col-notes">
@@ -1217,6 +1229,177 @@ function TrendingList({
           </div>
         )}
       </div>
+
+      {newsPopoverStock && (
+        <NewsSourcesPopover
+          stock={newsPopoverStock}
+          onClose={() => setNewsPopoverStock(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* Popover listing the news channels that referenced a trending stock, grouped
+   by outlet with per-outlet mention counts — opened by clicking the News count
+   in the trending table. */
+function NewsSourcesPopover({
+  stock,
+  onClose,
+}: {
+  stock: any;
+  onClose: () => void;
+}) {
+  const mentions: { title: string; source: string }[] = Array.isArray(stock.newsMentions)
+    ? stock.newsMentions
+    : [];
+
+  // Group headlines by publishing channel, preserving first-seen order and
+  // counting how many articles each channel contributed.
+  const groups = useMemo(() => {
+    const map = new Map<string, { source: string; titles: string[] }>();
+    for (const m of mentions) {
+      const name = (m.source || "").trim() || "Other sources";
+      const key = name.toLowerCase();
+      if (!map.has(key)) map.set(key, { source: name, titles: [] });
+      if (m.title) map.get(key)!.titles.push(m.title);
+    }
+    return [...map.values()].sort((a, b) => b.titles.length - a.titles.length);
+  }, [mentions]);
+
+  const count = stock.newsCount ?? mentions.length;
+
+  return (
+    <>
+      <div className="drawer-backdrop" style={{ zIndex: 200 }} onClick={onClose} />
+      <div className="news-sources-popover" role="dialog" aria-modal="true">
+        <div className="nsp-header">
+          <div>
+            <h3 className="nsp-title">{stock.name || stock.symbol}</h3>
+            <p className="nsp-subtitle">
+              Referenced across {count} article{count === 1 ? "" : "s"}
+              {groups.length > 0 && ` from ${groups.length} channel${groups.length === 1 ? "" : "s"}`}
+            </p>
+          </div>
+          <button className="nsp-close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+
+        <div className="nsp-body">
+          {groups.length === 0 ? (
+            <p className="nsp-empty">
+              Source-level detail isn&apos;t available for this pick.
+            </p>
+          ) : (
+            groups.map((g) => (
+              <div key={g.source} className="nsp-group">
+                <div className="nsp-group-head">
+                  <span className="nsp-channel">{g.source}</span>
+                  <span className="nsp-badge">{g.titles.length}</span>
+                </div>
+                {g.titles.length > 0 && (
+                  <ul className="nsp-titles">
+                    {g.titles.map((t, i) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* Top Headlines — the most cross-covered financial stories of the last 2 days,
+   ranked by how many distinct news channels ran each story. */
+function HeadlinesList({
+  stories,
+  loading,
+}: {
+  stories: any[];
+  loading: boolean;
+}) {
+  const sentClass = (s?: string) =>
+    s === "bullish" ? "sent-bullish" : s === "bearish" ? "sent-bearish" : "sent-neutral";
+
+  if (loading) {
+    return (
+      <div
+        className="panel empty"
+        style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
+      >
+        <span className="inline-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
+        <p style={{ marginTop: "16px", color: "var(--muted)" }}>
+          Clustering the most-covered stories across news channels…
+        </p>
+      </div>
+    );
+  }
+
+  if (stories.length === 0) {
+    return (
+      <div className="panel empty">
+        <div className="ico">
+          <Icon name="newspaper" />
+        </div>
+        <p>No headlines found in the last 2 days.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel headlines-panel">
+      {stories.map((s, i) => (
+        <article key={`${s.headline}-${i}`} className="hl-card">
+          <div className="hl-rank">{i + 1}</div>
+          <div className="hl-body">
+            <div className="hl-top">
+              {s.category && <span className="hl-category">{s.category}</span>}
+              {s.sentiment && (
+                <span className={`sent-badge ${sentClass(s.sentiment)}`}>{s.sentiment}</span>
+              )}
+              <span
+                className="hl-coverage"
+                title={`Covered by ${s.channelCount} ${
+                  s.channelCount === 1 ? "channel" : "channels"
+                }`}
+              >
+                <Icon name="newspaper" />
+                {s.channelCount} {s.channelCount === 1 ? "channel" : "channels"}
+              </span>
+            </div>
+
+            {s.url ? (
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hl-headline hl-headline-link"
+              >
+                {s.headline}
+              </a>
+            ) : (
+              <h3 className="hl-headline">{s.headline}</h3>
+            )}
+
+            {s.summary && <p className="hl-summary">{s.summary}</p>}
+
+            {Array.isArray(s.channels) && s.channels.length > 0 && (
+              <div className="hl-channels">
+                {s.channels.map((c: string, k: number) => (
+                  <span key={k} className="hl-chip">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
@@ -1856,7 +2039,8 @@ export default function Dashboard({
     const sm = window.localStorage.getItem(MARKET_STORE_KEY);
     if (sm === "US" || sm === "IN") setMarket(sm);
     const sv = window.localStorage.getItem(VIEW_STORE_KEY);
-    if (sv === "watchlist" || sv === "ai") setView(sv);
+    if (sv === "watchlist" || sv === "ai" || sv === "trending" || sv === "headlines")
+      setView(sv);
     try {
       const f = JSON.parse(window.localStorage.getItem(FAV_STORE_KEY) || "[]");
       if (Array.isArray(f)) setFavorites(new Set(f));
@@ -2002,6 +2186,41 @@ export default function Dashboard({
     });
   }, [trendingRaw, trendingQuotes]);
 
+  // States & hooks for Top Headlines (most cross-covered stories, last 2 days)
+  const [headlines, setHeadlines] = useState<any[]>([]);
+  const [headlinesLoading, setHeadlinesLoading] = useState(false);
+  const [headlinesRefreshing, setHeadlinesRefreshing] = useState(false);
+  const [headlinesUpdatedAt, setHeadlinesUpdatedAt] = useState<string | null>(null);
+
+  const loadHeadlines = useCallback(
+    (force = false) => {
+      const ctrl = new AbortController();
+      if (force) setHeadlinesRefreshing(true);
+      else setHeadlinesLoading(true);
+      fetch(`/api/headlines?market=${market}${force ? "&refresh=1" : ""}`, {
+        signal: ctrl.signal,
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          setHeadlines(data.stories || []);
+          setHeadlinesUpdatedAt(data.updatedAt || null);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setHeadlinesLoading(false);
+          setHeadlinesRefreshing(false);
+        });
+      return () => ctrl.abort();
+    },
+    [market]
+  );
+
+  useEffect(() => {
+    if (view !== "headlines") return;
+    const abort = loadHeadlines(false);
+    return abort;
+  }, [view, market, loadHeadlines]);
+
   function handleAddTrendingStock(symbol: string, name: string) {
     let targetListId = currentListId;
     let listName = "";
@@ -2101,7 +2320,7 @@ export default function Dashboard({
               }`}
               onClick={() => {
                 selectMarket(m.id);
-                if (view !== "trending") {
+                if (view !== "trending" && view !== "headlines") {
                   selectView("watchlist");
                 }
                 setSidebarOpen(false);
@@ -2239,7 +2458,7 @@ export default function Dashboard({
         )}
 
         {/* Search card */}
-        {view !== "ai" && view !== "trending" && (
+        {view !== "ai" && view !== "trending" && view !== "headlines" && (
           <div className="panel search-panel">
             <form
               ref={addFormRef}
@@ -2433,6 +2652,84 @@ export default function Dashboard({
             );
           })()}
 
+        {view === "headlines" &&
+          (() => {
+            const totalChannels = new Set(
+              headlines.flatMap((s) => s.channels || [])
+            ).size;
+            const topCoverage = headlines.length
+              ? Math.max(...headlines.map((s) => s.channelCount || 0))
+              : 0;
+            return (
+              <section className="ai-hero">
+                <div className="ai-hero-left">
+                  <div className="ai-hero-badge">
+                    <Icon name="newspaper" />
+                  </div>
+                  <div className="ai-hero-txt">
+                    <h2>Top Headlines</h2>
+                    <p>
+                      The most widely-covered financial stories across news
+                      channels over the last 2 days.
+                    </p>
+                    <div className="trending-meta">
+                      <span className="trending-updated">
+                        Updated {formatRelativeTime(headlinesUpdatedAt)}
+                      </span>
+                      <button
+                        type="button"
+                        className="trending-refresh"
+                        onClick={() => loadHeadlines(true)}
+                        disabled={headlinesRefreshing || headlinesLoading}
+                        aria-label="Refresh headlines"
+                      >
+                        <Icon
+                          name="refresh"
+                          className={headlinesRefreshing ? "spin" : undefined}
+                        />
+                        <span>{headlinesRefreshing ? "Refreshing…" : "Refresh"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="ai-hero-stats">
+                  <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                    {MARKETS.map((m) => (
+                      <button
+                        key={m.id}
+                        role="tab"
+                        aria-selected={market === m.id}
+                        className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                          market === m.id ? "active" : ""
+                        }`}
+                        onClick={() => selectMarket(m.id)}
+                      >
+                        <span className="flag" aria-hidden>
+                          {m.flag}
+                        </span>
+                        <span className="seg-code">{m.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ai-stat">
+                    <span className="ai-stat-val">{headlines.length}</span>
+                    <span className="ai-stat-lbl">
+                      {headlines.length === 1 ? "Story" : "Stories"}
+                    </span>
+                  </div>
+                  <div className="ai-stat">
+                    <span className="ai-stat-val">{totalChannels || "—"}</span>
+                    <span className="ai-stat-lbl">Channels</span>
+                  </div>
+                  <div className="ai-stat">
+                    <span className="ai-stat-val">{topCoverage || "—"}</span>
+                    <span className="ai-stat-lbl">Top coverage</span>
+                  </div>
+                </div>
+              </section>
+            );
+          })()}
+
         {view === "trending" ? (
           <TrendingList
             stocks={trendingStocks}
@@ -2442,6 +2739,8 @@ export default function Dashboard({
             onSelectStock={setSelectedStock}
             activeWatchlistItems={items}
           />
+        ) : view === "headlines" ? (
+          <HeadlinesList stories={headlines} loading={headlinesLoading} />
         ) : view === "watchlist" && currentListId == null ? (
           <div className="panel empty">
             <div className="ico">🗂️</div>
