@@ -10,6 +10,8 @@ interface TrendingStock {
   sentiment: "bullish" | "bearish" | "neutral";
   rationale: string;
   source?: string;
+  // How many distinct articles in the last-month sample mentioned this company.
+  newsCount?: number;
 }
 
 interface Headline {
@@ -20,6 +22,9 @@ interface Headline {
 // Cached results are considered fresh for 24h; after that the next request
 // recomputes (a manual refresh via ?refresh=1 bypasses this immediately).
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// How far back to look for trending coverage (Google News `when:` window).
+const NEWS_WINDOW = "when:30d";
 
 // Business-news domains aggregated per market (Google News `site:` filters).
 const US_SOURCES = [
@@ -34,17 +39,23 @@ const US_SOURCES = [
   "fool.com",
   "businessinsider.com",
 ];
+// India: the financial TV channels / market-commentary desks the user tracks,
+// mapped to the domains where they publish indexable articles. (X/Twitter and
+// YouTube-only channels are pulled via the separate social query below.)
 const IN_SOURCES = [
-  "economictimes.indiatimes.com",
+  "cnbctv18.com", // CNBC-TV18, CNBC Awaaz, CNBC Bajar
+  "etnownews.com", // ET NOW
+  "ndtvprofit.com", // NDTV Profit (formerly BQ Prime)
+  "bqprime.com", // BQ Prime / BloombergQuint
+  "businesstoday.in", // Business Today TV
+  "zeebiz.com", // Zee Business
   "moneycontrol.com",
+  "economictimes.indiatimes.com",
   "livemint.com",
   "business-standard.com",
   "financialexpress.com",
-  "cnbctv18.com",
-  "thehindubusinessline.com",
-  "ndtvprofit.com",
-  "zeebiz.com",
-  "bseindia.com",
+  "groww.in", // Groww (digital)
+  "zerodha.com", // Zerodha / Varsity
 ];
 
 const MOCK_US_STOCKS: TrendingStock[] = [
@@ -73,7 +84,12 @@ const MOCK_IN_STOCKS: TrendingStock[] = [
   { symbol: "BHARTIARTL.NS", name: "Bharti Airtel", sentiment: "bullish", rationale: "Rides on recent mobile tariff revisions and rising 5G adoption in rural sectors.", source: "Business Standard" },
 ];
 
-const mockFor = (market: Market) => (market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS);
+const mockFor = (market: Market): TrendingStock[] =>
+  (market === "IN" ? MOCK_IN_STOCKS : MOCK_US_STOCKS).map((s, i) => ({
+    ...s,
+    // Plausible descending mention counts for the placeholder list.
+    newsCount: s.newsCount ?? 12 - i,
+  }));
 
 /* ---------- DB cache (best-effort; degrades gracefully) ---------- */
 
@@ -155,23 +171,40 @@ function parseItems(xml: string): Headline[] {
   return items;
 }
 
-// Aggregate the last two weeks of headlines from 8–10 outlets. We run a few
-// parallel Google News queries (a broad market query plus site-filtered
-// groups) and merge + dedupe the results for wider coverage.
+// Aggregate the last month of headlines from the tracked outlets. We fan out
+// several Google News queries in parallel — a "movers" query that surfaces
+// genuinely trending names (not just index heavyweights), site-filtered groups
+// for each outlet, and a best-effort social (X/Twitter) query — then merge and
+// dedupe for the widest possible coverage.
 async function fetchHeadlines(market: Market): Promise<Headline[]> {
   const sources = market === "IN" ? IN_SOURCES : US_SOURCES;
   const locale = market === "IN" ? "hl=en-IN&gl=IN&ceid=IN:en" : "hl=en-US&gl=US&ceid=US:en";
+
+  // Bias toward stocks that are actually moving/being talked about.
+  const movers =
+    market === "IN"
+      ? `(Nifty OR Sensex OR "share price" OR stock) (surges OR jumps OR rallies OR plunges OR crashes OR buzzing OR multibagger OR "52-week high" OR "hits record" OR results OR upgrade OR downgrade) ${NEWS_WINDOW}`
+      : `(stocks OR shares OR Nasdaq) (surges OR jumps OR rallies OR plunges OR "52-week high" OR earnings OR guidance OR upgrade OR downgrade) ${NEWS_WINDOW}`;
   const general =
     market === "IN"
-      ? "(Indian stock market OR Sensex OR Nifty OR NSE earnings) when:14d"
-      : "(US stock market OR Wall Street OR earnings OR shares) when:14d";
+      ? `(Indian stock market OR Sensex OR Nifty OR NSE) ${NEWS_WINDOW}`
+      : `(US stock market OR Wall Street OR earnings) ${NEWS_WINDOW}`;
+  // X/Twitter is not well indexed by Google News; this is best-effort and may
+  // return little without a dedicated X API.
+  const social =
+    market === "IN"
+      ? `(Nifty OR Sensex OR stock OR shares) (site:x.com OR site:twitter.com) ${NEWS_WINDOW}`
+      : `(stocks OR shares OR earnings) (site:x.com OR site:twitter.com) ${NEWS_WINDOW}`;
 
-  const half = Math.ceil(sources.length / 2);
-  const siteQueries = [sources.slice(0, half), sources.slice(half)].map(
-    (group) => `(${group.map((s) => `site:${s}`).join(" OR ")}) when:14d`
-  );
+  // Small site: OR groups return more reliably than one long OR chain.
+  const CHUNK = 4;
+  const siteQueries: string[] = [];
+  for (let i = 0; i < sources.length; i += CHUNK) {
+    const group = sources.slice(i, i + CHUNK);
+    siteQueries.push(`(${group.map((s) => `site:${s}`).join(" OR ")}) ${NEWS_WINDOW}`);
+  }
 
-  const queries = [general, ...siteQueries];
+  const queries = [movers, general, social, ...siteQueries];
   const urls = queries.map(
     (q) => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&${locale}`
   );
@@ -197,10 +230,53 @@ async function fetchHeadlines(market: Market): Promise<Headline[]> {
       if (seen.has(key)) continue;
       seen.add(key);
       headlines.push(h);
-      if (headlines.length >= 40) return headlines;
+      if (headlines.length >= 70) return headlines;
     }
   }
   return headlines;
+}
+
+// Corporate suffixes / filler words that shouldn't drive name matching.
+const NAME_STOPWORDS = new Set([
+  "limited", "ltd", "inc", "incorporated", "corporation", "corp", "company",
+  "co", "plc", "the", "group", "holdings", "industries", "enterprises",
+  "and", "of", "india", "technologies", "systems", "motors", "bank",
+  "finance", "financial", "services", "power", "steel", "cement", "pharma",
+  "pharmaceuticals", "labs", "laboratories", "&",
+]);
+
+// Count how many distinct sampled articles mention a company. We match on the
+// ticker base (e.g. HCLTECH) and on the distinctive words of the company name,
+// so "HCL Technologies Ltd" is still found in "HCL Tech jumps 7%".
+function countMentions(stock: TrendingStock, headlines: Headline[]): number {
+  const needles = new Set<string>();
+
+  const base = stock.symbol.replace(/\.(NS|BO)$/i, "").toLowerCase();
+  if (base.length >= 2) needles.add(base);
+
+  const words = stock.name
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !NAME_STOPWORDS.has(w));
+  // The first 1–2 distinctive words identify the company in a headline.
+  const core = words.slice(0, 2).join(" ");
+  if (core) needles.add(core);
+  if (words[0] && words[0].length >= 4) needles.add(words[0]);
+
+  let count = 0;
+  for (const h of headlines) {
+    const t = h.title.toLowerCase();
+    for (const n of needles) {
+      if (t.includes(n)) {
+        count++;
+        break;
+      }
+    }
+  }
+  // The stock was, by construction, drawn from this coverage, so floor at 1.
+  return Math.max(1, count);
 }
 
 /* ---------- AI extraction ---------- */
@@ -221,24 +297,29 @@ async function computeTrending(
   const headlines = await fetchHeadlines(market);
   if (headlines.length === 0) return null;
 
-  const prompt = `You are a financial analyst reviewing the last TWO WEEKS of business-news headlines aggregated from 8-10 major outlets for the market: ${
+  const prompt = `You are a financial analyst reviewing the LAST 30 DAYS (one month) of business-news headlines aggregated from 10+ financial outlets, TV channels and market-commentary desks for the market: ${
     market === "US" ? "United States (US)" : "India (IN)"
   }.
 
-From the headlines below (each tagged with the outlet that published it), identify the 10 publicly traded companies that are currently the most discussed or most materially impacted. Weigh companies that recur across multiple headlines/outlets more heavily.
+From the headlines below (each tagged with the outlet that published it), identify the 10 publicly traded companies that are genuinely TRENDING right now — i.e. the ones seeing the most coverage, the biggest price moves, or the most investor buzz over the past month.
 
+Ranking rules:
+- Weigh companies that RECUR across multiple headlines and multiple different outlets far more heavily than one-off mentions.
+- Favour stocks with clear momentum or a specific catalyst (earnings, big moves, upgrades/downgrades, deals, news) over generic index heavyweights that appear only in market-wide roundups.
+- It's good to include prominent mid-caps or newly-listed names if the coverage genuinely features them — don't just return the largest companies by default.
+${market === "IN" ? "- This is the INDIAN market: return Indian-listed companies, NOT US mega-caps.\n" : ""}
 For each company provide:
 1. The stock ticker — it MUST be a valid Yahoo Finance symbol.
-   - India (IN): symbol MUST end in .NS (e.g. RELIANCE.NS, TATAMOTORS.NS). Use .BO only if BSE-only.
+   - India (IN): symbol MUST end in .NS (e.g. RELIANCE.NS, TATAMOTORS.NS, ZOMATO.NS). Use .BO only if BSE-only.
    - US: standard symbols (e.g. NVDA, TSLA, AAPL).
 2. The official or short company name.
 3. Sentiment from the coverage: 'bullish', 'bearish', or 'neutral'.
-4. A concise 1-sentence rationale for why it's in the news.
+4. A concise 1-sentence rationale grounded in the actual headlines for why it's trending.
 5. "source": the outlet that published the single most relevant headline for this company. Use EXACTLY one of the outlet names shown in the "source" fields below — do not invent a source. If unsure, use the source of the headline your rationale is based on.
 
 Only include real, currently listed companies you can confidently map to a ticker. Return exactly up to 10, most prominent first.
 
-Headlines (last 14 days):
+Headlines (last 30 days):
 ${JSON.stringify(headlines, null, 2)}
 
 Respond ONLY with JSON:
@@ -279,7 +360,7 @@ Respond ONLY with JSON:
   );
   const stocks: TrendingStock[] = parsed.stocks.slice(0, 10).map((s: TrendingStock) => {
     const canonical = s.source ? validSources.get(s.source.trim().toLowerCase()) : undefined;
-    return { ...s, source: canonical };
+    return { ...s, source: canonical, newsCount: countMentions(s, headlines) };
   });
   return { stocks, mock: false };
 }

@@ -947,7 +947,9 @@ function TrendingList({
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
+  const [sortField, setSortField] = useState<
+    "price" | "change" | "change3m" | "news" | null
+  >(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -969,7 +971,7 @@ function TrendingList({
     };
   }, [stocks, currentPage, showAll]);
 
-  const handleSort = (field: "price" | "change" | "change3m") => {
+  const handleSort = (field: "price" | "change" | "change3m" | "news") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -985,7 +987,14 @@ function TrendingList({
   const sortedStocks = useMemo(() => {
     if (!sortField) return stocks;
     return [...stocks].sort((a, b) => {
-      const key = sortField === "change" ? "changePct" : sortField === "change3m" ? "change3mPct" : "price";
+      const key =
+        sortField === "change"
+          ? "changePct"
+          : sortField === "change3m"
+            ? "change3mPct"
+            : sortField === "news"
+              ? "newsCount"
+              : "price";
       const valA = a[key] != null ? a[key] : -Infinity;
       const valB = b[key] != null ? b[key] : -Infinity;
       if (valA === valB) return 0;
@@ -1064,6 +1073,14 @@ function TrendingList({
                   )}
                 </span>
               </div>
+              <div className="ai-col-news">
+                <span className="sortable-header" onClick={() => handleSort("news")}>
+                  News
+                  {sortField === "news" && (
+                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
+              </div>
               <div className="ai-col-notes">Why in News</div>
             </div>
 
@@ -1131,6 +1148,15 @@ function TrendingList({
                         {s.change3mPct.toFixed(2)}%
                       </span>
                     )}
+                  </div>
+
+                  <div className="ai-col-news">
+                    <span
+                      className="news-count"
+                      title={`Mentioned in ${s.newsCount ?? "—"} news articles over the past month`}
+                    >
+                      {s.newsCount ?? "—"}
+                    </span>
                   </div>
 
                   <div className="ai-col-notes">
@@ -2336,8 +2362,8 @@ export default function Dashboard({
                   <div className="ai-hero-txt">
                     <h2>Trending Stocks</h2>
                     <p>
-                      Companies most discussed across major business outlets over
-                      the past two weeks.
+                      Most-discussed stocks across financial news channels and
+                      commentary over the past month.
                     </p>
                     <div className="trending-meta">
                       <span className="trending-updated">
