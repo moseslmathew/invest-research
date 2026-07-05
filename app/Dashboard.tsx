@@ -2584,8 +2584,8 @@ export default function Dashboard({
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "36px", width: "auto" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "36px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
           </div>
         </div>
 
