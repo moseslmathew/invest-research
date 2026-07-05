@@ -1352,38 +1352,59 @@ function HeadlinesList({
   }
 
   return (
-    <div className="panel headlines-panel">
-      {stories.map((s, i) => (
-        <article key={`${s.headline}-${i}`} className="hl-card">
-          <div className="hl-rank">{i + 1}</div>
-          <div className="hl-body">
-            {s.url ? (
-              <a
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hl-headline hl-headline-link"
-              >
-                {s.headline}
-              </a>
-            ) : (
-              <h3 className="hl-headline">{s.headline}</h3>
-            )}
-
-            {s.summary && <p className="hl-summary">{s.summary}</p>}
-
-            {Array.isArray(s.channels) && s.channels.length > 0 && (
-              <div className="hl-channels">
-                {s.channels.map((c: string, k: number) => (
-                  <span key={k} className="hl-chip">
-                    {c}
-                  </span>
-                ))}
-              </div>
-            )}
+    <div className="panel table-panel ai-table-panel">
+      <div className="ai-list-scroll">
+        <div className="ai-list">
+          <div className="ai-row ai-header-row hl-row">
+            <div className="ai-col-index">#</div>
+            <div className="ai-col-sentiment">Sentiment</div>
+            <div className="hl-col-story">Story</div>
+            <div className="hl-col-channels">Coverage</div>
           </div>
-        </article>
-      ))}
+          {stories.map((s, i) => (
+            <article key={`${s.headline}-${i}`} className="ai-row hl-row">
+              <div className="ai-col-index">{i + 1}</div>
+              <div className="ai-col-sentiment">
+                <span className={`sent-badge ${sentClass(s.sentiment)}`}>
+                  {s.sentiment || "neutral"}
+                </span>
+              </div>
+              <div className="hl-col-story">
+                <div className="hl-story-top">
+                  {s.url ? (
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hl-headline hl-headline-link"
+                    >
+                      {s.headline}
+                    </a>
+                  ) : (
+                    <h3 className="hl-headline">{s.headline}</h3>
+                  )}
+                  {s.category && (
+                    <span className="hl-category">{s.category}</span>
+                  )}
+                </div>
+                {s.summary && <p className="hl-summary">{s.summary}</p>}
+              </div>
+              <div className="hl-col-channels">
+                {Array.isArray(s.channels) && s.channels.length > 0 && (
+                  <>
+                    <span className="news-count">{s.channels.length}</span>
+                    {s.channels.map((c: string, k: number) => (
+                      <span key={k} className="hl-chip">
+                        {c}
+                      </span>
+                    ))}
+                  </>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -2549,48 +2570,17 @@ export default function Dashboard({
             );
           })()}
 
-        {view === "trending" &&
-          (() => {
-            const priced = trendingStocks.filter((s) => s.price != null);
-            const gainers = priced.filter((s) => s.change >= 0).length;
-            const avgMove = priced.length
-              ? priced.reduce((sum, s) => sum + s.changePct, 0) / priced.length
-              : null;
-            return (
-              <div className="hl-header-compact">
-                <div className="hl-header-left">
-                  <h2>
-                    <Icon name="trending" className="hl-header-icon" /> Trending Stocks
-                  </h2>
-                  <span className="hl-header-sub">
-                    Most-discussed stocks · past month
-                  </span>
-                </div>
-                <div className="hl-header-actions">
-                  <div className="hl-mini-stats">
-                    <span className="hl-mini-stat">
-                      <b>{trendingStocks.length}</b>{" "}
-                      {trendingStocks.length === 1 ? "stock" : "stocks"}
-                    </span>
-                    <span className="hl-mini-stat">
-                      <b className={priced.length ? "up" : ""}>
-                        {priced.length ? gainers : "—"}
-                      </b>{" "}
-                      up
-                    </span>
-                    <span className="hl-mini-stat">
-                      <b
-                        className={
-                          avgMove == null ? "" : avgMove >= 0 ? "up" : "down"
-                        }
-                      >
-                        {avgMove == null
-                          ? "—"
-                          : `${avgMove >= 0 ? "+" : ""}${avgMove.toFixed(2)}%`}
-                      </b>{" "}
-                      avg
-                    </span>
-                  </div>
+        {view === "trending" && (
+          <div className="hl-header-compact">
+            <div className="hl-header-left">
+              <h2>
+                <Icon name="trending" className="hl-header-icon" /> Trending Stocks
+              </h2>
+              <span className="hl-header-sub">
+                Most-discussed stocks · past month
+              </span>
+            </div>
+            <div className="hl-header-actions">
                   <div className="hero-market-seg seg" role="tablist" aria-label="Market">
                     {MARKETS.map((m) => (
                       <button
@@ -2625,10 +2615,9 @@ export default function Dashboard({
                       className={trendingRefreshing ? "spin" : undefined}
                     />
                   </button>
-                </div>
-              </div>
-            );
-          })()}
+            </div>
+          </div>
+        )}
 
         {view === "headlines" && (
           <div className="hl-header-compact">
