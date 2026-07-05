@@ -3355,3 +3355,56 @@ th.sortable:hover {
   color: #6b7280;
 }
 
+/* --- Compact Headlines Header --- */
+.hl-header-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 6px 0 20px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.hl-header-left {
+  flex: 1;
+  min-width: 280px;
+}
+.hl-header-left h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hl-header-icon {
+  color: var(--accent);
+  width: 24px;
+  height: 24px;
+}
+.hl-header-left p {
+  font-size: 13.5px;
+  color: var(--text-2);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.hl-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+@media (max-width: 768px) {
+  .hl-header-compact {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .hl-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+

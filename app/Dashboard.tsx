@@ -2652,83 +2652,56 @@ export default function Dashboard({
             );
           })()}
 
-        {view === "headlines" &&
-          (() => {
-            const totalChannels = new Set(
-              headlines.flatMap((s) => s.channels || [])
-            ).size;
-            const topCoverage = headlines.length
-              ? Math.max(...headlines.map((s) => s.channelCount || 0))
-              : 0;
-            return (
-              <section className="ai-hero">
-                <div className="ai-hero-left">
-                  <div className="ai-hero-badge">
-                    <Icon name="newspaper" />
-                  </div>
-                  <div className="ai-hero-txt">
-                    <h2>Top Headlines</h2>
-                    <p>
-                      The most widely-covered financial stories across news
-                      channels over the last 2 days.
-                    </p>
-                    <div className="trending-meta">
-                      <span className="trending-updated">
-                        Updated {formatRelativeTime(headlinesUpdatedAt)}
-                      </span>
-                      <button
-                        type="button"
-                        className="trending-refresh"
-                        onClick={() => loadHeadlines(true)}
-                        disabled={headlinesRefreshing || headlinesLoading}
-                        aria-label="Refresh headlines"
-                      >
-                        <Icon
-                          name="refresh"
-                          className={headlinesRefreshing ? "spin" : undefined}
-                        />
-                        <span>{headlinesRefreshing ? "Refreshing…" : "Refresh"}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="ai-hero-stats">
-                  <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                    {MARKETS.map((m) => (
-                      <button
-                        key={m.id}
-                        role="tab"
-                        aria-selected={market === m.id}
-                        className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                          market === m.id ? "active" : ""
-                        }`}
-                        onClick={() => selectMarket(m.id)}
-                      >
-                        <span className="flag" aria-hidden>
-                          {m.flag}
-                        </span>
-                        <span className="seg-code">{m.code}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="ai-stat">
-                    <span className="ai-stat-val">{headlines.length}</span>
-                    <span className="ai-stat-lbl">
-                      {headlines.length === 1 ? "Story" : "Stories"}
+        {view === "headlines" && (
+          <div className="hl-header-compact">
+            <div className="hl-header-left">
+              <h2>
+                <Icon name="newspaper" className="hl-header-icon" /> Top Headlines
+              </h2>
+              <p>
+                The most widely-covered financial stories across news channels over the last 2 days.
+              </p>
+            </div>
+            <div className="hl-header-actions">
+              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                {MARKETS.map((m) => (
+                  <button
+                    key={m.id}
+                    role="tab"
+                    aria-selected={market === m.id}
+                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                      market === m.id ? "active" : ""
+                    }`}
+                    onClick={() => selectMarket(m.id)}
+                  >
+                    <span className="flag" aria-hidden>
+                      {m.flag}
                     </span>
-                  </div>
-                  <div className="ai-stat">
-                    <span className="ai-stat-val">{totalChannels || "—"}</span>
-                    <span className="ai-stat-lbl">Channels</span>
-                  </div>
-                  <div className="ai-stat">
-                    <span className="ai-stat-val">{topCoverage || "—"}</span>
-                    <span className="ai-stat-lbl">Top coverage</span>
-                  </div>
-                </div>
-              </section>
-            );
-          })()}
+                    <span className="seg-code">{m.code}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="trending-meta" style={{ marginTop: 0 }}>
+                <span className="trending-updated">
+                  Updated {formatRelativeTime(headlinesUpdatedAt)}
+                </span>
+                <button
+                  type="button"
+                  className="trending-refresh"
+                  onClick={() => loadHeadlines(true)}
+                  disabled={headlinesRefreshing || headlinesLoading}
+                  aria-label="Refresh headlines"
+                >
+                  <Icon
+                    name="refresh"
+                    className={headlinesRefreshing ? "spin" : undefined}
+                  />
+                  <span>{headlinesRefreshing ? "Refreshing…" : "Refresh"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {view === "trending" ? (
           <TrendingList
