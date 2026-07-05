@@ -1357,18 +1357,13 @@ function HeadlinesList({
         <div className="ai-list">
           <div className="ai-row ai-header-row hl-row">
             <div className="ai-col-index">#</div>
-            <div className="ai-col-sentiment">Sentiment</div>
             <div className="hl-col-story">Story</div>
+            <div className="ai-col-sentiment">Sentiment</div>
             <div className="hl-col-channels">Coverage</div>
           </div>
           {stories.map((s, i) => (
             <article key={`${s.headline}-${i}`} className="ai-row hl-row">
               <div className="ai-col-index">{i + 1}</div>
-              <div className="ai-col-sentiment">
-                <span className={`sent-badge ${sentClass(s.sentiment)}`}>
-                  {s.sentiment || "neutral"}
-                </span>
-              </div>
               <div className="hl-col-story">
                 <div className="hl-story-top">
                   {s.url ? (
@@ -1389,17 +1384,19 @@ function HeadlinesList({
                 </div>
                 {s.summary && <p className="hl-summary">{s.summary}</p>}
               </div>
+              <div className="ai-col-sentiment">
+                <span className={`sent-badge ${sentClass(s.sentiment)}`}>
+                  {s.sentiment || "neutral"}
+                </span>
+              </div>
               <div className="hl-col-channels">
-                {Array.isArray(s.channels) && s.channels.length > 0 && (
-                  <>
-                    <span className="news-count">{s.channels.length}</span>
-                    {s.channels.map((c: string, k: number) => (
-                      <span key={k} className="hl-chip">
-                        {c}
-                      </span>
-                    ))}
-                  </>
-                )}
+                {Array.isArray(s.channels) &&
+                  s.channels.length > 0 &&
+                  s.channels.map((c: string, k: number) => (
+                    <span key={k} className="hl-chip">
+                      {c}
+                    </span>
+                  ))}
               </div>
             </article>
           ))}
