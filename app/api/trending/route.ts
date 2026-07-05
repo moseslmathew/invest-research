@@ -64,19 +64,24 @@ const US_SOURCES = [
 // mapped to the domains where they publish indexable articles. (X/Twitter and
 // YouTube-only channels are pulled via the separate social query below.)
 const IN_SOURCES = [
-  "cnbctv18.com", // CNBC-TV18, CNBC Awaaz, CNBC Bajar
-  "etnownews.com", // ET NOW
-  "ndtvprofit.com", // NDTV Profit (formerly BQ Prime)
-  "bqprime.com", // BQ Prime / BloombergQuint
-  "businesstoday.in", // Business Today TV
-  "zeebiz.com", // Zee Business
-  "moneycontrol.com",
-  "economictimes.indiatimes.com",
-  "livemint.com",
+  "thehindubusinessline.com",
   "business-standard.com",
+  "livemint.com",
+  "the-ken.com",
+  "economictimes.indiatimes.com",
   "financialexpress.com",
-  "groww.in", // Groww (digital)
-  "zerodha.com", // Zerodha / Varsity
+  "themorningcontext.com",
+  "finshots.in",
+  "moneycontrol.com",
+  "fortuneindia.com",
+  "cnbctv18.com",
+  "etnownews.com",
+  "ndtvprofit.com",
+  "bqprime.com",
+  "businesstoday.in",
+  "zeebiz.com",
+  "groww.in",
+  "zerodha.com",
 ];
 
 const MOCK_US_STOCKS: TrendingStock[] = [
