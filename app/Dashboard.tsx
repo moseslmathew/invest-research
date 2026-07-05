@@ -2682,17 +2682,14 @@ export default function Dashboard({
                   disabled={quotesLoading}
                   aria-label="Refresh watchlist quotes"
                   title={quotesLoading ? "Refreshing…" : "Refresh"}
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                 >
-                  <Icon
-                    name="refresh"
-                    className={quotesLoading ? "spin" : undefined}
-                  />
+                  {quotesLoading ? (
+                    <PrismWaitIcon size={18} duration="1.6s" />
+                  ) : (
+                    <Icon name="refresh" />
+                  )}
                 </button>
-                {quotesLoading && (
-                  <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                    <PrismWaitIcon size={20} duration="1.6s" />
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -2848,17 +2845,14 @@ export default function Dashboard({
                     disabled={trendingRefreshing || trendingLoading}
                     aria-label="Refresh trending stocks"
                     title={trendingRefreshing ? "Refreshing…" : "Refresh"}
+                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                   >
-                    <Icon
-                      name="refresh"
-                      className={trendingRefreshing ? "spin" : undefined}
-                    />
+                    {trendingRefreshing ? (
+                      <PrismWaitIcon size={18} duration="1.6s" />
+                    ) : (
+                      <Icon name="refresh" />
+                    )}
                   </button>
-                  {trendingRefreshing && (
-                    <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                      <PrismWaitIcon size={20} duration="1.6s" />
-                    </span>
-                  )}
             </div>
           </div>
         )}
@@ -2902,17 +2896,14 @@ export default function Dashboard({
                 disabled={headlinesRefreshing || headlinesLoading}
                 aria-label="Refresh headlines"
                 title={headlinesRefreshing ? "Refreshing…" : "Refresh"}
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
               >
-                <Icon
-                  name="refresh"
-                  className={headlinesRefreshing ? "spin" : undefined}
-                />
+                {headlinesRefreshing ? (
+                  <PrismWaitIcon size={18} duration="1.6s" />
+                ) : (
+                  <Icon name="refresh" />
+                )}
               </button>
-              {headlinesRefreshing && (
-                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                  <PrismWaitIcon size={20} duration="1.6s" />
-                </span>
-              )}
             </div>
           </div>
         )}
