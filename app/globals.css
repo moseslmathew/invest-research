@@ -3613,25 +3613,19 @@ th.sortable:hover {
 }
 
 /* --- Brand Logo Theme Toggle --- */
-.logo img.logo-light {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.logo-light {
+  display: block !important;
 }
-.logo img.logo-dark {
-  display: none;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.logo-dark {
+  display: none !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  .logo img.logo-light {
-    display: none;
+  .logo-light {
+    display: none !important;
   }
-  .logo img.logo-dark {
-    display: block;
+  .logo-dark {
+    display: block !important;
   }
 }
 
