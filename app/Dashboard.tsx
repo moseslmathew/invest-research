@@ -2166,8 +2166,7 @@ export default function Dashboard({
         signal: ctrl.signal,
       })
         .then((r) => r.json())
-        .then(async (data) => {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+        .then((data) => {
           if (ctrl.signal.aborted) return;
           setTrendingRaw(data.stocks || []);
           setTrendingUpdatedAt(data.updatedAt || null);
@@ -2225,8 +2224,7 @@ export default function Dashboard({
         signal: ctrl.signal,
       })
         .then((r) => r.json())
-        .then(async (data) => {
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+        .then((data) => {
           if (ctrl.signal.aborted) return;
           setHeadlines(data.stories || []);
           setHeadlinesUpdatedAt(data.updatedAt || null);
