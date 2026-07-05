@@ -164,16 +164,18 @@ body {
   gap: 12px;
   min-width: 0;
 }
+.logo {
+  overflow: hidden;
+}
+.logo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .side-brand .logo {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #38bdf8);
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 18px;
   box-shadow: 0 4px 12px -3px rgba(99, 102, 241, 0.4);
   flex-shrink: 0;
 }

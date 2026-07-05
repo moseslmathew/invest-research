@@ -2302,7 +2302,7 @@ export default function Dashboard({
       <aside className="sidebar">
         <div className="side-brand-card">
           <div className="side-brand">
-            <div className="logo">L</div>
+            <div className="logo"><Icon name="brandLogo" /></div>
             <div className="side-brand-txt">
               <h1>Lumina</h1>
               <p>Investment Research</p>
@@ -2369,7 +2369,7 @@ export default function Dashboard({
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <div className="logo">L</div>
+            <div className="logo"><Icon name="brandLogo" /></div>
             <div>
               <h1>Lumina</h1>
               <p>Investment Research</p>

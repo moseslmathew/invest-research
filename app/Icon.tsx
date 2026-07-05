@@ -17,6 +17,7 @@ export type IconName =
   | "arrowDown"
   | "bulb"
   | "chartArt"
+  | "brandLogo"
   | "chevronRight"
   | "refresh"
   | "search";
@@ -85,6 +86,58 @@ export function Icon({
         <circle cx="12" cy="5" r="1.7" />
         <circle cx="12" cy="12" r="1.7" />
         <circle cx="12" cy="19" r="1.7" />
+      </svg>
+    );
+  }
+
+  if (name === "brandLogo") {
+    // Lumina brand mark: a gradient tile where a rising "growth" line climbs
+    // into a radiant 4-point spark — investment momentum + light ("lumina").
+    return (
+      <svg
+        viewBox="0 0 40 40"
+        width={40}
+        height={40}
+        fill="none"
+        aria-hidden
+        className={className}
+        {...rest}
+      >
+        <defs>
+          <linearGradient id="lumaTile" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#a78bfa" />
+            <stop offset="0.5" stopColor="#6366f1" />
+            <stop offset="1" stopColor="#22d3ee" />
+          </linearGradient>
+          <radialGradient id="lumaSheen" cx="0.3" cy="0.22" r="0.9">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.4" />
+            <stop offset="0.6" stopColor="#ffffff" stopOpacity="0" />
+          </radialGradient>
+          <filter id="lumaGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="1.4" />
+          </filter>
+        </defs>
+        <rect width="40" height="40" rx="11" fill="url(#lumaTile)" />
+        <rect width="40" height="40" rx="11" fill="url(#lumaSheen)" />
+        <path
+          d="M9 27 L17 21 L22 23.5 L30 14"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeOpacity="0.95"
+        />
+        <path
+          d="M31 4.7 C31 7.8 32.7 9.5 35.8 9.5 C32.7 9.5 31 11.2 31 14.3 C31 11.2 29.3 9.5 26.2 9.5 C29.3 9.5 31 7.8 31 4.7 Z"
+          fill="#ffffff"
+          opacity="0.7"
+          filter="url(#lumaGlow)"
+        />
+        <path
+          d="M31 4.7 C31 7.8 32.7 9.5 35.8 9.5 C32.7 9.5 31 11.2 31 14.3 C31 11.2 29.3 9.5 26.2 9.5 C29.3 9.5 31 7.8 31 4.7 Z"
+          fill="#ffffff"
+        />
       </svg>
     );
   }

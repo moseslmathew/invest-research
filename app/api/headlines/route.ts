@@ -203,8 +203,8 @@ async function fetchRawItems(market: Market): Promise<RawItem[]> {
   // over market news, not general headlines from these outlets.
   const topic =
     market === "IN"
-      ? "(stock OR shares OR market OR Sensex OR Nifty OR NSE OR earnings OR results OR RBI OR IPO)"
-      : "(stock OR shares OR market OR Nasdaq OR earnings OR Fed OR economy OR \"Wall Street\")";
+      ? "(stock OR shares OR market OR Sensex OR Nifty OR NSE OR earnings OR results OR RBI OR IPO OR Technology OR Tech OR IT OR Banking OR Bank OR Defence OR Defense OR Pharma OR Automobile OR Auto OR Infra OR Infrastructure OR Energy OR Power)"
+      : "(stock OR shares OR market OR Nasdaq OR earnings OR Fed OR economy OR \"Wall Street\" OR Technology OR Tech OR Banking OR Bank OR Defence OR Defense OR Pharma OR Biotech OR Automobile OR Auto OR Retail OR Energy)";
 
   // Restrict every query to the tracked top financial outlets (via site:), so
   // the channels we rank coverage across are all reputable financial channels.
