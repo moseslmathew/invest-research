@@ -2311,35 +2311,6 @@ export default function Dashboard({
           <Icon name="chartArt" className="side-brand-art" />
         </div>
 
-        <div className="market-cards" role="tablist" aria-label="Market">
-          {MARKETS.map((m) => (
-            <button
-              key={m.id}
-              role="tab"
-              aria-selected={market === m.id}
-              className={`market-card ${m.id === "US" ? "us" : "in"} ${
-                market === m.id ? "active" : ""
-              }`}
-              onClick={() => {
-                selectMarket(m.id);
-                if (view !== "trending" && view !== "headlines") {
-                  selectView("watchlist");
-                }
-                setSidebarOpen(false);
-              }}
-            >
-              <span className="market-card-ico" aria-hidden>
-                {m.id === "US" ? "$" : "₹"}
-              </span>
-              <span className="market-card-txt">
-                <strong>{m.code}</strong>
-                <span>{m.id === "US" ? "US Markets" : "Indian Markets"}</span>
-              </span>
-              <Icon name="chevronRight" className="market-card-chevron" />
-            </button>
-          ))}
-        </div>
-
         <nav className="side-nav" aria-label="Primary">
           {NAV.map((item) => (
             <button
@@ -2375,29 +2346,40 @@ export default function Dashboard({
               <p>Investment Research</p>
             </div>
           </div>
-
-          {view !== "ai" && (
-            <div className="seg main-top-seg" role="tablist" aria-label="Market">
-              {MARKETS.map((m) => (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={market === m.id}
-                  className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                    market === m.id ? "active" : ""
-                  }`}
-                  onClick={() => selectMarket(m.id)}
-                >
-                  <span className="flag" aria-hidden>
-                    {m.flag}
-                  </span>
-                  <span className="seg-label">{m.label}</span>
-                  <span className="seg-code">{m.code}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+
+        {view === "watchlist" && (
+          <div className="hl-header-compact">
+            <div className="hl-header-left">
+              <h2>
+                <Icon name="bookmark" className="hl-header-icon" /> Watchlists
+              </h2>
+              <span className="hl-header-sub">
+                Track and analyze your assets
+              </span>
+            </div>
+            <div className="hl-header-actions">
+              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                {MARKETS.map((m) => (
+                  <button
+                    key={m.id}
+                    role="tab"
+                    aria-selected={market === m.id}
+                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                      market === m.id ? "active" : ""
+                    }`}
+                    onClick={() => selectMarket(m.id)}
+                  >
+                    <span className="flag" aria-hidden>
+                      {m.flag}
+                    </span>
+                    <span className="seg-code">{m.code}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {view === "watchlist" && (
           <div className="wl-bar">
