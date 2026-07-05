@@ -2673,7 +2673,7 @@ export default function Dashboard({
 
               <div className="wl-status-row">
                 <span className="trending-updated">
-                  updated {formatRelativeTime(quotesUpdatedAt)}
+                  {quotesLoading ? "updating..." : `updated ${formatRelativeTime(quotesUpdatedAt)}`}
                 </span>
                 <button
                   type="button"
@@ -2836,7 +2836,7 @@ export default function Dashboard({
                     ))}
                   </div>
                   <span className="trending-updated">
-                    Updated {formatRelativeTime(trendingUpdatedAt)}
+                    {trendingRefreshing || trendingLoading ? "updating..." : `Updated ${formatRelativeTime(trendingUpdatedAt)}`}
                   </span>
                   <button
                     type="button"
@@ -2887,7 +2887,7 @@ export default function Dashboard({
                 ))}
               </div>
               <span className="trending-updated">
-                Updated {formatRelativeTime(headlinesUpdatedAt)}
+                {headlinesRefreshing || headlinesLoading ? "updating..." : `Updated ${formatRelativeTime(headlinesUpdatedAt)}`}
               </span>
               <button
                 type="button"
