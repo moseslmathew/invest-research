@@ -2367,65 +2367,8 @@ export default function Dashboard({
 
         {view === "watchlist" && (
           <div className="wl-bar">
-            {/* Left side: Tabs & New Watchlist Trigger */}
-            <div className="wl-tabs-left">
-              {personalLists.map((l) => (
-                <span
-                  key={l.id}
-                  className={`wl-tab-wrap ${activeList === l.id ? "active" : ""}`}
-                >
-                  <button
-                    className="wl-tab"
-                    onClick={() => setActiveList(l.id)}
-                    aria-pressed={activeList === l.id}
-                  >
-                    {l.name}
-                    <span className="wl-tab-count">{l.item_count}</span>
-                  </button>
-                  {activeList === l.id && (
-                    <button
-                      type="button"
-                      className="wl-del"
-                      title="Delete this watchlist"
-                      aria-label={`Delete watchlist ${l.name}`}
-                      onClick={() => removeWatchlist(l)}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </span>
-              ))}
-
-              {creating ? (
-                <form action={createAction} className="wl-create">
-                  <input type="hidden" name="market" value={market} />
-                  <input
-                    name="name"
-                    placeholder="Watchlist name…"
-                    autoComplete="off"
-                    autoFocus
-                    maxLength={40}
-                    required
-                  />
-                  <SubmitButton market={market} label="Create" pendingLabel="…" />
-                  <button
-                    type="button"
-                    className="wl-cancel"
-                    onClick={() => setCreating(false)}
-                    aria-label="Cancel"
-                  >
-                    ✕
-                  </button>
-                </form>
-              ) : (
-                <button type="button" className="wl-new-link" onClick={() => setCreating(true)}>
-                  + New watchlist
-                </button>
-              )}
-            </div>
-
-            {/* Right side: Market segments switcher & Relative updated status */}
-            <div className="wl-actions-right">
+            {/* Row 1: Market segments switcher & Relative updated status */}
+            <div className="wl-row-1">
               <div className="hero-market-seg seg" role="tablist" aria-label="Market">
                 {MARKETS.map((m) => (
                   <button
@@ -2466,6 +2409,65 @@ export default function Dashboard({
                   <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
                     <PrismWaitIcon size={20} duration="1.6s" />
                   </span>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Tabs & New Watchlist Trigger */}
+            <div className="wl-row-2">
+              <div className="wl-tabs-left">
+                {personalLists.map((l) => (
+                  <span
+                    key={l.id}
+                    className={`wl-tab-wrap ${activeList === l.id ? "active" : ""}`}
+                  >
+                    <button
+                      className="wl-tab"
+                      onClick={() => setActiveList(l.id)}
+                      aria-pressed={activeList === l.id}
+                    >
+                      {l.name}
+                      <span className="wl-tab-count">{l.item_count}</span>
+                    </button>
+                    {activeList === l.id && (
+                      <button
+                        type="button"
+                        className="wl-del"
+                        title="Delete this watchlist"
+                        aria-label={`Delete watchlist ${l.name}`}
+                        onClick={() => removeWatchlist(l)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+
+                {creating ? (
+                  <form action={createAction} className="wl-create">
+                    <input type="hidden" name="market" value={market} />
+                    <input
+                      name="name"
+                      placeholder="Watchlist name…"
+                      autoComplete="off"
+                      autoFocus
+                      maxLength={40}
+                      required
+                    />
+                    <SubmitButton market={market} label="Create" pendingLabel="…" />
+                    <button
+                      type="button"
+                      className="wl-cancel"
+                      onClick={() => setCreating(false)}
+                      aria-label="Cancel"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                ) : (
+                  <button type="button" className="wl-new-link" onClick={() => setCreating(true)}>
+                    + New watchlist
+                  </button>
                 )}
               </div>
             </div>
