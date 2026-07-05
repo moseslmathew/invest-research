@@ -700,63 +700,97 @@ body {
   box-shadow: 0 6px 16px -8px rgba(15, 23, 42, 0.35);
 }
 
-/* --- Watchlist selector bar --- */
+/* --- Watchlist selector bar: soft tinted card, underline tabs on top,
+   a divider, then a slim live-status row underneath. --- */
 .wl-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-start;
-  margin-bottom: 14px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 12px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 13%, var(--surface-solid)),
+    color-mix(in srgb, var(--accent) 5%, var(--surface-solid))
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
 }
-.wl-chip {
+.wl-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wl-tabs-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.wl-tab-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  color: var(--text);
+  gap: 2px;
+  padding-bottom: 11px;
+}
+.wl-tab-wrap.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.wl-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.wl-tab-wrap.active .wl-tab {
+  color: var(--accent-strong);
+}
+.wl-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-strong);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.wl-tab-wrap.active .wl-tab-count {
+  background: var(--accent);
+  color: #fff;
+}
+.wl-new-link {
+  border: none;
+  background: transparent;
+  color: var(--muted);
   font-size: 14.5px;
   font-weight: 600;
-  padding: 9px 16px;
-  border-radius: 999px;
+  padding: 4px 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease;
 }
-.wl-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-.wl-chip-count {
-  font-size: 12px;
-  font-weight: 700;
-  background: var(--bg);
-  color: var(--muted);
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-}
-.wl-chip.active.us {
-  background: var(--us);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 10px 24px -10px var(--us);
-}
-.wl-chip.active.in {
-  background: var(--in);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 10px 24px -10px var(--in);
-}
-.wl-chip.active .wl-chip-count {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
-  border-color: transparent;
-}
-.wl-chip.new {
-  border-style: dashed;
-  color: var(--muted);
+.wl-new-link:hover {
+  color: var(--accent-strong);
 }
 .wl-create {
   display: inline-flex;
@@ -767,6 +801,24 @@ body {
   border-radius: 999px;
   padding: 5px 6px 5px 14px;
   box-shadow: var(--shadow);
+}
+.wl-divider {
+  height: 1px;
+  background: color-mix(in srgb, var(--accent) 15%, var(--border));
+}
+.wl-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.wl-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+  flex-shrink: 0;
 }
 .wl-create input {
   border: none;
@@ -1165,7 +1217,10 @@ body {
 
 /* --- Watchlist table --- */
 .table-panel {
-  padding: 8px;
+  padding: 0px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 .table-scroll {
   overflow-x: auto;
@@ -1188,7 +1243,7 @@ body {
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--surface-solid);
+  background: transparent;
 }
 .wl-table tbody tr {
   transition: background 0.15s ease;
@@ -1307,21 +1362,16 @@ body {
   pointer-events: none;
 }
 
-/* --- Watchlist chip delete --- */
-.wl-chip-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
+/* --- Watchlist tab delete --- */
 .wl-del {
   border: none;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: grid;
   place-items: center;
