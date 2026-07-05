@@ -332,18 +332,22 @@ body {
 .brand.mini {
   display: none; /* Hidden on desktop */
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 .brand.mini .logo {
   display: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: 0 3px 8px -2px rgba(99, 102, 241, 0.45);
 }
 .brand.mini h1 {
-  font-size: 20px;
+  font-size: 17px;
   letter-spacing: -0.02em;
 }
 .brand.mini p {
-  font-size: 12.5px;
-  color: var(--muted);
+  display: none;
 }
 .seg-code {
   display: none;

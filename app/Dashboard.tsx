@@ -1357,22 +1357,6 @@ function HeadlinesList({
         <article key={`${s.headline}-${i}`} className="hl-card">
           <div className="hl-rank">{i + 1}</div>
           <div className="hl-body">
-            <div className="hl-top">
-              {s.category && <span className="hl-category">{s.category}</span>}
-              {s.sentiment && (
-                <span className={`sent-badge ${sentClass(s.sentiment)}`}>{s.sentiment}</span>
-              )}
-              <span
-                className="hl-coverage"
-                title={`Covered by ${s.channelCount} ${
-                  s.channelCount === 1 ? "channel" : "channels"
-                }`}
-              >
-                <Icon name="newspaper" />
-                {s.channelCount} {s.channelCount === 1 ? "channel" : "channels"}
-              </span>
-            </div>
-
             {s.url ? (
               <a
                 href={s.url}
