@@ -2573,38 +2573,40 @@ export default function Dashboard({
               ? priced.reduce((sum, s) => sum + s.changePct, 0) / priced.length
               : null;
             return (
-              <section className="ai-hero">
-                <div className="ai-hero-left">
-                  <div className="ai-hero-badge">
-                    <Icon name="trending" />
-                  </div>
-                  <div className="ai-hero-txt">
-                    <h2>Trending Stocks</h2>
-                    <p>
-                      Most-discussed stocks across financial news channels and
-                      commentary over the past month.
-                    </p>
-                    <div className="trending-meta">
-                      <span className="trending-updated">
-                        Updated {formatRelativeTime(trendingUpdatedAt)}
-                      </span>
-                      <button
-                        type="button"
-                        className="trending-refresh"
-                        onClick={() => loadTrending(true)}
-                        disabled={trendingRefreshing || trendingLoading}
-                        aria-label="Refresh trending stocks"
-                      >
-                        <Icon
-                          name="refresh"
-                          className={trendingRefreshing ? "spin" : undefined}
-                        />
-                        <span>{trendingRefreshing ? "Refreshing…" : "Refresh"}</span>
-                      </button>
-                    </div>
-                  </div>
+              <div className="hl-header-compact">
+                <div className="hl-header-left">
+                  <h2>
+                    <Icon name="trending" className="hl-header-icon" /> Trending Stocks
+                  </h2>
+                  <span className="hl-header-sub">
+                    Most-discussed stocks · past month
+                  </span>
                 </div>
-                <div className="ai-hero-stats">
+                <div className="hl-header-actions">
+                  <div className="hl-mini-stats">
+                    <span className="hl-mini-stat">
+                      <b>{trendingStocks.length}</b>{" "}
+                      {trendingStocks.length === 1 ? "stock" : "stocks"}
+                    </span>
+                    <span className="hl-mini-stat">
+                      <b className={priced.length ? "up" : ""}>
+                        {priced.length ? gainers : "—"}
+                      </b>{" "}
+                      up
+                    </span>
+                    <span className="hl-mini-stat">
+                      <b
+                        className={
+                          avgMove == null ? "" : avgMove >= 0 ? "up" : "down"
+                        }
+                      >
+                        {avgMove == null
+                          ? "—"
+                          : `${avgMove >= 0 ? "+" : ""}${avgMove.toFixed(2)}%`}
+                      </b>{" "}
+                      avg
+                    </span>
+                  </div>
                   <div className="hero-market-seg seg" role="tablist" aria-label="Market">
                     {MARKETS.map((m) => (
                       <button
@@ -2623,32 +2625,24 @@ export default function Dashboard({
                       </button>
                     ))}
                   </div>
-                  <div className="ai-stat">
-                    <span className="ai-stat-val">{trendingStocks.length}</span>
-                    <span className="ai-stat-lbl">
-                      {trendingStocks.length === 1 ? "Stock" : "Stocks"}
-                    </span>
-                  </div>
-                  <div className="ai-stat">
-                    <span className={`ai-stat-val ${priced.length ? "up" : ""}`}>
-                      {priced.length ? gainers : "—"}
-                    </span>
-                    <span className="ai-stat-lbl">Up today</span>
-                  </div>
-                  <div className="ai-stat">
-                    <span
-                      className={`ai-stat-val ${
-                        avgMove == null ? "" : avgMove >= 0 ? "up" : "down"
-                      }`}
-                    >
-                      {avgMove == null
-                        ? "—"
-                        : `${avgMove >= 0 ? "+" : ""}${avgMove.toFixed(2)}%`}
-                    </span>
-                    <span className="ai-stat-lbl">Avg move</span>
-                  </div>
+                  <span className="trending-updated">
+                    Updated {formatRelativeTime(trendingUpdatedAt)}
+                  </span>
+                  <button
+                    type="button"
+                    className="hl-refresh"
+                    onClick={() => loadTrending(true)}
+                    disabled={trendingRefreshing || trendingLoading}
+                    aria-label="Refresh trending stocks"
+                    title={trendingRefreshing ? "Refreshing…" : "Refresh"}
+                  >
+                    <Icon
+                      name="refresh"
+                      className={trendingRefreshing ? "spin" : undefined}
+                    />
+                  </button>
                 </div>
-              </section>
+              </div>
             );
           })()}
 
@@ -2658,9 +2652,9 @@ export default function Dashboard({
               <h2>
                 <Icon name="newspaper" className="hl-header-icon" /> Top Headlines
               </h2>
-              <p>
-                The most widely-covered financial stories across news channels over the last 2 days.
-              </p>
+              <span className="hl-header-sub">
+                Most-covered stories · last 2 days
+              </span>
             </div>
             <div className="hl-header-actions">
               <div className="hero-market-seg seg" role="tablist" aria-label="Market">
@@ -2681,24 +2675,22 @@ export default function Dashboard({
                   </button>
                 ))}
               </div>
-              <div className="trending-meta" style={{ marginTop: 0 }}>
-                <span className="trending-updated">
-                  Updated {formatRelativeTime(headlinesUpdatedAt)}
-                </span>
-                <button
-                  type="button"
-                  className="trending-refresh"
-                  onClick={() => loadHeadlines(true)}
-                  disabled={headlinesRefreshing || headlinesLoading}
-                  aria-label="Refresh headlines"
-                >
-                  <Icon
-                    name="refresh"
-                    className={headlinesRefreshing ? "spin" : undefined}
-                  />
-                  <span>{headlinesRefreshing ? "Refreshing…" : "Refresh"}</span>
-                </button>
-              </div>
+              <span className="trending-updated">
+                Updated {formatRelativeTime(headlinesUpdatedAt)}
+              </span>
+              <button
+                type="button"
+                className="hl-refresh"
+                onClick={() => loadHeadlines(true)}
+                disabled={headlinesRefreshing || headlinesLoading}
+                aria-label="Refresh headlines"
+                title={headlinesRefreshing ? "Refreshing…" : "Refresh"}
+              >
+                <Icon
+                  name="refresh"
+                  className={headlinesRefreshing ? "spin" : undefined}
+                />
+              </button>
             </div>
           </div>
         )}
