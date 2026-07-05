@@ -2408,6 +2408,11 @@ export default function Dashboard({
                   className={quotesLoading ? "spin" : undefined}
                 />
               </button>
+              {quotesLoading && (
+                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                  <PrismWaitIcon size={20} duration="1.6s" />
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -2625,6 +2630,11 @@ export default function Dashboard({
                       className={trendingRefreshing ? "spin" : undefined}
                     />
                   </button>
+                  {trendingRefreshing && (
+                    <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                      <PrismWaitIcon size={20} duration="1.6s" />
+                    </span>
+                  )}
             </div>
           </div>
         )}
@@ -2674,6 +2684,11 @@ export default function Dashboard({
                   className={headlinesRefreshing ? "spin" : undefined}
                 />
               </button>
+              {headlinesRefreshing && (
+                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                  <PrismWaitIcon size={20} duration="1.6s" />
+                </span>
+              )}
             </div>
           </div>
         )}
