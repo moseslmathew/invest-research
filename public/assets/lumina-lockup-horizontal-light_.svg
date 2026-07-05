@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="140" viewBox="0 0 480 140">
+  
+  <defs>
+    <linearGradient id="spectrum-light" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e8274b"></stop>
+      <stop offset="0.35" stop-color="#eec513"></stop>
+      <stop offset="0.7" stop-color="#1e9be0"></stop>
+      <stop offset="1" stop-color="#8b63ef"></stop>
+    </linearGradient>
+  </defs>
+  <g transform="translate(40,30) scale(1.375)">
+    <polygon points="32,16 17,48 47,48" fill="rgba(24,32,48,0.05)" stroke="#232c3d" stroke-width="2.5" stroke-linejoin="round"></polygon>
+    <line x1="3" y1="42" x2="23.8" y2="33" stroke="#232c3d" stroke-width="3" stroke-linecap="round"></line>
+    <g>
+      <polygon points="40.2,33 62,16 62,22" fill="#e8274b"></polygon>
+      <polygon points="40.2,33 62,22 62,28" fill="#f28c0d"></polygon>
+      <polygon points="40.2,33 62,28 62,34" fill="#eec513"></polygon>
+      <polygon points="40.2,33 62,34 62,40" fill="#22b566"></polygon>
+      <polygon points="40.2,33 62,40 62,46" fill="#1e9be0"></polygon>
+      <polygon points="40.2,33 62,46 62,52" fill="#8b63ef"></polygon>
+    </g>
+    <path d="M 45 6 C 45.9 9.1 46.9 10.1 50 11 C 46.9 11.9 45.9 12.9 45 16 C 44.1 12.9 43.1 11.9 40 11 C 43.1 10.1 44.1 9.1 45 6 Z" fill="#f2b90d"></path>
+    <path d="M 52.5 14 C 53 15.7 53.6 16.3 55.3 16.8 C 53.6 17.3 53 17.9 52.5 19.6 C 52 17.9 51.4 17.3 49.7 16.8 C 51.4 16.3 52 15.7 52.5 14 Z" fill="#232c3d" fill-opacity="0.75"></path>
+  </g>
+  <text x="150" y="70" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="600" font-size="40" letter-spacing="4" fill="#1a2233">LUMINA</text>
+  <rect x="151" y="86" width="255" height="3" rx="1.5" fill="url(#spectrum-light)"></rect>
+  <text x="151" y="112" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="700" font-size="11.5" letter-spacing="3.2" fill="#5c6577">AI INVESTMENT RESEARCH</text>
+</svg>

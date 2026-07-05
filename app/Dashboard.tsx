@@ -1547,6 +1547,26 @@ function HeadlinesList({
   const sentClass = (s?: string) =>
     s === "bullish" ? "sent-bullish" : s === "bearish" ? "sent-bearish" : "sent-neutral";
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollRight(scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    // Delay slightly to allow layout calculations to finish
+    const timer = setTimeout(checkScroll, 100);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [stories]);
+
   if (loading) {
     return (
       <div className="panel empty prism-loading-panel">
@@ -1571,7 +1591,15 @@ function HeadlinesList({
 
   return (
     <div className="panel table-panel ai-table-panel">
-      <div className="ai-list-scroll">
+      <div className="ai-scroll-wrapper" style={{ position: "relative" }}>
+        {canScrollRight && (
+          <div className="ai-scroll-hint">
+            <div className="ai-scroll-hint-pill">
+              Swipe Right <span>➔</span>
+            </div>
+          </div>
+        )}
+        <div ref={scrollRef} className="ai-list-scroll" onScroll={checkScroll}>
         <div className="ai-list">
           <div className="ai-row ai-header-row hl-row">
             <div className="ai-col-index">#</div>
@@ -1618,6 +1646,7 @@ function HeadlinesList({
               </div>
             </article>
           ))}
+        </div>
         </div>
       </div>
     </div>
@@ -2550,8 +2579,8 @@ export default function Dashboard({
       <aside className="sidebar">
         <div className="side-brand-card">
           <div className="side-brand">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "58px", width: "auto", marginLeft: "-14px" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "58px", width: "auto", marginLeft: "-14px" }} />
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "72px", width: "auto", marginLeft: "-14px" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "72px", width: "auto", marginLeft: "-14px" }} />
           </div>
         </div>
 
@@ -2573,19 +2602,14 @@ export default function Dashboard({
           ))}
         </nav>
 
-        <div className="side-foot">
-          <button className="logout" type="button" onClick={() => setSidebarOpen(false)}>
-            <Icon name="logout" /> Logout
-          </button>
-        </div>
       </aside>
 
       {/* ---------- Main ---------- */}
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
           </div>
         </div>
 
