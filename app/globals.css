@@ -170,9 +170,9 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 12px 6px 24px;
-  padding: 6px 8px;
-  overflow: hidden;
+  margin: 12px 0px 24px;
+  padding: 6px 0px;
+  overflow: visible;
 }
 .side-brand {
   display: flex;
