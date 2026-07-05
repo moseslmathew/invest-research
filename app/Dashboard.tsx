@@ -10,6 +10,7 @@ import {
   type ActionState,
 } from "./actions";
 import TickerSearch from "./TickerSearch";
+import PrismWaitIcon from "./PrismWaitIcon";
 import { Icon, type IconName } from "./Icon";
 import type { Quote } from "./api/quotes/route";
 import type { Market, Watchlist, WatchlistItem } from "@/lib/db";
@@ -1041,7 +1042,7 @@ function TrendingList({
   if (loading) {
     return (
       <div className="panel empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-        <span className="inline-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
+        <PrismWaitIcon size={64} />
         <p style={{ marginTop: "16px", color: "var(--muted)" }}>Analyzing news & loading trending stock performance...</p>
       </div>
     );
@@ -1352,7 +1353,7 @@ function HeadlinesList({
         className="panel empty"
         style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
       >
-        <span className="inline-spin" style={{ width: "28px", height: "28px", display: "inline-block", margin: "0 auto" }} />
+        <PrismWaitIcon size={64} />
         <p style={{ marginTop: "16px", color: "var(--muted)" }}>
           Clustering the most-covered stories across news channels…
         </p>
