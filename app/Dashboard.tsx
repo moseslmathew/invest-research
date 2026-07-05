@@ -2308,7 +2308,6 @@ export default function Dashboard({
               <p>Investment Research</p>
             </div>
           </div>
-          <Icon name="chartArt" className="side-brand-art" />
         </div>
 
         <nav className="side-nav" aria-label="Primary">

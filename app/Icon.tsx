@@ -91,9 +91,20 @@ export function Icon({
   }
 
   if (name === "brandLogo") {
-    // Lumina brand mark: "The 3D Prism of Insight" (Light Theme) — a faceted 
-    // glass crystal pyramid refracting a dark indigo beam into a vibrant spectrum 
-    // of insights (Cyan, Purple, and Pink) over a premium white/slate base tile.
+    // Lumina brand mark: "the prism" — a beam of raw information (white light)
+    // enters a glass prism and splits into a spectrum of insights. Dark tile so
+    // the light actually glows; everything clipped to the rounded tile.
+    const fan = [
+      { d: "M23.1 15.9 L41 6.5 L41 11 L23.55 16.83 Z", c: "#f87171" },
+      { d: "M23.55 16.83 L41 11 L41 15.5 L24 17.77 Z", c: "#fb923c" },
+      { d: "M24 17.77 L41 15.5 L41 20 L24.45 18.7 Z", c: "#facc15" },
+      { d: "M24.45 18.7 L41 20 L41 24.5 L24.9 19.63 Z", c: "#4ade80" },
+      { d: "M24.9 19.63 L41 24.5 L41 29 L25.35 20.57 Z", c: "#38bdf8" },
+      { d: "M25.35 20.57 L41 29 L41 33.5 L25.8 21.5 Z", c: "#a78bfa" },
+    ];
+    const glint =
+      "M20 6.7 C20 8.6 20.7 9.3 22.6 9.3 C20.7 9.3 20 10 20 11.9 " +
+      "C20 10 19.3 9.3 17.4 9.3 C19.3 9.3 20 8.6 20 6.7 Z";
     return (
       <svg
         viewBox="0 0 40 40"
@@ -105,119 +116,68 @@ export function Icon({
         {...rest}
       >
         <defs>
-          <linearGradient id="prismBg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#f1f5f9" />
+          <linearGradient id="prTile" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#0b0d1a" />
+            <stop offset="1" stopColor="#1a1e33" />
           </linearGradient>
-          <linearGradient id="facetLeft" x1="9.5" y1="29" x2="20" y2="8" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
+          <linearGradient id="prGlass" x1="14" y1="12" x2="27" y2="27" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#ffffff" stopOpacity="0.3" />
+            <stop offset="0.5" stopColor="#c7d2fe" stopOpacity="0.1" />
+            <stop offset="1" stopColor="#818cf8" stopOpacity="0.18" />
           </linearGradient>
-          <linearGradient id="facetRight" x1="20" y1="8" x2="30.5" y2="29" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#ec4899" stopOpacity="0.05" />
-          </linearGradient>
-          <linearGradient id="facetBottom" x1="9.5" y1="29" x2="30.5" y2="29" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.12" />
-          </linearGradient>
-          <linearGradient id="rayCyan" x1="20" y1="18" x2="38" y2="7" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#0891b2" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="rayPurple" x1="20" y1="21" x2="38" y2="20" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="rayPink" x1="20" y1="24" x2="38" y2="31" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#db2777" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#db2777" stopOpacity="0" />
-          </linearGradient>
-          <filter id="prismGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.6" />
+          <clipPath id="prClip">
+            <rect width="40" height="40" rx="11" />
+          </clipPath>
+          <filter id="prBlur" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="1.5" />
           </filter>
         </defs>
-        <rect width="40" height="40" rx="12" fill="url(#prismBg)" />
-        <rect width="39" height="39" x="0.5" y="0.5" rx="11.5" stroke="#0f172a" strokeOpacity="0.06" />
-        <path
-          d="M20 18 L38 7 M20 21 L38 20 M20 24 L38 31"
-          stroke="#818cf8"
-          strokeWidth="6"
-          strokeLinecap="round"
-          opacity="0.12"
-          filter="url(#prismGlow)"
-        />
-        <path
-          d="M22 18 C22 18 29 11 38 7"
-          stroke="url(#rayCyan)"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M23 21 C23 21 30 20.5 38 20"
-          stroke="url(#rayPurple)"
-          strokeWidth="3.2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M22 24 C22 24 29 27.5 38 31"
-          stroke="url(#rayPink)"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M2 21 L15 21"
-          stroke="#1e1b4b"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M15 21 L20 18 M15 21 L20 21 M15 21 L20 24"
-          stroke="#1e1b4b"
-          strokeWidth="1"
-          opacity="0.25"
-        />
-        <path
-          d="M9.5 29 L20 21 L30.5 29 Z"
-          fill="url(#facetBottom)"
-          stroke="#0f172a"
-          strokeWidth="0.8"
-          strokeOpacity="0.08"
-        />
-        <path
-          d="M20 8 L20 21 L9.5 29 Z"
-          fill="url(#facetLeft)"
-          stroke="#0f172a"
-          strokeWidth="0.8"
-          strokeOpacity="0.12"
-        />
-        <path
-          d="M20 8 L20 21 L30.5 29 Z"
-          fill="url(#facetRight)"
-          stroke="#0f172a"
-          strokeWidth="0.8"
-          strokeOpacity="0.12"
-        />
-        <path
-          d="M20 8 L30.5 29 C31 30 30 30 29.5 30 L10.5 30 C10 30 9 30 9.5 29 Z"
-          stroke="#0f172a"
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-          strokeOpacity="0.18"
-        />
-        <path
-          d="M20 8.5 L12 25"
-          stroke="#ffffff"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          strokeOpacity="0.8"
-        />
-        <g transform="translate(15, 21)">
-          <circle r="2.2" fill="#06b6d4" filter="url(#prismGlow)" opacity="0.8" />
-          <circle r="1" fill="#ffffff" />
+        <rect width="40" height="40" rx="11" fill="url(#prTile)" />
+        <g clipPath="url(#prClip)">
+          {/* soft glow under the spectrum */}
+          <g filter="url(#prBlur)" opacity="0.6">
+            {fan.map((w) => (
+              <path key={`${w.c}-glow`} d={w.d} fill={w.c} />
+            ))}
+          </g>
+          {/* crisp spectrum, gently breathing */}
+          <g>
+            {fan.map((w) => (
+              <path key={w.c} d={w.d} fill={w.c} />
+            ))}
+            <animate
+              attributeName="opacity"
+              values="0.82;1;0.82"
+              dur="3.6s"
+              repeatCount="indefinite"
+            />
+          </g>
+          {/* incoming beam of white light */}
+          <path
+            d="M1.5 22 L15.7 18.8"
+            stroke="#ffffff"
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.45"
+            filter="url(#prBlur)"
+          />
+          <path d="M1.5 22 L15.7 18.8" stroke="#ffffff" strokeWidth="1.7" strokeLinecap="round" />
+          {/* refraction spreading inside the glass */}
+          <path d="M15.6 18.7 L23.1 15.9 L25.8 21.5 Z" fill="#ffffff" opacity="0.16" />
+          {/* the prism */}
+          <path
+            d="M20 9.5 L28.5 27 L11.5 27 Z"
+            fill="url(#prGlass)"
+            stroke="#dbe3ff"
+            strokeOpacity="0.65"
+            strokeWidth="1.1"
+            strokeLinejoin="round"
+          />
+          {/* apex glint */}
+          <path d={glint} fill="#ffffff" opacity="0.6" filter="url(#prBlur)" />
+          <path d={glint} fill="#ffffff" />
         </g>
-        <circle cx="34" cy="14" r="0.7" fill="#0891b2" opacity="0.7" />
-        <circle cx="36" cy="25" r="0.8" fill="#db2777" opacity="0.65" />
+        <rect width="39" height="39" x="0.5" y="0.5" rx="10.5" stroke="#ffffff" strokeOpacity="0.08" />
       </svg>
     );
   }

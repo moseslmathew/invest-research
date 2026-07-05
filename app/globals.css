@@ -146,17 +146,11 @@ body {
 .side-brand-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   margin: 0 6px 14px;
   padding: 8px 10px 6px;
   overflow: hidden;
-}
-.side-brand-art {
-  flex: none;
-  width: 56px;
-  height: 42px;
-  opacity: 0.9;
 }
 .side-brand {
   display: flex;
@@ -182,20 +176,24 @@ body {
 .side-brand-txt {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 1px;
 }
 .side-brand-txt h1 {
   font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   line-height: 1.2;
 }
 .side-brand-txt p {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
-  line-height: 1.1;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.2;
+  margin-top: 3px;
 }
 .side-nav {
   display: flex;
