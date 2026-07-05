@@ -389,7 +389,7 @@ function NewsDrawer({
   quotes?: Record<string, Quote>;
   onRemove?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research">("news");
+  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research" | "technicals">("news");
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -401,6 +401,10 @@ function NewsDrawer({
   const [researchData, setResearchData] = useState<any | null>(null);
   const [researchLoading, setResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState<string | null>(null);
+
+  const [techData, setTechData] = useState<any | null>(null);
+  const [techLoading, setTechLoading] = useState(false);
+  const [techError, setTechError] = useState<string | null>(null);
 
   const [insiderTrades, setInsiderTrades] = useState<any[]>([]);
   const [insiderLoading, setInsiderLoading] = useState(false);
@@ -515,6 +519,37 @@ function NewsDrawer({
   }, [stock, activeTab]);
 
   useEffect(() => {
+    if (!stock || activeTab !== "technicals") return;
+    setTechLoading(true);
+    setTechError(null);
+    const controller = new AbortController();
+    fetch(
+      `/api/technicals?symbol=${encodeURIComponent(stock.symbol)}&name=${encodeURIComponent(
+        stock.name || ""
+      )}`,
+      {
+        signal: controller.signal,
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load technical analysis");
+        return res.json();
+      })
+      .then((data) => {
+        setTechData(data);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          setTechError(e.message || "Failed to load technical analysis");
+        }
+      })
+      .finally(() => {
+        setTechLoading(false);
+      });
+    return () => controller.abort();
+  }, [stock, activeTab]);
+
+  useEffect(() => {
     if (!stock || activeTab !== "events") return;
     setInsiderLoading(true);
     setInsiderError(null);
@@ -599,7 +634,12 @@ function NewsDrawer({
           >
             Events
           </button>
-
+          <button
+            className={`drawer-tab ${activeTab === "technicals" ? "active" : ""}`}
+            onClick={() => setActiveTab("technicals")}
+          >
+            Technicals
+          </button>
           <button
             className={`drawer-tab ${activeTab === "research" ? "active" : ""}`}
             onClick={() => setActiveTab("research")}
@@ -873,6 +913,164 @@ function NewsDrawer({
                   <div className="ai-research-bullets" style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
                     <h4 style={{ fontSize: "14px", fontWeight: 650, color: "var(--text)", margin: "4px 0" }}>Key Takeaways</h4>
                     {researchData.bullets.map((b: string, i: number) => (
+                      <div key={i} className="val-grid-card" style={{ padding: "12px", display: "flex", flexDirection: "row", gap: "10px", alignItems: "flex-start" }}>
+                        <span style={{ color: "var(--us)", fontWeight: "bold" }}>•</span>
+                        <span style={{ fontSize: "13px", lineHeight: "1.45", color: "var(--text)" }}>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === "technicals" && (
+            <>
+              {techLoading ? (
+                <div className="val-section" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
+                    <PrismWaitIcon size={34} />
+                    <span>✨ AI is computing technical indicators & levels...</span>
+                  </div>
+                  <div className="news-shimmer-card" style={{ height: "100px" }} />
+                  <div className="news-shimmer-card" style={{ height: "120px" }} />
+                </div>
+              ) : techError ? (
+                <div className="news-empty-state">
+                  <span className="icon">⚠️</span>
+                  <p>{techError}</p>
+                </div>
+              ) : !techData ? (
+                <div className="news-empty-state">
+                  <span className="icon">📊</span>
+                  <p>Technical analysis report not generated.</p>
+                </div>
+              ) : (
+                <div className="val-section">
+                  {/* Stance Indicator */}
+                  <div className={`ai-research-stance-card ${
+                    techData.stance.toLowerCase().includes("buy") ? "bullish" :
+                    techData.stance.toLowerCase().includes("sell") ? "bearish" : "neutral"
+                  }`} style={{ marginBottom: "16px" }}>
+                    <div className="ai-research-score-ring">
+                      <div className="score-svg-text" style={{ position: "static", transform: "none" }}>
+                        <span className="score-num" style={{ fontSize: "20px" }}>
+                          {techData.stance.toLowerCase().includes("strong buy") ? "🚀" :
+                           techData.stance.toLowerCase().includes("buy") ? "📈" :
+                           techData.stance.toLowerCase().includes("strong sell") ? "💥" :
+                           techData.stance.toLowerCase().includes("sell") ? "📉" : "⚖️"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ai-research-stance-meta">
+                      <span className="stance-lbl">Technical Consensus</span>
+                      <h3 className="stance-val">{techData.stance}</h3>
+                    </div>
+                  </div>
+
+                  {/* Indicators Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "16px" }}>
+                    {/* RSI Card */}
+                    <div className="val-grid-card" style={{ padding: "12px" }}>
+                      <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, display: "block", marginBottom: "6px" }}>
+                        RSI (14)
+                      </span>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "18px", fontWeight: 700, color: "var(--text)" }}>{techData.rsi}</span>
+                        <span style={{ fontSize: "11px", color: "var(--muted)" }}>/ 100</span>
+                      </div>
+                      <div style={{ width: "100%", height: "6px", background: "var(--border)", borderRadius: "3px", overflow: "hidden", position: "relative" }}>
+                        <div style={{
+                          position: "absolute",
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: `${techData.rsi}%`,
+                          background: techData.rsi > 70 ? "var(--premium)" : techData.rsi < 30 ? "var(--undervalued)" : "var(--us)"
+                        }} />
+                      </div>
+                      <span style={{ fontSize: "10px", color: "var(--muted)", display: "block", marginTop: "6px" }}>
+                        {techData.rsi > 70 ? "Overbought" : techData.rsi < 30 ? "Oversold" : "Neutral"}
+                      </span>
+                    </div>
+
+                    {/* MACD Card */}
+                    <div className="val-grid-card" style={{ padding: "12px" }}>
+                      <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, display: "block", marginBottom: "6px" }}>
+                        MACD Signal
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span className={`val-stance ${
+                          techData.macd.toLowerCase().includes("bullish") ? "undervalued" :
+                          techData.macd.toLowerCase().includes("bearish") ? "premium" : "neutral"
+                        }`} style={{ fontSize: "12px", padding: "4px 8px", borderRadius: "6px", fontWeight: 700 }}>
+                          {techData.macd}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Moving Averages Card */}
+                  <div className="val-summary-card" style={{ marginBottom: "16px" }}>
+                    <div className="val-summary-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="val-lbl">Moving Averages</span>
+                      <span className={`val-stance ${
+                        techData.movingAverages?.trend.toLowerCase() === "bullish" ? "undervalued" :
+                        techData.movingAverages?.trend.toLowerCase() === "bearish" ? "premium" : "neutral"
+                      }`} style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px" }}>
+                        {techData.movingAverages?.trend} Trend
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px" }}>
+                        <span style={{ color: "var(--muted)" }}>SMA (20)</span>
+                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma20}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", borderTop: "1px dashed var(--border)", paddingTop: "8px" }}>
+                        <span style={{ color: "var(--muted)" }}>SMA (50)</span>
+                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma50}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", borderTop: "1px dashed var(--border)", paddingTop: "8px" }}>
+                        <span style={{ color: "var(--muted)" }}>SMA (200)</span>
+                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma200}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Support and Resistance */}
+                  <div className="val-grid-card" style={{ padding: "14px", marginBottom: "16px" }}>
+                    <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700, display: "block", marginBottom: "10px" }}>
+                      Key Price Levels
+                    </span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
+                      <div style={{ flex: 1, textAlign: "left" }}>
+                        <span style={{ fontSize: "10px", color: "var(--muted)", display: "block" }}>Support Floor</span>
+                        <strong style={{ fontSize: "15px", color: "var(--undervalued)" }}>
+                          {quote?.currency === "INR" ? "₹" : "$"}{techData.support}
+                        </strong>
+                      </div>
+                      <div style={{ width: "2px", height: "30px", background: "var(--border)" }} />
+                      <div style={{ flex: 1, textAlign: "right" }}>
+                        <span style={{ fontSize: "10px", color: "var(--muted)", display: "block" }}>Resistance Ceiling</span>
+                        <strong style={{ fontSize: "15px", color: "var(--premium)" }}>
+                          {quote?.currency === "INR" ? "₹" : "$"}{techData.resistance}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Commentary Summary */}
+                  <div className="val-summary-card" style={{ marginBottom: "16px" }}>
+                    <div className="val-summary-header">
+                      <span className="val-lbl">Technical Summary</span>
+                    </div>
+                    <p className="val-commentary">{techData.summary}</p>
+                  </div>
+
+                  {/* Bullet points Takeaways */}
+                  <div className="ai-research-bullets" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <h4 style={{ fontSize: "14px", fontWeight: 650, color: "var(--text)", margin: "4px 0" }}>Takeaways</h4>
+                    {techData.bullets.map((b: string, i: number) => (
                       <div key={i} className="val-grid-card" style={{ padding: "12px", display: "flex", flexDirection: "row", gap: "10px", alignItems: "flex-start" }}>
                         <span style={{ color: "var(--us)", fontWeight: "bold" }}>•</span>
                         <span style={{ fontSize: "13px", lineHeight: "1.45", color: "var(--text)" }}>{b}</span>
