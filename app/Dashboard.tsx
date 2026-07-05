@@ -317,8 +317,11 @@ function getMutualFundActivity(symbol: string, currency: string) {
       quantity: qty.toLocaleString("en-US") + " shares",
       date: dateStr,
       value: isIndian ? `₹${val} Cr` : `$${val}M`,
+      _day: day,
     });
   }
+  // Sort most-recent first
+  items.sort((a, b) => b._day - a._day);
   return items;
 }
 
