@@ -593,17 +593,17 @@ function NewsDrawer({
           >
             News
           </button>
-           <button
-            className={`drawer-tab ${activeTab === "mf" ? "active" : ""}`}
-            onClick={() => setActiveTab("mf")}
-          >
-            Mutual Funds
-          </button>
           <button
             className={`drawer-tab ${activeTab === "events" ? "active" : ""}`}
             onClick={() => setActiveTab("events")}
           >
             Events
+          </button>
+          <button
+            className={`drawer-tab ${activeTab === "mf" ? "active" : ""}`}
+            onClick={() => setActiveTab("mf")}
+          >
+            Mutual Funds
           </button>
           <button
             className={`drawer-tab ${activeTab === "research" ? "active" : ""}`}
@@ -682,34 +682,6 @@ function NewsDrawer({
             </>
           )}
 
-          {activeTab === "mf" && (() => {
-            const mfActivity = getMutualFundActivity(stock.symbol, quote?.currency || "USD");
-            return (
-              <div className="mf-list">
-                {mfActivity.map((mf, index) => {
-                  const isBuy = mf.action === "Bought" || mf.action === "Increased";
-                  return (
-                    <div key={index} className="mf-card">
-                      <div className="mf-header">
-                        <span className="mf-name">{mf.fundName}</span>
-                        <span className={`mf-badge ${isBuy ? "buy" : "sell"}`}>
-                          {mf.action}
-                        </span>
-                      </div>
-                      <div className="mf-details">
-                        <span className="mf-qty">{mf.quantity}</span>
-                        <span className="mf-dot">•</span>
-                        <span className="mf-value">{mf.value}</span>
-                        <span className="mf-dot">•</span>
-                        <span className="mf-date">{mf.date}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
           {activeTab === "events" && (() => {
             const events = getUpcomingEvents(stock.symbol);
             return (
@@ -785,7 +757,7 @@ function NewsDrawer({
                               <div className="event-desc" style={{ marginTop: "6px", display: "flex", flexWrap: "wrap", gap: "8px 12px", fontSize: "12px", color: "var(--muted)" }}>
                                 {facts.length === 0 ? (
                                   <span>Transaction details not disclosed in source reports.</span>
-                                ) : (
+                                  ) : (
                                   facts.map((f, i) => (
                                     <span key={f.label}>
                                       {i > 0 && (
@@ -810,6 +782,34 @@ function NewsDrawer({
                     </>
                   )}
                 </div>
+              </div>
+            );
+          })()}
+
+          {activeTab === "mf" && (() => {
+            const mfActivity = getMutualFundActivity(stock.symbol, quote?.currency || "USD");
+            return (
+              <div className="mf-list">
+                {mfActivity.map((mf, index) => {
+                  const isBuy = mf.action === "Bought" || mf.action === "Increased";
+                  return (
+                    <div key={index} className="mf-card">
+                      <div className="mf-header">
+                        <span className="mf-name">{mf.fundName}</span>
+                        <span className={`mf-badge ${isBuy ? "buy" : "sell"}`}>
+                          {mf.action}
+                        </span>
+                      </div>
+                      <div className="mf-details">
+                        <span className="mf-qty">{mf.quantity}</span>
+                        <span className="mf-dot">•</span>
+                        <span className="mf-value">{mf.value}</span>
+                        <span className="mf-dot">•</span>
+                        <span className="mf-date">{mf.date}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             );
           })()}
