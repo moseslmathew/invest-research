@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { SVGProps } from "react";
 
 export type IconName =
@@ -49,6 +50,7 @@ export function Icon({
   className,
   ...rest
 }: { name: IconName; filled?: boolean } & SVGProps<SVGSVGElement>) {
+  const idSuffix = useId().replace(/:/g, "");
   const base = {
     viewBox: "0 0 24 24",
     width: 18,
@@ -105,6 +107,12 @@ export function Icon({
     const glint =
       "M20 6.7 C20 8.6 20.7 9.3 22.6 9.3 C20.7 9.3 20 10 20 11.9 " +
       "C20 10 19.3 9.3 17.4 9.3 C19.3 9.3 20 8.6 20 6.7 Z";
+    
+    const tileId = `prTile-${idSuffix}`;
+    const glassId = `prGlass-${idSuffix}`;
+    const clipId = `prClip-${idSuffix}`;
+    const blurId = `prBlur-${idSuffix}`;
+
     return (
       <svg
         viewBox="0 0 40 40"
@@ -116,26 +124,26 @@ export function Icon({
         {...rest}
       >
         <defs>
-          <linearGradient id="prTile" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <linearGradient id={tileId} x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
             <stop offset="0" stopColor="#0b0d1a" />
             <stop offset="1" stopColor="#1a1e33" />
           </linearGradient>
-          <linearGradient id="prGlass" x1="14" y1="12" x2="27" y2="27" gradientUnits="userSpaceOnUse">
+          <linearGradient id={glassId} x1="14" y1="12" x2="27" y2="27" gradientUnits="userSpaceOnUse">
             <stop offset="0" stopColor="#ffffff" stopOpacity="0.3" />
             <stop offset="0.5" stopColor="#c7d2fe" stopOpacity="0.1" />
             <stop offset="1" stopColor="#818cf8" stopOpacity="0.18" />
           </linearGradient>
-          <clipPath id="prClip">
+          <clipPath id={clipId}>
             <rect width="40" height="40" rx="11" />
           </clipPath>
-          <filter id="prBlur" x="-40%" y="-40%" width="180%" height="180%">
+          <filter id={blurId} x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="1.5" />
           </filter>
         </defs>
-        <rect width="40" height="40" rx="11" fill="url(#prTile)" />
-        <g clipPath="url(#prClip)">
+        <rect width="40" height="40" rx="11" fill={`url(#${tileId})`} />
+        <g clipPath={`url(#${clipId})`}>
           {/* soft glow under the spectrum */}
-          <g filter="url(#prBlur)" opacity="0.6">
+          <g filter={`url(#${blurId})`} opacity="0.6">
             {fan.map((w) => (
               <path key={`${w.c}-glow`} d={w.d} fill={w.c} />
             ))}
@@ -159,7 +167,7 @@ export function Icon({
             strokeWidth="3"
             strokeLinecap="round"
             opacity="0.45"
-            filter="url(#prBlur)"
+            filter={`url(#${blurId})`}
           />
           <path d="M1.5 22 L15.7 18.8" stroke="#ffffff" strokeWidth="1.7" strokeLinecap="round" />
           {/* refraction spreading inside the glass */}
@@ -171,19 +179,19 @@ export function Icon({
             strokeOpacity="0.55"
             strokeWidth="3.2"
             strokeLinejoin="round"
-            filter="url(#prBlur)"
+            filter={`url(#${blurId})`}
           />
           {/* the prism */}
           <path
             d="M20 9.5 L28.5 27 L11.5 27 Z"
-            fill="url(#prGlass)"
+            fill={`url(#${glassId})`}
             stroke="#dbe3ff"
             strokeOpacity="0.75"
             strokeWidth="1.1"
             strokeLinejoin="round"
           />
           {/* apex glint */}
-          <path d={glint} fill="#ffffff" opacity="0.6" filter="url(#prBlur)" />
+          <path d={glint} fill="#ffffff" opacity="0.6" filter={`url(#${blurId})`} />
           <path d={glint} fill="#ffffff" />
         </g>
         <rect width="39" height="39" x="0.5" y="0.5" rx="10.5" stroke="#ffffff" strokeOpacity="0.08" />
