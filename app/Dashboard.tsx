@@ -95,6 +95,12 @@ function useQuotes(symbols: string[]) {
   const key = symbols.join(",");
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [loading, setLoading] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  const refetch = useCallback(() => {
+    setRefreshCounter((c) => c + 1);
+  }, []);
 
   useEffect(() => {
     if (!key) {
@@ -103,17 +109,20 @@ function useQuotes(symbols: string[]) {
     }
     setLoading(true);
     const ctrl = new AbortController();
-    fetch(`/api/quotes?symbols=${encodeURIComponent(key)}`, {
+    fetch(`/api/quotes?symbols=${encodeURIComponent(key)}&t=${refreshCounter}`, {
       signal: ctrl.signal,
     })
       .then((r) => r.json())
-      .then((d) => setQuotes(d.quotes ?? {}))
+      .then((d) => {
+        setQuotes(d.quotes ?? {});
+        setUpdatedAt(new Date().toISOString());
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
     return () => ctrl.abort();
-  }, [key]);
+  }, [key, refreshCounter]);
 
-  return { quotes, loading };
+  return { quotes, loading, refetch, updatedAt };
 }
 
 function SubmitButton({
@@ -139,18 +148,26 @@ function SubmitButton({
 
 function Toast({
   state,
+  lastProcessedRef,
   className = "",
 }: {
   state: ActionState;
+  lastProcessedRef?: React.MutableRefObject<any>;
   className?: string;
 }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!state.message) return;
+    if (lastProcessedRef) {
+      if (lastProcessedRef.current === state) {
+        return;
+      }
+      lastProcessedRef.current = state;
+    }
     setVisible(true);
     const t = setTimeout(() => setVisible(false), 4200);
     return () => clearTimeout(t);
-  }, [state]);
+  }, [state, lastProcessedRef]);
   if (!state.message || !visible) return null;
   return (
     <div
@@ -2026,6 +2043,8 @@ export default function Dashboard({
     createWatchlistAction,
     { ok: true }
   );
+  const lastAddStateRef = useRef<any>(null);
+  const lastCreateStateRef = useRef<any>(null);
 
   const addFormRef = useRef<HTMLFormElement>(null);
   const symbolRef = useRef<HTMLInputElement>(null);
@@ -2122,7 +2141,7 @@ export default function Dashboard({
     () => items.map((i) => i.symbol),
     [items]
   );
-  const { quotes, loading: quotesLoading } = useQuotes(quoteSymbols);
+  const { quotes, loading: quotesLoading, refetch: refetchQuotes, updatedAt: quotesUpdatedAt } = useQuotes(quoteSymbols);
 
   // States & hooks for Trending stocks in news
   const [trendingRaw, setTrendingRaw] = useState<any[]>([]);
@@ -2379,6 +2398,22 @@ export default function Dashboard({
                   </button>
                 ))}
               </div>
+              <span className="trending-updated">
+                Updated {formatRelativeTime(quotesUpdatedAt)}
+              </span>
+              <button
+                type="button"
+                className="hl-refresh"
+                onClick={refetchQuotes}
+                disabled={quotesLoading}
+                aria-label="Refresh watchlist quotes"
+                title={quotesLoading ? "Refreshing…" : "Refresh"}
+              >
+                <Icon
+                  name="refresh"
+                  className={quotesLoading ? "spin" : undefined}
+                />
+              </button>
             </div>
           </div>
         )}
@@ -2440,7 +2475,7 @@ export default function Dashboard({
           </div>
         )}
         {view === "watchlist" && !createState.ok && (
-          <Toast state={createState} className="inline-toast" />
+          <Toast state={createState} lastProcessedRef={lastCreateStateRef} className="inline-toast" />
         )}
 
         {/* Search card */}
@@ -2493,7 +2528,7 @@ export default function Dashboard({
               </div>
             )}
 
-            <Toast state={addState} />
+            <Toast state={addState} lastProcessedRef={lastAddStateRef} />
           </div>
         )}
 
