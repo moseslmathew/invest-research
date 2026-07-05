@@ -131,9 +131,7 @@ export default function TickerSearch({
         <ul className="search-results" id="search-listbox" role="listbox">
           {results.length === 0 && !loading ? (
             <li className="search-empty">
-              No matches in the {market === "US" ? "🇺🇸 US" : "🇮🇳 India"} market.
-              Switch markets above to search{" "}
-              {market === "US" ? "Indian" : "US"} tickers.
+              No matches found.
             </li>
           ) : (
             results.map((r, i) => (

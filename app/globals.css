@@ -1843,11 +1843,8 @@ th.col-num-r {
   }
 }
 @media (max-width: 900px) {
-  /* The app bar already carries the market switch on mobile; avoid a
-     second, redundant control inside the hero. */
-  .hero-market-seg {
-    display: none;
-  }
+  /* Keep .hero-market-seg visible — the global app bar switch was removed,
+     so this inline toggle is the only market control on mobile. */
 }
 
 .ai-table-panel .ai-filter-bar {
