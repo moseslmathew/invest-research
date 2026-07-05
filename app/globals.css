@@ -2553,15 +2553,6 @@ th.col-num-r {
   font-size: 13px;
 }
 
-/* Responsive floating behavior */
-@media (max-width: 768px) {
-  .ai-col-price {
-    margin-left: auto;
-    margin-right: 16px;
-    width: auto;
-  }
-}
-
 /* Table Header Row Styling */
 .ai-header-row {
   font-size: 11px;
