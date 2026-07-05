@@ -1218,9 +1218,11 @@ body {
 /* --- Watchlist table --- */
 .table-panel {
   padding: 0px;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: var(--surface-solid) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 .table-scroll {
   overflow-x: auto;
