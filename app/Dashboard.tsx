@@ -2326,8 +2326,8 @@ export default function Dashboard({
       <aside className="sidebar">
         <div className="side-brand-card">
           <div className="side-brand">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "38px", width: "auto" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "38px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "50px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "50px", width: "auto" }} />
           </div>
         </div>
 
@@ -2360,8 +2360,8 @@ export default function Dashboard({
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "24px", width: "auto" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "24px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "31px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "31px", width: "auto" }} />
           </div>
         </div>
 
