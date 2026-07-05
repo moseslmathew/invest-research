@@ -2367,7 +2367,8 @@ export default function Dashboard({
 
         {view === "watchlist" && (
           <div className="wl-bar">
-            <div className="wl-tabs-row">
+            {/* Row 1: Tabs & New Watchlist Trigger */}
+            <div className="wl-row-1">
               <div className="wl-tabs-left">
                 {personalLists.map((l) => (
                   <span
@@ -2423,7 +2424,10 @@ export default function Dashboard({
                   </button>
                 )}
               </div>
+            </div>
 
+            {/* Row 2: Market segments switcher & Relative updated status */}
+            <div className="wl-row-2">
               <div className="hero-market-seg seg" role="tablist" aria-label="Market">
                 {MARKETS.map((m) => (
                   <button
@@ -2442,33 +2446,30 @@ export default function Dashboard({
                   </button>
                 ))}
               </div>
-            </div>
 
-            <div className="wl-divider" />
-
-            <div className="wl-status-row">
-              <span className="wl-live-dot" aria-hidden />
-              <span className="trending-updated">
-                Live · updated {formatRelativeTime(quotesUpdatedAt)}
-              </span>
-              <button
-                type="button"
-                className="hl-refresh"
-                onClick={refetchQuotes}
-                disabled={quotesLoading}
-                aria-label="Refresh watchlist quotes"
-                title={quotesLoading ? "Refreshing…" : "Refresh"}
-              >
-                <Icon
-                  name="refresh"
-                  className={quotesLoading ? "spin" : undefined}
-                />
-              </button>
-              {quotesLoading && (
-                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                  <PrismWaitIcon size={20} duration="1.6s" />
+              <div className="wl-status-row">
+                <span className="trending-updated">
+                  updated {formatRelativeTime(quotesUpdatedAt)}
                 </span>
-              )}
+                <button
+                  type="button"
+                  className="hl-refresh"
+                  onClick={refetchQuotes}
+                  disabled={quotesLoading}
+                  aria-label="Refresh watchlist quotes"
+                  title={quotesLoading ? "Refreshing…" : "Refresh"}
+                >
+                  <Icon
+                    name="refresh"
+                    className={quotesLoading ? "spin" : undefined}
+                  />
+                </button>
+                {quotesLoading && (
+                  <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                    <PrismWaitIcon size={20} duration="1.6s" />
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}

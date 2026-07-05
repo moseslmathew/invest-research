@@ -705,23 +705,28 @@ body {
 .wl-bar {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 20px 12px;
-  margin-bottom: 18px;
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent) 13%, var(--surface-solid)),
-    color-mix(in srgb, var(--accent) 5%, var(--surface-solid))
-  );
-  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
+  gap: 14px;
+  padding: 0px !important;
+  margin-bottom: 20px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
-.wl-tabs-row {
+.wl-row-1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  width: 100%;
+}
+.wl-row-2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 .wl-tabs-left {
   display: flex;
