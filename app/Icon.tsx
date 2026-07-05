@@ -164,12 +164,21 @@ export function Icon({
           <path d="M1.5 22 L15.7 18.8" stroke="#ffffff" strokeWidth="1.7" strokeLinecap="round" />
           {/* refraction spreading inside the glass */}
           <path d="M15.6 18.7 L23.1 15.9 L25.8 21.5 Z" fill="#ffffff" opacity="0.16" />
+          {/* the prism glow */}
+          <path
+            d="M20 9.5 L28.5 27 L11.5 27 Z"
+            stroke="#6366f1"
+            strokeOpacity="0.55"
+            strokeWidth="3.2"
+            strokeLinejoin="round"
+            filter="url(#prBlur)"
+          />
           {/* the prism */}
           <path
             d="M20 9.5 L28.5 27 L11.5 27 Z"
             fill="url(#prGlass)"
             stroke="#dbe3ff"
-            strokeOpacity="0.65"
+            strokeOpacity="0.75"
             strokeWidth="1.1"
             strokeLinejoin="round"
           />

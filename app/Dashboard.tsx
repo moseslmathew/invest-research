@@ -2304,7 +2304,7 @@ export default function Dashboard({
           <div className="side-brand">
             <div className="logo"><Icon name="brandLogo" /></div>
             <div className="side-brand-txt">
-              <h1>Lumina</h1>
+              <h1>Lum<span className="brand-i">ı</span>na</h1>
               <p>Investment Research</p>
             </div>
           </div>
@@ -2340,8 +2340,8 @@ export default function Dashboard({
         <div className="main-top">
           <div className="brand mini">
             <div className="logo"><Icon name="brandLogo" /></div>
-            <div>
-              <h1>Lumina</h1>
+            <div className="side-brand-txt">
+              <h1>Lum<span className="brand-i">ı</span>na</h1>
               <p>Investment Research</p>
             </div>
           </div>
