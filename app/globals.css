@@ -146,17 +146,27 @@ body {
 .side-brand-card {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin: 0 6px 14px;
-  padding: 8px 10px 6px;
+  gap: 12px;
+  margin: 4px 8px 20px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.side-brand-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.08);
 }
 .side-brand {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
+  width: 100%;
 }
 .logo {
   overflow: hidden;
@@ -167,33 +177,36 @@ body {
   height: 100%;
 }
 .side-brand .logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px -3px rgba(99, 102, 241, 0.4);
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  box-shadow: 0 4px 14px -3px rgba(99, 102, 241, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 .side-brand-txt {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 2px;
 }
 .side-brand-txt h1 {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .side-brand-txt p {
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
   line-height: 1.2;
-  margin-top: 3px;
 }
 .side-nav {
   display: flex;
