@@ -620,7 +620,7 @@ function NewsDrawer({
               {loading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
-                    <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                    <PrismWaitIcon size={34} />
                     <span>✨ AI is filtering & analyzing news...</span>
                   </div>
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -746,7 +746,7 @@ function NewsDrawer({
                   {insiderLoading ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px", margin: "10px 0" }}>
                       <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
-                        <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                        <PrismWaitIcon size={34} />
                         <span>✨ AI is scanning & verifying insider activity...</span>
                       </div>
                       <div className="news-shimmer-card" style={{ height: "80px" }} />
@@ -819,7 +819,7 @@ function NewsDrawer({
               {researchLoading ? (
                 <div className="val-section" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
-                    <span className="inline-spin" style={{ width: "16px", height: "16px" }}></span>
+                    <PrismWaitIcon size={34} />
                     <span>✨ AI is drafting research summary & catalyst stances...</span>
                   </div>
                   <div className="news-shimmer-card" style={{ height: "100px" }} />

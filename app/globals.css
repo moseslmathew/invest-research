@@ -3569,10 +3569,9 @@ th.sortable:hover {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 16px;
-  box-shadow: var(--shadow);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .prism-loading-panel p {
