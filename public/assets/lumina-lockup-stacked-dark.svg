@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="172" viewBox="0 0 260 172">
+  
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.3" result="b"></feGaussianBlur>
+      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"></stop>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.04"></stop>
+    </linearGradient>
+  </defs>
+  <g transform="translate(86,0) scale(1.375)">
+    <polygon points="32,12 16,46 48,46" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.9" stroke-width="2.5" stroke-linejoin="round"></polygon>
+    <line x1="3" y1="40" x2="23.5" y2="30" stroke="#ffffff" stroke-width="3" stroke-linecap="round" filter="url(#glow)"></line>
+    <g filter="url(#glow)">
+      <polygon points="40.5,30 62,12 62,18" fill="#ff3b5c"></polygon>
+      <polygon points="40.5,30 62,18 62,24" fill="#ff9f1c"></polygon>
+      <polygon points="40.5,30 62,24 62,30" fill="#ffe14d"></polygon>
+      <polygon points="40.5,30 62,30 62,36" fill="#4ade80"></polygon>
+      <polygon points="40.5,30 62,36 62,42" fill="#38bdf8"></polygon>
+      <polygon points="40.5,30 62,42 62,48" fill="#a78bfa"></polygon>
+    </g>
+  </g>
+  <text x="133" y="128" text-anchor="middle" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="300" font-size="28" letter-spacing="5" fill="#f4f6fa">LUMINA</text>
+  <text x="132" y="154" text-anchor="middle" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="500" font-size="10" letter-spacing="4" fill="#8b94a7">INVESTMENT RESEARCH</text>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="340" height="80" viewBox="0 0 340 80">
+  
+  <defs>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e8274b"></stop>
+      <stop offset="0.35" stop-color="#eec513"></stop>
+      <stop offset="0.7" stop-color="#1e9be0"></stop>
+      <stop offset="1" stop-color="#8b63ef"></stop>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0,4) scale(1.125)">
+    <polygon points="32,12 16,46 48,46" fill="rgba(24,32,48,0.05)" stroke="#232c3d" stroke-width="2.5" stroke-linejoin="round"></polygon>
+    <line x1="3" y1="40" x2="23.5" y2="30" stroke="#232c3d" stroke-width="3" stroke-linecap="round"></line>
+    <g>
+      <polygon points="40.5,30 62,12 62,18" fill="#e8274b"></polygon>
+      <polygon points="40.5,30 62,18 62,24" fill="#f28c0d"></polygon>
+      <polygon points="40.5,30 62,24 62,30" fill="#eec513"></polygon>
+      <polygon points="40.5,30 62,30 62,36" fill="#22b566"></polygon>
+      <polygon points="40.5,30 62,36 62,42" fill="#1e9be0"></polygon>
+      <polygon points="40.5,30 62,42 62,48" fill="#8b63ef"></polygon>
+    </g>
+  </g>
+  <text x="94" y="40" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="300" font-size="32" letter-spacing="4.5" fill="#1a2233">LUMINA</text>
+  <rect x="95" y="50" width="222" height="1" fill="url(#spectrum)"></rect>
+  <text x="95" y="68" font-family="Manrope, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-weight="500" font-size="11" letter-spacing="4.6" fill="#5c6577">INVESTMENT RESEARCH</text>
+</svg>

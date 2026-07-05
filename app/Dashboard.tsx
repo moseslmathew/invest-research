@@ -2326,7 +2326,10 @@ export default function Dashboard({
       <aside className="sidebar">
         <div className="side-brand-card">
           <div className="side-brand">
-            <div className="logo"><Icon name="brandLogo" /></div>
+            <div className="logo">
+              <img src="/assets/prism-icon-light.svg" className="logo-light" alt="Lumina Logo" />
+              <img src="/assets/prism-icon-dark.svg" className="logo-dark" alt="Lumina Logo" />
+            </div>
             <div className="side-brand-txt">
               <h1>Lum<span className="brand-i">ı</span>na</h1>
               <p>Investment Research</p>
@@ -2363,7 +2366,10 @@ export default function Dashboard({
       <div className="main">
         <div className="main-top">
           <div className="brand mini">
-            <div className="logo"><Icon name="brandLogo" /></div>
+            <div className="logo">
+              <img src="/assets/prism-icon-light.svg" className="logo-light" alt="Lumina Logo" />
+              <img src="/assets/prism-icon-dark.svg" className="logo-dark" alt="Lumina Logo" />
+            </div>
             <div className="side-brand-txt">
               <h1>Lum<span className="brand-i">ı</span>na</h1>
               <p>Investment Research</p>

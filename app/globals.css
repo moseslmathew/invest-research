@@ -3583,4 +3583,56 @@ th.sortable:hover {
   letter-spacing: 0.02em;
 }
 
+/* --- Prism Wait Loader Theme Classes & Animation Bindings --- */
+.pw-beam { animation: pw-beam var(--dur, 2s) linear infinite; }
+.pw-mid { animation: pw-mid var(--dur, 2s) linear infinite; }
+.pw-flash { opacity: 0; animation: pw-flash var(--dur, 2s) linear infinite; }
+.pw-ray { animation: pw-ray var(--dur, 2s) linear infinite; }
+
+.prism-wait--light {
+  display: block;
+}
+.prism-wait--dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .prism-wait--light {
+    display: none;
+  }
+  .prism-wait--dark {
+    display: block;
+  }
+}
+
+.prism-loading-panel .prism-wait--light {
+  display: none;
+}
+.prism-loading-panel .prism-wait--dark {
+  display: block;
+}
+
+/* --- Brand Logo Theme Toggle --- */
+.logo img.logo-light {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.logo img.logo-dark {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo img.logo-light {
+    display: none;
+  }
+  .logo img.logo-dark {
+    display: block;
+  }
+}
+
 
