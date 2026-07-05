@@ -91,9 +91,9 @@ export function Icon({
   }
 
   if (name === "brandLogo") {
-    // Lumina brand mark: "the glowing analyst candle" — a 3D glassmorphic 
-    // trading candlestick wrapped in glowing orbital data particle rings, 
-    // crowned with a high-luminance crystal flame.
+    // Lumina brand mark: "The Prism of Insight" — a 3D glassmorphic prism 
+    // refracting a beam of white light (raw data) into a vibrant glowing spectrum 
+    // of insights (Tech/Purple, Cyan, and Pink). Represents deep analytical sorting.
     return (
       <svg
         viewBox="0 0 40 40"
@@ -105,66 +105,90 @@ export function Icon({
         {...rest}
       >
         <defs>
-          <linearGradient id="lumaBg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#0d0e15" />
-            <stop offset="100%" stopColor="#1a1c2e" />
+          <linearGradient id="prismBg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#08070d" />
+            <stop offset="100%" stopColor="#141221" />
           </linearGradient>
-          <linearGradient id="glassCandle" x1="16.5" y1="18" x2="23.5" y2="31" gradientUnits="userSpaceOnUse">
+          <linearGradient id="prismGlass" x1="9" y1="9" x2="31" y2="29" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.05" />
+          </linearGradient>
+          <linearGradient id="rayCyan" x1="20" y1="15" x2="38" y2="8" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.85" />
-            <stop offset="50%" stopColor="#6366f1" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#ec4899" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
           </linearGradient>
-          <radialGradient id="flameHalo" cx="20" cy="12" r="8" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5" />
-            <stop offset="60%" stopColor="#ef4444" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="flameCore" x1="20" y1="5" x2="20" y2="15" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="35%" stopColor="#fef08a" />
-            <stop offset="70%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#dc2626" />
+          <linearGradient id="rayPurple" x1="20" y1="19" x2="38" y2="19" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
           </linearGradient>
-          <linearGradient id="orbitGrad" x1="10" y1="10" x2="30" y2="15" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="50%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#ec4899" />
+          <linearGradient id="rayPink" x1="20" y1="23" x2="38" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ec4899" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#ec4899" stopOpacity="0" />
           </linearGradient>
-          <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.5" />
+          <filter id="prismGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.8" />
           </filter>
         </defs>
-        <rect width="40" height="40" rx="12" fill="url(#lumaBg)" />
-        <rect width="39" height="39" x="0.5" y="0.5" rx="11.5" stroke="#ffffff" strokeOpacity="0.08" />
-        <circle cx="20" cy="12" r="8" fill="url(#flameHalo)" filter="url(#neonGlow)" />
-        <path d="M20 31v4" stroke="#ec4899" strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
-        <rect x="16.5" y="18" width="7" height="13" rx="2.2" fill="url(#glassCandle)" />
-        <rect x="17.2" y="18.7" width="1.2" height="11.6" rx="1" fill="#ffffff" fillOpacity="0.35" />
-        <path d="M20 15v3.2" stroke="#a5b4fc" strokeWidth="1.5" strokeLinecap="round" />
+        <rect width="40" height="40" rx="12" fill="url(#prismBg)" />
+        <rect width="39" height="39" x="0.5" y="0.5" rx="11.5" stroke="#ffffff" strokeOpacity="0.07" />
         <path
-          d="M10 12 C10 9.8 14.5 8 20 8 C25.5 8 30 9.8 30 12 C30 14.2 25.5 16 20 16 C14.5 16 10 14.2 10 12 Z"
-          fill="none"
-          stroke="url(#orbitGrad)"
+          d="M20 18 L38 8 M20 20 L38 20 M20 22 L38 30"
+          stroke="#818cf8"
+          strokeWidth="6"
+          strokeLinecap="round"
+          opacity="0.15"
+          filter="url(#prismGlow)"
+        />
+        <path
+          d="M23 15.5 C23 15.5 29 11.5 38 8"
+          stroke="url(#rayCyan)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M24 19.5 C24 19.5 31 19.5 38 19.5"
+          stroke="url(#rayPurple)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M23 23.5 C23 23.5 29 27.5 38 31"
+          stroke="url(#rayPink)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M2 20 L15 20"
+          stroke="#ffffff"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeOpacity="0.9"
+        />
+        <path
+          d="M15 20 L23 16 M15 20 L24 20 M15 20 L23 24"
+          stroke="#ffffff"
+          strokeWidth="1"
+          opacity="0.3"
+        />
+        <path
+          d="M20 9 L31 28 C31.5 29 30.5 30 29.5 30 L10.5 30 C9.5 30 8.5 29 9 28 Z"
+          fill="url(#prismGlass)"
+          stroke="#ffffff"
           strokeWidth="1.2"
-          strokeDasharray="22 14"
-          opacity="0.85"
-          transform="rotate(-20 20 12)"
+          strokeLinejoin="round"
+          strokeOpacity="0.25"
         />
-        <g transform="rotate(-20 20 12)">
-          <circle cx="11.5" cy="10.8" r="1.3" fill="#22d3ee" filter="url(#neonGlow)" />
-          <circle cx="11.5" cy="10.8" r="0.8" fill="#ffffff" />
-          <circle cx="28.5" cy="13.2" r="1.3" fill="#ec4899" filter="url(#neonGlow)" />
-          <circle cx="28.5" cy="13.2" r="0.8" fill="#ffffff" />
+        <path
+          d="M20 9.8 L10.2 29"
+          stroke="#ffffff"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeOpacity="0.45"
+        />
+        <g transform="translate(15, 20)">
+          <circle r="2" fill="#22d3ee" filter="url(#prismGlow)" opacity="0.8" />
+          <circle r="1" fill="#ffffff" />
         </g>
-        <path
-          d="M20 5 C22.5 8.2 24.2 10.2 24.2 12.3 A4.2 4.2 0 0 1 15.8 12.3 C15.8 10.2 17.5 8.2 20 5 Z"
-          fill="url(#flameCore)"
-        />
-        <path
-          d="M20 7 C21.2 9.2 22 10.4 22 11.8 A2 2 0 0 1 18 11.8 C18 10.4 18.8 9.2 20 7 Z"
-          fill="#ffffff"
-          opacity="0.95"
-        />
       </svg>
     );
   }
