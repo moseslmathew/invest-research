@@ -2367,8 +2367,54 @@ export default function Dashboard({
 
         {view === "watchlist" && (
           <div className="wl-bar">
-            {/* Row 1: Tabs & New Watchlist Trigger */}
+            {/* Row 1: Market segments switcher & Relative updated status */}
             <div className="wl-row-1">
+              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                {MARKETS.map((m) => (
+                  <button
+                    key={m.id}
+                    role="tab"
+                    aria-selected={market === m.id}
+                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                      market === m.id ? "active" : ""
+                    }`}
+                    onClick={() => selectMarket(m.id)}
+                  >
+                    <span className="flag" aria-hidden>
+                      {m.flag}
+                    </span>
+                    <span className="seg-code">{m.code}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="wl-status-row">
+                <span className="trending-updated">
+                  updated {formatRelativeTime(quotesUpdatedAt)}
+                </span>
+                <button
+                  type="button"
+                  className="hl-refresh"
+                  onClick={refetchQuotes}
+                  disabled={quotesLoading}
+                  aria-label="Refresh watchlist quotes"
+                  title={quotesLoading ? "Refreshing…" : "Refresh"}
+                >
+                  <Icon
+                    name="refresh"
+                    className={quotesLoading ? "spin" : undefined}
+                  />
+                </button>
+                {quotesLoading && (
+                  <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                    <PrismWaitIcon size={20} duration="1.6s" />
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Tabs & New Watchlist Trigger */}
+            <div className="wl-row-2">
               <div className="wl-tabs-left">
                 {personalLists.map((l) => (
                   <span
@@ -2422,52 +2468,6 @@ export default function Dashboard({
                   <button type="button" className="wl-new-link" onClick={() => setCreating(true)}>
                     + New watchlist
                   </button>
-                )}
-              </div>
-            </div>
-
-            {/* Row 2: Market segments switcher & Relative updated status */}
-            <div className="wl-row-2">
-              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                {MARKETS.map((m) => (
-                  <button
-                    key={m.id}
-                    role="tab"
-                    aria-selected={market === m.id}
-                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                      market === m.id ? "active" : ""
-                    }`}
-                    onClick={() => selectMarket(m.id)}
-                  >
-                    <span className="flag" aria-hidden>
-                      {m.flag}
-                    </span>
-                    <span className="seg-code">{m.code}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="wl-status-row">
-                <span className="trending-updated">
-                  updated {formatRelativeTime(quotesUpdatedAt)}
-                </span>
-                <button
-                  type="button"
-                  className="hl-refresh"
-                  onClick={refetchQuotes}
-                  disabled={quotesLoading}
-                  aria-label="Refresh watchlist quotes"
-                  title={quotesLoading ? "Refreshing…" : "Refresh"}
-                >
-                  <Icon
-                    name="refresh"
-                    className={quotesLoading ? "spin" : undefined}
-                  />
-                </button>
-                {quotesLoading && (
-                  <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                    <PrismWaitIcon size={20} duration="1.6s" />
-                  </span>
                 )}
               </div>
             </div>
