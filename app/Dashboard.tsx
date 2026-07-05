@@ -1041,9 +1041,9 @@ function TrendingList({
 
   if (loading) {
     return (
-      <div className="panel empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+      <div className="panel empty prism-loading-panel">
         <PrismWaitIcon size={64} />
-        <p style={{ marginTop: "16px", color: "var(--muted)" }}>Analyzing news & loading trending stock performance...</p>
+        <p>Analyzing news & loading trending stock performance...</p>
       </div>
     );
   }
@@ -1349,12 +1349,9 @@ function HeadlinesList({
 
   if (loading) {
     return (
-      <div
-        className="panel empty"
-        style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
-      >
+      <div className="panel empty prism-loading-panel">
         <PrismWaitIcon size={64} />
-        <p style={{ marginTop: "16px", color: "var(--muted)" }}>
+        <p>
           Clustering the most-covered stories across news channels…
         </p>
       </div>
