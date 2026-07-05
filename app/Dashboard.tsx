@@ -2363,59 +2363,7 @@ export default function Dashboard({
           </div>
         </div>
 
-        {view === "watchlist" && (
-          <div className="hl-header-compact">
-            <div className="hl-header-left">
-              <h2>
-                <Icon name="bookmark" className="hl-header-icon" /> Watchlists
-              </h2>
-              <span className="hl-header-sub">
-                Track and analyze your assets
-              </span>
-            </div>
-            <div className="hl-header-actions">
-              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                {MARKETS.map((m) => (
-                  <button
-                    key={m.id}
-                    role="tab"
-                    aria-selected={market === m.id}
-                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                      market === m.id ? "active" : ""
-                    }`}
-                    onClick={() => selectMarket(m.id)}
-                  >
-                    <span className="flag" aria-hidden>
-                      {m.flag}
-                    </span>
-                    <span className="seg-code">{m.code}</span>
-                  </button>
-                ))}
-              </div>
-              <span className="trending-updated">
-                Updated {formatRelativeTime(quotesUpdatedAt)}
-              </span>
-              <button
-                type="button"
-                className="hl-refresh"
-                onClick={refetchQuotes}
-                disabled={quotesLoading}
-                aria-label="Refresh watchlist quotes"
-                title={quotesLoading ? "Refreshing…" : "Refresh"}
-              >
-                <Icon
-                  name="refresh"
-                  className={quotesLoading ? "spin" : undefined}
-                />
-              </button>
-              {quotesLoading && (
-                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
-                  <PrismWaitIcon size={20} duration="1.6s" />
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+
 
         {view === "watchlist" && (
           <div className="wl-bar">
@@ -2471,6 +2419,50 @@ export default function Dashboard({
                 ＋ New watchlist
               </button>
             )}
+
+            <div style={{ flexGrow: 1 }} />
+
+            <div className="hl-header-actions" style={{ margin: 0, padding: 0 }}>
+              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
+                {MARKETS.map((m) => (
+                  <button
+                    key={m.id}
+                    role="tab"
+                    aria-selected={market === m.id}
+                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
+                      market === m.id ? "active" : ""
+                    }`}
+                    onClick={() => selectMarket(m.id)}
+                  >
+                    <span className="flag" aria-hidden>
+                      {m.flag}
+                    </span>
+                    <span className="seg-code">{m.code}</span>
+                  </button>
+                ))}
+              </div>
+              <span className="trending-updated">
+                Updated {formatRelativeTime(quotesUpdatedAt)}
+              </span>
+              <button
+                type="button"
+                className="hl-refresh"
+                onClick={refetchQuotes}
+                disabled={quotesLoading}
+                aria-label="Refresh watchlist quotes"
+                title={quotesLoading ? "Refreshing…" : "Refresh"}
+              >
+                <Icon
+                  name="refresh"
+                  className={quotesLoading ? "spin" : undefined}
+                />
+              </button>
+              {quotesLoading && (
+                <span className="inline-loader" style={{ display: "flex", alignItems: "center" }}>
+                  <PrismWaitIcon size={20} duration="1.6s" />
+                </span>
+              )}
+            </div>
           </div>
         )}
         {view === "watchlist" && !createState.ok && (
