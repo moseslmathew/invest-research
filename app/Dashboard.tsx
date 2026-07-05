@@ -1464,6 +1464,25 @@ function MarketTable({
   const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollRight(scrollWidth > clientWidth && scrollLeft + clientWidth < scrollWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 100);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [items]);
+
   const handleSort = (field: "price" | "change" | "change3m") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
@@ -1511,14 +1530,21 @@ function MarketTable({
   }, [filteredItems, sortField, sortOrder, quotes]);
 
   return (
-    <div className="panel table-panel">
+    <div className="panel table-panel" style={{ position: "relative" }}>
+      {canScrollRight && (
+        <div className="ai-scroll-hint">
+          <div className="ai-scroll-hint-pill">
+            Swipe Right <span>➔</span>
+          </div>
+        </div>
+      )}
       {filteredItems.length === 0 ? (
         <div className="panel empty" style={{ border: "none", boxShadow: "none", margin: 0, padding: "24px 0" }}>
           <div className="ico">🔍</div>
           <p>No matching stocks found for &ldquo;{filterText}&rdquo;.</p>
         </div>
       ) : (
-        <div className="table-scroll">
+        <div ref={scrollRef} className="table-scroll" onScroll={checkScroll}>
           <table className={`wl-table ${market === "IN" ? "in" : "us"}`}>
             <thead>
               <tr>
