@@ -316,6 +316,66 @@ body {
   padding: 2px 7px;
   border-radius: 999px;
 }
+
+/* --- Sidebar profile / logout --- */
+.side-profile {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+}
+.side-profile-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  box-shadow: 0 4px 10px -4px rgba(15, 23, 42, 0.4);
+}
+.side-profile-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.side-profile-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.side-profile-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+.side-profile-logout {
+  flex: none;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--muted);
+  background: transparent;
+  transition: background 0.18s, color 0.18s;
+}
+.side-profile-logout svg {
+  width: 16px;
+  height: 16px;
+}
+.side-profile-logout:hover {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+}
 .user-card {
   display: flex;
   align-items: center;
@@ -3751,12 +3811,12 @@ th.sortable:hover {
 .lp-title-spectrum {
   background: linear-gradient(
     92deg,
-    #ff5c7a,
-    #ffa23e 22%,
-    #ffd93d 40%,
-    #4ade80 58%,
-    #38bdf8 76%,
-    #a78bfa 94%
+    #f43f6b,
+    #f97316 24%,
+    #e0890f 44%,
+    #16a34a 62%,
+    #2f9fe0 80%,
+    #8b5cf6 96%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;

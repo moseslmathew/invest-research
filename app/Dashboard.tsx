@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
+import Link from "next/link";
 import {
   addItemAction,
   createWatchlistAction,
@@ -2602,6 +2603,23 @@ export default function Dashboard({
           ))}
         </nav>
 
+        <div className="side-profile">
+          <span className="side-profile-avatar" aria-hidden>
+            G
+          </span>
+          <span className="side-profile-info">
+            <span className="side-profile-name">Guest</span>
+            <span className="side-profile-sub">Browsing locally</span>
+          </span>
+          <Link
+            href="/"
+            className="side-profile-logout"
+            aria-label="Log out"
+            title="Log out"
+          >
+            <Icon name="logout" />
+          </Link>
+        </div>
       </aside>
 
       {/* ---------- Main ---------- */}

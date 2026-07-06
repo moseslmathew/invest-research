@@ -20,7 +20,8 @@ export type IconName =
   | "brandLogo"
   | "chevronRight"
   | "refresh"
-  | "search";
+  | "search"
+  | "logout";
 
 // Stroke-based line icons (Lucide-style), drawn with currentColor.
 const PATHS: Record<string, string> = {
@@ -40,6 +41,7 @@ const PATHS: Record<string, string> = {
   chevronRight: "M9 18l6-6-6-6",
   refresh: "M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6",
   search: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
 };
 
 export function Icon({
