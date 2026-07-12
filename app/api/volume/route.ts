@@ -11,7 +11,18 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Symbol is required" }, { status: 400 });
     }
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1mo&interval=1d`;
+    const range = (searchParams.get("range") || "2w").toLowerCase();
+
+    let yahooRange = "1mo";
+    let interval = "1d";
+    if (range === "3m") {
+      yahooRange = "3mo";
+    } else if (range === "1y") {
+      yahooRange = "1y";
+      interval = "1wk";
+    }
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${yahooRange}&interval=${interval}`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; LuminaResearch/1.0)" },
       next: { revalidate: 60 },
@@ -42,7 +53,13 @@ export async function GET(req: Request) {
 
       if (vol != null && Number.isFinite(vol) && close != null && Number.isFinite(close) && time != null) {
         const dateObj = new Date(time * 1000);
-        const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        let dateStr = "";
+        if (range === "1y") {
+          // For weekly data, show Month + Year or Month Day
+          dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        } else {
+          dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        }
         history.push({
           date: dateStr,
           volume: vol,
@@ -61,11 +78,8 @@ export async function GET(req: Request) {
       }
     }
 
-    const range = (searchParams.get("range") || "2w").toLowerCase();
-
-    // Keep either the last 10 trading days (2 weeks) or the full month (approx 22 trading days)
-    const sliceCount = range === "1m" ? history.length : 10;
-    const slicedHistory = history.slice(-sliceCount);
+    // Keep either the last 10 trading days (2 weeks) or all items for wider ranges
+    const slicedHistory = range === "2w" ? history.slice(-10) : history;
 
     if (slicedHistory.length === 0) {
       return NextResponse.json({ error: "No valid volume data points available" }, { status: 404 });

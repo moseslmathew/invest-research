@@ -427,7 +427,7 @@ function NewsDrawer({
   const [volLoading, setVolLoading] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
-  const [volumeRange, setVolumeRange] = useState<"2w" | "1m">("2w");
+  const [volumeRange, setVolumeRange] = useState<"2w" | "1m" | "3m" | "1y">("2w");
 
   // Close on Escape press
   useEffect(() => {
@@ -737,42 +737,27 @@ function NewsDrawer({
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                       <h3 className="volume-chart-title" style={{ margin: 0 }}>Historical Price Chart</h3>
                       <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                        <button
-                          className={`volume-range-btn ${volumeRange === "2w" ? "active" : ""}`}
-                          onClick={() => setVolumeRange("2w")}
-                          style={{
-                            border: "none",
-                            background: volumeRange === "2w" ? "var(--surface-solid)" : "transparent",
-                            color: volumeRange === "2w" ? "var(--accent)" : "var(--muted)",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            boxShadow: volumeRange === "2w" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          2W
-                        </button>
-                        <button
-                          className={`volume-range-btn ${volumeRange === "1m" ? "active" : ""}`}
-                          onClick={() => setVolumeRange("1m")}
-                          style={{
-                            border: "none",
-                            background: volumeRange === "1m" ? "var(--surface-solid)" : "transparent",
-                            color: volumeRange === "1m" ? "var(--accent)" : "var(--muted)",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            boxShadow: volumeRange === "1m" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          1M
-                        </button>
+                        {["2w", "1m", "3m", "1y"].map((r) => (
+                          <button
+                            key={r}
+                            className={`volume-range-btn ${volumeRange === r ? "active" : ""}`}
+                            onClick={() => setVolumeRange(r as any)}
+                            style={{
+                              border: "none",
+                              background: volumeRange === r ? "var(--surface-solid)" : "transparent",
+                              color: volumeRange === r ? "var(--accent)" : "var(--muted)",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              boxShadow: volumeRange === r ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {r.toUpperCase()}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="volume-chart-wrapper">
@@ -841,9 +826,9 @@ function NewsDrawer({
                                       x="50"
                                       y={yPos + 4}
                                       textAnchor="end"
-                                      fontSize="11"
-                                      fill="var(--muted)"
-                                      fontWeight="500"
+                                      fontSize="12.5"
+                                      fill="var(--text)"
+                                      fontWeight="600"
                                     >
                                       {fmtPrice(labelVal, quote?.currency || "USD")}
                                     </text>
@@ -904,16 +889,24 @@ function NewsDrawer({
 
                               {/* X-Axis Date Labels */}
                               {points.map((p, index) => {
+                                let showDate = true;
+                                if (points.length > 50) {
+                                  showDate = index % 8 === 0;
+                                } else if (points.length > 25) {
+                                  showDate = index % 4 === 0;
+                                } else if (points.length > 12) {
+                                  showDate = index % 2 === 0;
+                                }
                                 return (
-                                  (points.length <= 12 || index % 2 === 0) && (
+                                  showDate && (
                                     <text
                                       key={index}
                                       x={p.x}
-                                      y="272"
+                                      y="274"
                                       textAnchor="middle"
-                                      fontSize="11"
+                                      fontSize="12.5"
                                       fill="var(--text)"
-                                      fontWeight="500"
+                                      fontWeight="600"
                                     >
                                       {p.date}
                                     </text>
@@ -1443,42 +1436,27 @@ function NewsDrawer({
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                       <h3 className="volume-chart-title" style={{ margin: 0 }}>Daily Traded Volume</h3>
                       <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                        <button
-                          className={`volume-range-btn ${volumeRange === "2w" ? "active" : ""}`}
-                          onClick={() => setVolumeRange("2w")}
-                          style={{
-                            border: "none",
-                            background: volumeRange === "2w" ? "var(--surface-solid)" : "transparent",
-                            color: volumeRange === "2w" ? "var(--accent)" : "var(--muted)",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            boxShadow: volumeRange === "2w" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          2W
-                        </button>
-                        <button
-                          className={`volume-range-btn ${volumeRange === "1m" ? "active" : ""}`}
-                          onClick={() => setVolumeRange("1m")}
-                          style={{
-                            border: "none",
-                            background: volumeRange === "1m" ? "var(--surface-solid)" : "transparent",
-                            color: volumeRange === "1m" ? "var(--accent)" : "var(--muted)",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            boxShadow: volumeRange === "1m" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          1M
-                        </button>
+                        {["2w", "1m", "3m", "1y"].map((r) => (
+                          <button
+                            key={r}
+                            className={`volume-range-btn ${volumeRange === r ? "active" : ""}`}
+                            onClick={() => setVolumeRange(r as any)}
+                            style={{
+                              border: "none",
+                              background: volumeRange === r ? "var(--surface-solid)" : "transparent",
+                              color: volumeRange === r ? "var(--accent)" : "var(--muted)",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              boxShadow: volumeRange === r ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {r.toUpperCase()}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="volume-chart-wrapper">
@@ -1499,7 +1477,7 @@ function NewsDrawer({
                           const gridLines = [0, 0.25, 0.5, 0.75, 1];
                           const chartHeight = 230;
                           const chartWidth = 520;
-                          const barWidth = volumeHistory.length > 12 ? 14 : 32;
+                          const barWidth = volumeHistory.length > 50 ? 5 : (volumeHistory.length > 25 ? 9 : (volumeHistory.length > 12 ? 14 : 32));
                           const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
 
                           return (
@@ -1523,9 +1501,9 @@ function NewsDrawer({
                                       x="50"
                                       y={yPos + 4}
                                       textAnchor="end"
-                                      fontSize="11"
-                                      fill="var(--muted)"
-                                      fontWeight="500"
+                                      fontSize="12.5"
+                                      fill="var(--text)"
+                                      fontWeight="600"
                                     >
                                       {fmtVolume(labelVal)}
                                     </text>
@@ -1562,18 +1540,30 @@ function NewsDrawer({
                                       className="volume-bar"
                                       style={{ transition: "all 0.2s ease" }}
                                     />
-                                    {(volumeHistory.length <= 12 || index % 2 === 0) && (
-                                      <text
-                                        x={xPos + barWidth / 2}
-                                        y="272"
-                                        textAnchor="middle"
-                                        fontSize="11"
-                                        fill="var(--text)"
-                                        fontWeight="500"
-                                      >
-                                        {d.date}
-                                      </text>
-                                    )}
+                                    {(() => {
+                                      let showDate = true;
+                                      if (volumeHistory.length > 50) {
+                                        showDate = index % 8 === 0;
+                                      } else if (volumeHistory.length > 25) {
+                                        showDate = index % 4 === 0;
+                                      } else if (volumeHistory.length > 12) {
+                                        showDate = index % 2 === 0;
+                                      }
+                                      return (
+                                        showDate && (
+                                          <text
+                                            x={xPos + barWidth / 2}
+                                            y="274"
+                                            textAnchor="middle"
+                                            fontSize="12.5"
+                                            fill="var(--text)"
+                                            fontWeight="600"
+                                          >
+                                            {d.date}
+                                          </text>
+                                        )
+                                      );
+                                    })()}
                                   </g>
                                 );
                               })}
