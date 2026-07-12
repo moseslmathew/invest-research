@@ -3550,6 +3550,219 @@ function ResearchTable({
   );
 }
 
+function WatchlistBriefing({ items }: { items: WatchlistItem[] }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [briefing, setBriefing] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    const symbols = items.map(i => i.symbol).join(",");
+    fetch(`/api/watchlist-briefing?symbols=${encodeURIComponent(symbols)}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load AI briefing");
+        return res.json();
+      })
+      .then(data => {
+        if (active) {
+          setBriefing(data.briefing || []);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (active) {
+          setError(err.message || "Something went wrong");
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [items]);
+
+  if (loading) {
+    return (
+      <div className="panel empty" style={{ border: "none", boxShadow: "none", padding: "60px 0" }}>
+        <PrismWaitIcon size={48} />
+        <p style={{ marginTop: "12px", fontSize: "15px", fontWeight: 600 }}>Analyzing recent news catalysts...</p>
+        <p style={{ color: "var(--muted)", fontSize: "13px" }}>Finding events in the last 24–48 hours for {items.length} companies</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="panel empty" style={{ border: "none", boxShadow: "none", color: "var(--danger)", padding: "60px 0" }}>
+        <span style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</span>
+        <p style={{ fontWeight: 650 }}>Failed to compile briefing</p>
+        <p style={{ fontSize: "13px" }}>{error}</p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            const symbols = items.map(i => i.symbol).join(",");
+            fetch(`/api/watchlist-briefing?symbols=${encodeURIComponent(symbols)}`)
+              .then(res => res.json())
+              .then(data => {
+                setBriefing(data.briefing || []);
+                setLoading(false);
+              })
+              .catch(err => {
+                setError(err.message || "Failed to load");
+                setLoading(false);
+              });
+          }}
+          style={{
+            marginTop: "12px",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            background: "var(--surface-solid)",
+            border: "1px solid var(--border)",
+            cursor: "pointer",
+            color: "var(--text)",
+            fontWeight: 700,
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const allSources: { name: string; url: string }[] = [];
+  briefing.forEach(b => {
+    b.bullets.forEach((bullet: any) => {
+      if (bullet.url && !bullet.headline.toLowerCase().includes("no significant news")) {
+        const alreadyExists = allSources.some(s => s.url === bullet.url);
+        if (!alreadyExists) {
+          allSources.push({ name: bullet.source || "Source", url: bullet.url });
+        }
+      }
+    });
+  });
+
+  return (
+    <div className="ai-briefing-view" style={{ padding: "0 24px 40px", display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div className="ai-briefing-cards" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {briefing.map((comp, idx) => {
+          const isNoNews = comp.noNews || comp.bullets.some((b: any) => b.headline.toLowerCase().includes("no significant news"));
+          return (
+            <div
+              key={idx}
+              className="val-summary-card"
+              style={{
+                padding: "20px",
+                opacity: isNoNews ? 0.75 : 1,
+                borderLeft: isNoNews ? "3px solid var(--border)" : "3px solid var(--accent)",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "var(--text)" }}>
+                  {comp.company}
+                </h4>
+                <span
+                  style={{
+                    fontSize: "10.5px",
+                    fontWeight: 800,
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    background: isNoNews ? "rgba(148, 163, 184, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                    color: isNoNews ? "var(--muted)" : "#10b981",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {comp.symbol}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {comp.bullets.map((bullet: any, bIdx: number) => {
+                  const bulletNoNews = bullet.headline.toLowerCase().includes("no significant news");
+                  return (
+                    <div key={bIdx} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                      <span style={{ color: bulletNoNews ? "var(--muted)" : "var(--accent)", fontWeight: "bold", fontSize: "14px", marginTop: "-1px" }}>
+                        {bulletNoNews ? "✓" : "•"}
+                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+                        <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)" }}>
+                          {bullet.headline}
+                        </span>
+                        {!bulletNoNews && (
+                          <>
+                            <span style={{ fontSize: "12.5px", color: "var(--muted)", lineHeight: 1.45 }}>
+                              {bullet.summary}
+                            </span>
+                            <div style={{ marginTop: "2px" }}>
+                              <a
+                                href={bullet.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  background: "rgba(15, 23, 42, 0.04)",
+                                  color: "var(--accent)",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                🔗 {bullet.source}
+                              </a>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {allSources.length > 0 && (
+        <div className="val-summary-card" style={{ padding: "20px", marginTop: "8px" }}>
+          <h4 style={{ margin: "0 0 12px 0", fontSize: "14px", fontWeight: 800, color: "var(--text)" }}>
+            Sources
+          </h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px" }}>
+            {allSources.map((src, sIdx) => (
+              <a
+                key={sIdx}
+                href={src.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: "12px",
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                📰 {src.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard({
   data,
 }: {
@@ -3558,6 +3771,7 @@ export default function Dashboard({
   const [market, setMarket] = useState<Market>("US");
   const [view, setView] = useState<View>("watchlist");
   const [activeList, setActiveList] = useState<number | null>(null);
+  const [watchlistTab, setWatchlistTab] = useState<"table" | "briefing">("table");
   const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<Set<number>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
@@ -3604,6 +3818,11 @@ export default function Dashboard({
       /* ignore */
     }
   }, []);
+
+  // Reset watchlistTab to table when active watchlist or view changes
+  useEffect(() => {
+    setWatchlistTab("table");
+  }, [view, activeList]);
 
   function selectMarket(m: Market) {
     setMarket(m);
@@ -4234,6 +4453,48 @@ export default function Dashboard({
           <AIResearchPage market={market} quotes={quotes} />
         )}
 
+        {/* Watchlist Sub-Tabs (Table vs AI Briefing) */}
+        {view === "watchlist" && currentListId != null && items.length > 0 && (
+          <div className="wl-sub-tabs" style={{ display: "flex", gap: "8px", margin: "0 24px 20px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
+            <button
+              className={`wl-sub-tab ${watchlistTab === "table" ? "active" : ""}`}
+              onClick={() => setWatchlistTab("table")}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: watchlistTab === "table" ? "var(--text)" : "var(--muted)",
+                fontSize: "14px",
+                fontWeight: 750,
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderBottom: watchlistTab === "table" ? "2px solid var(--accent)" : "2px solid transparent",
+                marginBottom: "-10px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              📋 Stocks List
+            </button>
+            <button
+              className={`wl-sub-tab ${watchlistTab === "briefing" ? "active" : ""}`}
+              onClick={() => setWatchlistTab("briefing")}
+              style={{
+                border: "none",
+                background: "transparent",
+                color: watchlistTab === "briefing" ? "var(--text)" : "var(--muted)",
+                fontSize: "14px",
+                fontWeight: 750,
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderBottom: watchlistTab === "briefing" ? "2px solid var(--accent)" : "2px solid transparent",
+                marginBottom: "-10px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              ✨ AI Briefing
+            </button>
+          </div>
+        )}
+
         {view === "trending" ? (
           <TrendingList
             stocks={trendingStocks}
@@ -4255,6 +4516,8 @@ export default function Dashboard({
             <div className="ico">{view === "ai" ? "✨" : "📈"}</div>
             <p>No stocks yet — add your first one above.</p>
           </div>
+        ) : view === "watchlist" && watchlistTab === "briefing" ? (
+          <WatchlistBriefing items={items} />
         ) : showMarketTable ? (
           <MarketTable
             items={items}
