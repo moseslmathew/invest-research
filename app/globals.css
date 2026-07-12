@@ -3041,30 +3041,43 @@ th.col-num-r {
 /* Drawer Tabs */
 .drawer-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  background: var(--surface-solid);
+  gap: 4px;
+  padding: 5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 16px 20px 8px; /* floats cleanly inside drawer */
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+}
+.drawer-tabs::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Chrome/Safari */
 }
 .drawer-tab {
-  padding: 14px 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #64748b;
+  flex: 1;
+  min-width: fit-content;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--muted);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
   background: transparent;
-  transition: all 0.2s;
-  margin-right: 20px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .drawer-tab:hover {
-  color: #0f172a;
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.03);
 }
 .drawer-tab.active {
-  color: #4f46e5;
-  border-bottom-color: #4f46e5;
+  color: var(--accent);
+  background: var(--surface-solid);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 /* Mutual Fund Cards */
