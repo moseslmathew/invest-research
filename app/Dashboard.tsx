@@ -1275,7 +1275,7 @@ function NewsDrawer({
                               {hoveredBarIndex !== null && (() => {
                                 const d = volumeHistory[hoveredBarIndex];
                                 const xPos = 60 + hoveredBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
-                                const tooltipWidth = 140;
+                                const tooltipWidth = 160;
                                 const tooltipX = xPos + tooltipWidth > 580 ? xPos - tooltipWidth - 10 : xPos + 10;
                                 return (
                                   <g pointerEvents="none">
@@ -1283,20 +1283,20 @@ function NewsDrawer({
                                       x={tooltipX}
                                       y="40"
                                       width={tooltipWidth}
-                                      height="76"
+                                      height="88"
                                       rx="6"
                                       fill="var(--surface-solid)"
                                       stroke="var(--border)"
                                       strokeWidth="1.5"
                                       style={{ filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))" }}
                                     />
-                                    <text x={tooltipX + 12} y="58" fontSize="11" fontWeight="bold" fill="var(--text)">
+                                    <text x={tooltipX + 14} y="62" fontSize="13" fontWeight="bold" fill="var(--text)">
                                       {d.date}
                                     </text>
-                                    <text x={tooltipX + 12} y="78" fontSize="11" fill="var(--muted)">
+                                    <text x={tooltipX + 14} y="85" fontSize="12" fill="var(--muted)">
                                       Volume: <tspan fontWeight="bold" fill="var(--text)">{fmtVolume(d.volume)}</tspan>
                                     </text>
-                                    <text x={tooltipX + 12} y="98" fontSize="11" fill="var(--muted)">
+                                    <text x={tooltipX + 14} y="108" fontSize="12" fill="var(--muted)">
                                       Close: <tspan fontWeight="bold" fill={d.up ? "var(--green)" : "var(--red)"}>
                                         {fmtPrice(d.close, quote?.currency || "USD")}
                                       </tspan>
