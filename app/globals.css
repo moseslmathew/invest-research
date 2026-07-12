@@ -1253,6 +1253,10 @@ body {
 }
 
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 50px 20px;
   color: var(--muted);
