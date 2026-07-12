@@ -427,6 +427,7 @@ function NewsDrawer({
   const [volLoading, setVolLoading] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const [volumeRange, setVolumeRange] = useState<"2w" | "1m">("2w");
 
   // Close on Escape press
   useEffect(() => {
@@ -449,6 +450,7 @@ function NewsDrawer({
     setInsiderVerified(false);
     setVolumeHistory([]); // Reset volume history on symbol change
     setVolumeStats(null); // Reset volume stats on symbol change
+    setVolumeRange("2w"); // Reset volume range on symbol change
     setActiveTab("news"); // Reset tab on stock change
 
     const controller = new AbortController();
@@ -573,7 +575,7 @@ function NewsDrawer({
     setVolLoading(true);
     setVolError(null);
     const controller = new AbortController();
-    fetch(`/api/volume?symbol=${encodeURIComponent(stock.symbol)}`, {
+    fetch(`/api/volume?symbol=${encodeURIComponent(stock.symbol)}&range=${volumeRange}`, {
       signal: controller.signal,
     })
       .then((res) => {
@@ -593,7 +595,7 @@ function NewsDrawer({
         setVolLoading(false);
       });
     return () => controller.abort();
-  }, [stock, activeTab]);
+  }, [stock, activeTab, volumeRange]);
 
   useEffect(() => {
     if (!stock || activeTab !== "events") return;
@@ -1176,7 +1178,47 @@ function NewsDrawer({
 
                   {/* SVG Bar Chart */}
                   <div className="volume-chart-section">
-                    <h3 className="volume-chart-title">Daily Traded Volume (Last 10 Sessions)</h3>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                      <h3 className="volume-chart-title" style={{ margin: 0 }}>Daily Traded Volume</h3>
+                      <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        <button
+                          className={`volume-range-btn ${volumeRange === "2w" ? "active" : ""}`}
+                          onClick={() => setVolumeRange("2w")}
+                          style={{
+                            border: "none",
+                            background: volumeRange === "2w" ? "var(--surface-solid)" : "transparent",
+                            color: volumeRange === "2w" ? "var(--accent)" : "var(--muted)",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: volumeRange === "2w" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          2W
+                        </button>
+                        <button
+                          className={`volume-range-btn ${volumeRange === "1m" ? "active" : ""}`}
+                          onClick={() => setVolumeRange("1m")}
+                          style={{
+                            border: "none",
+                            background: volumeRange === "1m" ? "var(--surface-solid)" : "transparent",
+                            color: volumeRange === "1m" ? "var(--accent)" : "var(--muted)",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: volumeRange === "1m" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          1M
+                        </button>
+                      </div>
+                    </div>
                     <div className="volume-chart-wrapper">
                       <svg viewBox="0 0 600 300" className="volume-svg-chart" style={{ width: "100%", height: "100%" }}>
                         <defs>
@@ -1195,7 +1237,7 @@ function NewsDrawer({
                           const gridLines = [0, 0.25, 0.5, 0.75, 1];
                           const chartHeight = 230;
                           const chartWidth = 520;
-                          const barWidth = 32;
+                          const barWidth = volumeHistory.length > 12 ? 14 : 32;
                           const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
 
                           return (
@@ -1258,16 +1300,18 @@ function NewsDrawer({
                                       className="volume-bar"
                                       style={{ transition: "all 0.2s ease" }}
                                     />
-                                    <text
-                                      x={xPos + barWidth / 2}
-                                      y="272"
-                                      textAnchor="middle"
-                                      fontSize="11"
-                                      fill="var(--text)"
-                                      fontWeight="500"
-                                    >
-                                      {d.date}
-                                    </text>
+                                    {(volumeHistory.length <= 12 || index % 2 === 0) && (
+                                      <text
+                                        x={xPos + barWidth / 2}
+                                        y="272"
+                                        textAnchor="middle"
+                                        fontSize="11"
+                                        fill="var(--text)"
+                                        fontWeight="500"
+                                      >
+                                        {d.date}
+                                      </text>
+                                    )}
                                   </g>
                                 );
                               })}

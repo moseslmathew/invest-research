@@ -61,8 +61,11 @@ export async function GET(req: Request) {
       }
     }
 
-    // Keep only the last 10 trading days (2 weeks of business days)
-    const slicedHistory = history.slice(-10);
+    const range = (searchParams.get("range") || "2w").toLowerCase();
+
+    // Keep either the last 10 trading days (2 weeks) or the full month (approx 22 trading days)
+    const sliceCount = range === "1m" ? history.length : 10;
+    const slicedHistory = history.slice(-sliceCount);
 
     if (slicedHistory.length === 0) {
       return NextResponse.json({ error: "No valid volume data points available" }, { status: 404 });
