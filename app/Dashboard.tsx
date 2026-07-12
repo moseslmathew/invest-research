@@ -399,7 +399,7 @@ function NewsDrawer({
   quotes?: Record<string, Quote>;
   onRemove?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research" | "technicals" | "volume">("news");
+  const [activeTab, setActiveTab] = useState<"news" | "charts" | "valuation" | "mf" | "events" | "research" | "technicals" | "volume">("news");
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -571,7 +571,7 @@ function NewsDrawer({
   }, [stock, activeTab]);
 
   useEffect(() => {
-    if (!stock || activeTab !== "volume") return;
+    if (!stock || (activeTab !== "volume" && activeTab !== "charts")) return;
     setVolLoading(true);
     setVolError(null);
     const controller = new AbortController();
@@ -677,6 +677,12 @@ function NewsDrawer({
             News
           </button>
           <button
+            className={`drawer-tab ${activeTab === "charts" ? "active" : ""}`}
+            onClick={() => setActiveTab("charts")}
+          >
+            Charts
+          </button>
+          <button
             className={`drawer-tab ${activeTab === "events" ? "active" : ""}`}
             onClick={() => setActiveTab("events")}
           >
@@ -704,6 +710,262 @@ function NewsDrawer({
         </div>
 
         <div className="drawer-body">
+          {activeTab === "charts" && (
+            <div className="volume-tab-container">
+              {volLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div className="search-spin-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px", background: "rgba(79, 70, 229, 0.05)", border: "1px solid rgba(79, 70, 229, 0.1)", borderRadius: "8px", color: "var(--us)", fontSize: "13px", fontWeight: 600 }}>
+                    <PrismWaitIcon size={34} />
+                    <span>Analyzing chart patterns...</span>
+                  </div>
+                  <div className="news-shimmer-card" style={{ height: "180px" }} />
+                </div>
+              ) : volError ? (
+                <div className="news-empty-state">
+                  <span className="icon">⚠️</span>
+                  <p>{volError}</p>
+                </div>
+              ) : volumeHistory.length === 0 ? (
+                <div className="news-empty-state">
+                  <span className="icon">📈</span>
+                  <p>No historical price chart data available.</p>
+                </div>
+              ) : (
+                <>
+                  {/* SVG Price Chart */}
+                  <div className="volume-chart-section">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                      <h3 className="volume-chart-title" style={{ margin: 0 }}>Historical Price Chart</h3>
+                      <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        <button
+                          className={`volume-range-btn ${volumeRange === "2w" ? "active" : ""}`}
+                          onClick={() => setVolumeRange("2w")}
+                          style={{
+                            border: "none",
+                            background: volumeRange === "2w" ? "var(--surface-solid)" : "transparent",
+                            color: volumeRange === "2w" ? "var(--accent)" : "var(--muted)",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: volumeRange === "2w" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          2W
+                        </button>
+                        <button
+                          className={`volume-range-btn ${volumeRange === "1m" ? "active" : ""}`}
+                          onClick={() => setVolumeRange("1m")}
+                          style={{
+                            border: "none",
+                            background: volumeRange === "1m" ? "var(--surface-solid)" : "transparent",
+                            color: volumeRange === "1m" ? "var(--accent)" : "var(--muted)",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            boxShadow: volumeRange === "1m" ? "0 2px 6px rgba(0, 0, 0, 0.05)" : "none",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          1M
+                        </button>
+                      </div>
+                    </div>
+                    <div className="volume-chart-wrapper">
+                      <svg viewBox="0 0 600 300" className="volume-svg-chart" style={{ width: "100%", height: "100%" }}>
+                        <defs>
+                          <linearGradient id="priceUpGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="priceDownGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {(() => {
+                          const prices = volumeHistory.map(d => d.close);
+                          const minPrice = Math.min(...prices);
+                          const maxPrice = Math.max(...prices);
+                          const priceRange = maxPrice - minPrice || 1;
+                          const paddedMin = minPrice - (priceRange * 0.08);
+                          const paddedMax = maxPrice + (priceRange * 0.08);
+                          const paddedRange = paddedMax - paddedMin || 1;
+
+                          const chartHeight = 220;
+                          const chartWidth = 520;
+                          const startX = 60;
+                          
+                          const points = volumeHistory.map((d, index) => {
+                            const x = startX + index * (chartWidth / (volumeHistory.length - 1 || 1));
+                            const y = 250 - ((d.close - paddedMin) / paddedRange) * chartHeight;
+                            return { x, y, date: d.date, close: d.close };
+                          });
+
+                          const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                          const areaPath = `${linePath} L${points[points.length - 1].x},250 L${points[0].x},250 Z`;
+
+                          // Overall trend color
+                          const firstPrice = prices[0];
+                          const lastPrice = prices[prices.length - 1];
+                          const isUpTrend = lastPrice >= firstPrice;
+                          const trendColor = isUpTrend ? "#10b981" : "#ef4444";
+                          const trendGrad = isUpTrend ? "url(#priceUpGrad)" : "url(#priceDownGrad)";
+
+                          const gridLines = [0, 0.25, 0.5, 0.75, 1];
+
+                          return (
+                            <>
+                              {/* Grid lines */}
+                              {gridLines.map((ratio, idx) => {
+                                const yPos = 250 - (ratio * chartHeight);
+                                const labelVal = paddedMin + (ratio * paddedRange);
+                                return (
+                                  <g key={idx}>
+                                    <line
+                                      x1="60"
+                                      y1={yPos}
+                                      x2="580"
+                                      y2={yPos}
+                                      stroke="var(--border)"
+                                      strokeWidth="1"
+                                      strokeDasharray="4 4"
+                                      opacity="0.6"
+                                    />
+                                    <text
+                                      x="50"
+                                      y={yPos + 4}
+                                      textAnchor="end"
+                                      fontSize="11"
+                                      fill="var(--muted)"
+                                      fontWeight="500"
+                                    >
+                                      {fmtPrice(labelVal, quote?.currency || "USD")}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+
+                              {/* Area under curve */}
+                              <path d={areaPath} fill={trendGrad} />
+
+                              {/* Trend Line */}
+                              <path d={linePath} fill="none" stroke={trendColor} strokeWidth="2.5" />
+
+                              {/* Interactive Hover Areas */}
+                              {points.map((p, index) => {
+                                const rectWidth = chartWidth / (volumeHistory.length - 1 || 1);
+                                return (
+                                  <rect
+                                    key={index}
+                                    x={p.x - rectWidth / 2}
+                                    y="30"
+                                    width={rectWidth}
+                                    height={chartHeight}
+                                    fill="transparent"
+                                    style={{ cursor: "pointer" }}
+                                    onMouseEnter={() => setHoveredBarIndex(index)}
+                                    onMouseLeave={() => setHoveredBarIndex(null)}
+                                  />
+                                );
+                              })}
+
+                              {/* Hover indicators */}
+                              {hoveredBarIndex !== null && (() => {
+                                const p = points[hoveredBarIndex];
+                                return (
+                                  <>
+                                    <line
+                                      x1={p.x}
+                                      y1="30"
+                                      x2={p.x}
+                                      y2="250"
+                                      stroke="var(--border)"
+                                      strokeWidth="1.5"
+                                      strokeDasharray="3 3"
+                                    />
+                                    <circle
+                                      cx={p.x}
+                                      cy={p.y}
+                                      r="5"
+                                      fill={trendColor}
+                                      stroke="var(--surface-solid)"
+                                      strokeWidth="2.5"
+                                      style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}
+                                    />
+                                  </>
+                                );
+                              })()}
+
+                              {/* X-Axis Date Labels */}
+                              {points.map((p, index) => {
+                                return (
+                                  (points.length <= 12 || index % 2 === 0) && (
+                                    <text
+                                      key={index}
+                                      x={p.x}
+                                      y="272"
+                                      textAnchor="middle"
+                                      fontSize="11"
+                                      fill="var(--text)"
+                                      fontWeight="500"
+                                    >
+                                      {p.date}
+                                    </text>
+                                  )
+                                );
+                              })}
+
+                              {/* Custom interactive Tooltip */}
+                              {hoveredBarIndex !== null && (() => {
+                                const p = points[hoveredBarIndex];
+                                const tooltipWidth = 160;
+                                const tooltipX = p.x + tooltipWidth > 580 ? p.x - tooltipWidth - 10 : p.x + 10;
+                                return (
+                                  <g pointerEvents="none">
+                                    <rect
+                                      x={tooltipX}
+                                      y="40"
+                                      width={tooltipWidth}
+                                      height="88"
+                                      rx="6"
+                                      fill="var(--surface-solid)"
+                                      stroke="var(--border)"
+                                      strokeWidth="1.5"
+                                      style={{ filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))" }}
+                                    />
+                                    <text x={tooltipX + 14} y="62" fontSize="13" fontWeight="bold" fill="var(--text)">
+                                      {p.date}
+                                    </text>
+                                    <text x={tooltipX + 14} y="85" fontSize="12" fill="var(--muted)">
+                                      Close: <tspan fontWeight="bold" fill={trendColor}>
+                                        {fmtPrice(p.close, quote?.currency || "USD")}
+                                      </tspan>
+                                    </text>
+                                    <text x={tooltipX + 14} y="108" fontSize="12" fill="var(--muted)">
+                                      Volume: <tspan fontWeight="bold" fill="var(--text)">
+                                        {fmtVolume(volumeHistory[hoveredBarIndex].volume)}
+                                      </tspan>
+                                    </text>
+                                  </g>
+                                );
+                              })()}
+                            </>
+                          );
+                        })()}
+                      </svg>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {activeTab === "news" && (
             <>
               {loading ? (
