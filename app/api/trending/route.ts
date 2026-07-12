@@ -7,6 +7,39 @@ import type { Market } from "@/lib/db";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+const SYMBOL_MAPPING: Record<string, string> = {
+  "TATAMOTORS.NS": "TMPV.NS",
+  "TATAMOTORS": "TMPV.NS",
+  "INDIANBANK.NS": "INDIANB.NS",
+  "INDIANBANK": "INDIANB.NS",
+  "KALYAN.NS": "KALYANKJIL.NS",
+  "KALYAN": "KALYANKJIL.NS",
+  "ADANI.NS": "ADANIENT.NS",
+  "ADANI": "ADANIENT.NS",
+  "LARSEN.NS": "LT.NS",
+  "LARSEN": "LT.NS",
+  "MAHINDRA.NS": "M&M.NS",
+  "MAHINDRA": "M&M.NS",
+  "JSW.NS": "JSWSTEEL.NS",
+  "JSW": "JSWSTEEL.NS",
+};
+
+function mapTrendingStockSymbols(stocks: TrendingStock[], market: Market): TrendingStock[] {
+  return stocks.map((s) => {
+    let rawSym = (s.symbol || "").trim().toUpperCase();
+    if (SYMBOL_MAPPING[rawSym]) {
+      rawSym = SYMBOL_MAPPING[rawSym];
+    }
+    if (market === "IN" && !rawSym.endsWith(".NS") && !rawSym.endsWith(".BO")) {
+      rawSym = `${rawSym}.NS`;
+    }
+    if (SYMBOL_MAPPING[rawSym]) {
+      rawSym = SYMBOL_MAPPING[rawSym];
+    }
+    return { ...s, symbol: rawSym };
+  });
+}
+
 interface TrendingStock {
   symbol: string;
   name: string;
@@ -99,7 +132,7 @@ const MOCK_US_STOCKS: TrendingStock[] = [
 
 const MOCK_IN_STOCKS: TrendingStock[] = [
   { symbol: "RELIANCE.NS", name: "Reliance Industries", sentiment: "bullish", rationale: "Jio Infocomm registers strong ARPU growth and plans a potential retail listing spin-off.", source: "The Economic Times" },
-  { symbol: "TATAMOTORS.NS", name: "Tata Motors", sentiment: "bullish", rationale: "JLR sales recovery and expansion of domestic EV fleet drive record quarterly revenues.", source: "Moneycontrol" },
+  { symbol: "TMPV.NS", name: "Tata Motors (PV)", sentiment: "bullish", rationale: "JLR sales recovery and expansion of domestic EV fleet drive record quarterly revenues.", source: "Moneycontrol" },
   { symbol: "HDFCBANK.NS", name: "HDFC Bank", sentiment: "neutral", rationale: "Focuses on credit-to-deposit ratio improvements after merger integration phases.", source: "Mint" },
   { symbol: "INFY.NS", name: "Infosys", sentiment: "neutral", rationale: "Guidance confirmation calms investors amid cautious global enterprise IT spending.", source: "Business Standard" },
   { symbol: "SBIN.NS", name: "State Bank of India", sentiment: "bullish", rationale: "NPA levels drop to historic lows alongside robust loan credit growth across divisions.", source: "The Economic Times" },
@@ -372,8 +405,8 @@ Ranking rules:
 ${market === "IN" ? "- This is the INDIAN market: return Indian-listed companies, NOT US mega-caps.\n" : ""}
 For each company provide:
 1. The stock ticker — it MUST be a valid Yahoo Finance symbol.
-   - India (IN): symbol MUST end in .NS (e.g. RELIANCE.NS, TATAMOTORS.NS, ZOMATO.NS). Use .BO only if BSE-only.
-   - US: standard symbols (e.g. NVDA, TSLA, AAPL).
+    - India (IN): symbol MUST end in .NS (e.g. RELIANCE.NS, ZOMATO.NS). Note: Indian Bank is INDIANB.NS, Kalyan Jewellers is KALYANKJIL.NS, and Tata Motors is TMPV.NS (Passenger Vehicles) or TMCV.NS (Commercial Vehicles). Use .BO only if BSE-only.
+    - US: standard symbols (e.g. NVDA, TSLA, AAPL).
 2. The official or short company name.
 3. Sentiment from the coverage: 'bullish', 'bearish', or 'neutral'.
 4. A concise 1-sentence rationale grounded in the actual headlines for why it's trending.
@@ -423,6 +456,18 @@ Respond ONLY with JSON:
   const scored: TrendingStock[] = parsed.stocks
     .slice(0, 20)
     .map((s: TrendingStock) => {
+      let rawSym = (s.symbol || "").trim().toUpperCase();
+      if (SYMBOL_MAPPING[rawSym]) {
+        rawSym = SYMBOL_MAPPING[rawSym];
+      }
+      if (market === "IN" && !rawSym.endsWith(".NS") && !rawSym.endsWith(".BO")) {
+        rawSym = `${rawSym}.NS`;
+      }
+      if (SYMBOL_MAPPING[rawSym]) {
+        rawSym = SYMBOL_MAPPING[rawSym];
+      }
+      s.symbol = rawSym;
+
       const canonical = s.source ? validSources.get(s.source.trim().toLowerCase()) : undefined;
       const mentions = collectMentions(s, headlines);
       return {
@@ -506,7 +551,11 @@ export async function GET(req: Request) {
   if (!forceRefresh) {
     const cached = await readCache(market);
     if (cached && Date.now() - new Date(cached.updatedAt).getTime() < CACHE_TTL_MS) {
-      return NextResponse.json({ ...cached, cached: true });
+      return NextResponse.json({
+        stocks: mapTrendingStockSymbols(cached.stocks, market),
+        updatedAt: cached.updatedAt,
+        cached: true
+      });
     }
   }
 
@@ -518,7 +567,11 @@ export async function GET(req: Request) {
       const updatedAt = computed.mock
         ? new Date().toISOString()
         : await writeCache(market, computed.stocks);
-      return NextResponse.json({ stocks: computed.stocks, updatedAt, cached: false });
+      return NextResponse.json({
+        stocks: mapTrendingStockSymbols(computed.stocks, market),
+        updatedAt,
+        cached: false
+      });
     }
   } catch (err) {
     console.error("Trending compute error:", err);
@@ -526,6 +579,17 @@ export async function GET(req: Request) {
 
   // Compute failed — fall back to any (possibly stale) cache, then mock data.
   const stale = await readCache(market);
-  if (stale) return NextResponse.json({ ...stale, cached: true, stale: true });
-  return NextResponse.json({ stocks: mockFor(market), updatedAt: new Date().toISOString(), cached: false });
+  if (stale) {
+    return NextResponse.json({
+      stocks: mapTrendingStockSymbols(stale.stocks, market),
+      updatedAt: stale.updatedAt,
+      cached: true,
+      stale: true
+    });
+  }
+  return NextResponse.json({
+    stocks: mapTrendingStockSymbols(mockFor(market), market),
+    updatedAt: new Date().toISOString(),
+    cached: false
+  });
 }

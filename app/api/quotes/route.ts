@@ -7,6 +7,7 @@ export interface Quote {
   currency: string;
   time: number | null;
   change3mPct?: number | null;
+  volume?: number | null;
 }
 
 const MAX_SYMBOLS = 60;
@@ -19,6 +20,7 @@ interface CacheEntry {
   currency: string;
   time: number | null;
   change3mPct?: number | null;
+  volume?: number | null;
   liveTimestamp: number;
   histTimestamp: number;
 }
@@ -27,7 +29,25 @@ const quoteCache: Record<string, CacheEntry> = {};
 const LIVE_TTL_MS = 3 * 60 * 1000; // 3 minutes for live price/change
 const HIST_TTL_MS = 60 * 60 * 1000; // 1 hour for 3M historical performance
 
-async function fetchGoogleFinance(symbol: string): Promise<{ price: number; change: number; changePct: number; currency: string; time: number } | null> {
+function parseVolumeString(volStr: string): number | null {
+  if (!volStr) return null;
+  const cleaned = volStr.trim().replace(/,/g, "");
+  const match = cleaned.match(/^([\d.]+)\s*(L|Cr|K|M|B)?$/i);
+  if (!match) {
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+  const val = parseFloat(match[1]);
+  const suffix = match[2].toUpperCase();
+  if (suffix === "K") return val * 1000;
+  if (suffix === "L") return val * 100000;
+  if (suffix === "M") return val * 1000000;
+  if (suffix === "CR") return val * 10000000;
+  if (suffix === "B") return val * 1000000000;
+  return val;
+}
+
+async function fetchGoogleFinance(symbol: string): Promise<{ price: number; change: number; changePct: number; currency: string; time: number; volume: number | null } | null> {
   try {
     const sym = symbol.split(".")[0].toUpperCase();
     let url = `https://www.google.com/finance/quote/${encodeURIComponent(sym)}`;
@@ -49,19 +69,23 @@ async function fetchGoogleFinance(symbol: string): Promise<{ price: number; chan
     const match = html.match(pattern);
     if (!match) return null;
 
+    const volMatch = html.match(/<div class="SwQK7">Volume<\/div><div class="dO6ijd">([^<]+)<\/div>/);
+    const volume = volMatch ? parseVolumeString(volMatch[1]) : null;
+
     return {
       price: parseFloat(match[3]),
       change: parseFloat(match[4]),
       changePct: parseFloat(match[5]),
       currency: match[2],
       time: Math.floor(Date.now() / 1000),
+      volume,
     };
   } catch {
     return null;
   }
 }
 
-async function fetchYahooFinanceLive(symbol: string): Promise<{ price: number; change: number; changePct: number; currency: string; time: number | null } | null> {
+async function fetchYahooFinanceLive(symbol: string): Promise<{ price: number; change: number; changePct: number; currency: string; time: number | null; volume: number | null } | null> {
   try {
     const url =
       `https://query1.finance.yahoo.com/v8/finance/chart/` +
@@ -80,12 +104,26 @@ async function fetchYahooFinanceLive(symbol: string): Promise<{ price: number; c
       return null;
     }
     const change = price - prev;
+
+    const volArray = result?.indicators?.quote?.[0]?.volume;
+    let volume = meta?.regularMarketVolume != null ? Number(meta.regularMarketVolume) : null;
+    if (volume === null && Array.isArray(volArray)) {
+      for (let idx = volArray.length - 1; idx >= 0; idx--) {
+        const v = volArray[idx];
+        if (v !== null && Number.isFinite(v)) {
+          volume = v;
+          break;
+        }
+      }
+    }
+
     return {
       price,
       change,
       changePct: (change / prev) * 100,
       currency: String(meta?.currency ?? "USD"),
       time: Number(meta?.regularMarketTime) || null,
+      volume,
     };
   } catch {
     return null;
@@ -155,6 +193,7 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
       changePct: cached.changePct,
       currency: cached.currency,
       time: cached.time,
+      volume: cached.volume,
     };
   }
 
@@ -185,6 +224,7 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
     currency: liveQuote.currency,
     time: liveQuote.time,
     change3mPct,
+    volume: liveQuote.volume,
   };
 
   quoteCache[symbol] = {

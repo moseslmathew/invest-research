@@ -21,7 +21,7 @@ export interface MarketData {
   items: Record<number, WatchlistItem[]>;
 }
 
-type View = "watchlist" | "ai" | "trending" | "headlines";
+type View = "research" | "watchlist" | "ai" | "trending" | "headlines";
 
 const MARKETS: { id: Market; label: string; flag: string; code: string }[] = [
   { id: "US", label: "United States", flag: "🇺🇸", code: "US" },
@@ -51,6 +51,7 @@ const NAV: {
   view?: View;
   soon?: boolean;
 }[] = [
+  { id: "research", label: "AI Research", icon: "search", view: "research" },
   { id: "watchlist", label: "Watchlist", icon: "bookmark", view: "watchlist" },
   { id: "ai", label: "AI Stocks", icon: "sparkles", view: "ai" },
   { id: "trending", label: "Trending", icon: "trending", view: "trending" },
@@ -83,6 +84,14 @@ function fmtPrice(v: number, currency: string) {
     currency: currency || "USD",
     maximumFractionDigits: 2,
   }).format(v);
+}
+function fmtVolume(vol: number | null | undefined): string {
+  if (vol == null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 2,
+  }).format(vol);
 }
 function fmtDate(time: number) {
   return new Date(time * 1000).toLocaleDateString("en-US", {
@@ -390,7 +399,7 @@ function NewsDrawer({
   quotes?: Record<string, Quote>;
   onRemove?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research" | "technicals">("news");
+  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "mf" | "events" | "research" | "technicals" | "volume">("news");
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -413,6 +422,12 @@ function NewsDrawer({
   const [insiderNote, setInsiderNote] = useState<string>("");
   const [insiderVerified, setInsiderVerified] = useState(false);
 
+  const [volumeHistory, setVolumeHistory] = useState<any[]>([]);
+  const [volumeStats, setVolumeStats] = useState<any | null>(null);
+  const [volLoading, setVolLoading] = useState(false);
+  const [volError, setVolError] = useState<string | null>(null);
+  const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+
   // Close on Escape press
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -432,6 +447,8 @@ function NewsDrawer({
     setInsiderTrades([]); // Reset insider trading on symbol change
     setInsiderNote("");
     setInsiderVerified(false);
+    setVolumeHistory([]); // Reset volume history on symbol change
+    setVolumeStats(null); // Reset volume stats on symbol change
     setActiveTab("news"); // Reset tab on stock change
 
     const controller = new AbortController();
@@ -489,7 +506,8 @@ function NewsDrawer({
   }, [stock, activeTab]);
 
   useEffect(() => {
-    if (!stock || activeTab !== "research") return;
+    if (!stock || (activeTab !== "research" && activeTab !== "volume")) return;
+    if (researchData) return;
     setResearchLoading(true);
     setResearchError(null);
     const controller = new AbortController();
@@ -517,7 +535,7 @@ function NewsDrawer({
         setResearchLoading(false);
       });
     return () => controller.abort();
-  }, [stock, activeTab]);
+  }, [stock, activeTab, researchData]);
 
   useEffect(() => {
     if (!stock || activeTab !== "technicals") return;
@@ -546,6 +564,33 @@ function NewsDrawer({
       })
       .finally(() => {
         setTechLoading(false);
+      });
+    return () => controller.abort();
+  }, [stock, activeTab]);
+
+  useEffect(() => {
+    if (!stock || activeTab !== "volume") return;
+    setVolLoading(true);
+    setVolError(null);
+    const controller = new AbortController();
+    fetch(`/api/volume?symbol=${encodeURIComponent(stock.symbol)}`, {
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load volume history");
+        return res.json();
+      })
+      .then((data) => {
+        setVolumeHistory(data.history ?? []);
+        setVolumeStats(data.stats ?? null);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") {
+          setVolError(e.message || "Failed to load volume history");
+        }
+      })
+      .finally(() => {
+        setVolLoading(false);
       });
     return () => controller.abort();
   }, [stock, activeTab]);
@@ -640,6 +685,12 @@ function NewsDrawer({
             onClick={() => setActiveTab("technicals")}
           >
             Technicals
+          </button>
+          <button
+            className={`drawer-tab ${activeTab === "volume" ? "active" : ""}`}
+            onClick={() => setActiveTab("volume")}
+          >
+            Volume
           </button>
           <button
             className={`drawer-tab ${activeTab === "research" ? "active" : ""}`}
@@ -1082,9 +1133,869 @@ function NewsDrawer({
               )}
             </>
           )}
+
+          {activeTab === "volume" && (
+            <div className="volume-tab-container">
+              {volLoading ? (
+                <div className="panel empty" style={{ border: "none", boxShadow: "none", padding: "40px 0" }}>
+                  <PrismWaitIcon size={48} />
+                  <p>Loading historical volume data...</p>
+                </div>
+              ) : volError ? (
+                <div className="panel empty" style={{ border: "none", boxShadow: "none", color: "var(--danger)", padding: "40px 0" }}>
+                  <span style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</span>
+                  <p>{volError}</p>
+                </div>
+              ) : volumeHistory.length === 0 ? (
+                <div className="panel empty" style={{ border: "none", boxShadow: "none", padding: "40px 0" }}>
+                  <span style={{ fontSize: "24px", marginBottom: "8px" }}>📈</span>
+                  <p>No historical volume data available.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Grid */}
+                  {volumeStats && (
+                    <div className="volume-stats-grid">
+                      <div className="volume-stat-card">
+                        <span className="volume-stat-label">Avg Daily Vol (2W)</span>
+                        <span className="volume-stat-val">{fmtVolume(volumeStats.avgVolume)}</span>
+                      </div>
+                      <div className="volume-stat-card">
+                        <span className="volume-stat-label">Peak Vol Traded</span>
+                        <span className="volume-stat-val" style={{ color: "var(--accent)" }}>
+                          {fmtVolume(volumeStats.peakVolume)}
+                        </span>
+                        <span className="volume-stat-sub">on {volumeStats.peakVolumeDate}</span>
+                      </div>
+                      <div className="volume-stat-card">
+                        <span className="volume-stat-label">Total Traded (2W)</span>
+                        <span className="volume-stat-val">{fmtVolume(volumeStats.totalVolume)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SVG Bar Chart */}
+                  <div className="volume-chart-section">
+                    <h3 className="volume-chart-title">Daily Traded Volume (Last 10 Sessions)</h3>
+                    <div className="volume-chart-wrapper">
+                      <svg viewBox="0 0 600 300" className="volume-svg-chart" style={{ width: "100%", height: "100%" }}>
+                        <defs>
+                          <linearGradient id="volUpGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
+                            <stop offset="100%" stopColor="#047857" stopOpacity="0.85" />
+                          </linearGradient>
+                          <linearGradient id="volDownGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
+                            <stop offset="100%" stopColor="#b91c1c" stopOpacity="0.85" />
+                          </linearGradient>
+                        </defs>
+
+                        {(() => {
+                          const maxVol = volumeStats?.peakVolume || Math.max(...volumeHistory.map(d => d.volume)) || 1;
+                          const gridLines = [0, 0.25, 0.5, 0.75, 1];
+                          const chartHeight = 230;
+                          const chartWidth = 520;
+                          const barWidth = 32;
+                          const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
+
+                          return (
+                            <>
+                              {gridLines.map((ratio, idx) => {
+                                const yPos = 250 - (ratio * chartHeight);
+                                const labelVal = ratio * maxVol;
+                                return (
+                                  <g key={idx}>
+                                    <line
+                                      x1="60"
+                                      y1={yPos}
+                                      x2="580"
+                                      y2={yPos}
+                                      stroke="var(--border)"
+                                      strokeWidth="1"
+                                      strokeDasharray="4 4"
+                                      opacity="0.6"
+                                    />
+                                    <text
+                                      x="50"
+                                      y={yPos + 4}
+                                      textAnchor="end"
+                                      fontSize="11"
+                                      fill="var(--muted)"
+                                      fontWeight="500"
+                                    >
+                                      {fmtVolume(labelVal)}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+
+                              {volumeHistory.map((d, index) => {
+                                const barHeight = (d.volume / maxVol) * chartHeight;
+                                const xPos = 60 + index * (barWidth + spacing) + spacing / 2;
+                                const yPos = 250 - barHeight;
+
+                                return (
+                                  <g
+                                    key={index}
+                                    onMouseEnter={() => setHoveredBarIndex(index)}
+                                    onMouseLeave={() => setHoveredBarIndex(null)}
+                                    style={{ cursor: "pointer" }}
+                                  >
+                                    <rect
+                                      x={xPos - 5}
+                                      y="20"
+                                      width={barWidth + 10}
+                                      height={chartHeight}
+                                      fill="transparent"
+                                    />
+                                    <rect
+                                      x={xPos}
+                                      y={yPos}
+                                      width={barWidth}
+                                      height={Math.max(barHeight, 2)}
+                                      rx="3"
+                                      fill={d.up ? "url(#volUpGrad)" : "url(#volDownGrad)"}
+                                      className="volume-bar"
+                                      style={{ transition: "all 0.2s ease" }}
+                                    />
+                                    <text
+                                      x={xPos + barWidth / 2}
+                                      y="272"
+                                      textAnchor="middle"
+                                      fontSize="11"
+                                      fill="var(--text)"
+                                      fontWeight="500"
+                                    >
+                                      {d.date}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+
+                              {hoveredBarIndex !== null && (() => {
+                                const d = volumeHistory[hoveredBarIndex];
+                                const xPos = 60 + hoveredBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
+                                const tooltipWidth = 140;
+                                const tooltipX = xPos + tooltipWidth > 580 ? xPos - tooltipWidth - 10 : xPos + 10;
+                                return (
+                                  <g pointerEvents="none">
+                                    <rect
+                                      x={tooltipX}
+                                      y="40"
+                                      width={tooltipWidth}
+                                      height="76"
+                                      rx="6"
+                                      fill="var(--surface-solid)"
+                                      stroke="var(--border)"
+                                      strokeWidth="1.5"
+                                      style={{ filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))" }}
+                                    />
+                                    <text x={tooltipX + 12} y="58" fontSize="11" fontWeight="bold" fill="var(--text)">
+                                      {d.date}
+                                    </text>
+                                    <text x={tooltipX + 12} y="78" fontSize="11" fill="var(--muted)">
+                                      Volume: <tspan fontWeight="bold" fill="var(--text)">{fmtVolume(d.volume)}</tspan>
+                                    </text>
+                                    <text x={tooltipX + 12} y="98" fontSize="11" fill="var(--muted)">
+                                      Close: <tspan fontWeight="bold" fill={d.up ? "var(--green)" : "var(--red)"}>
+                                        {fmtPrice(d.close, quote?.currency || "USD")}
+                                      </tspan>
+                                    </text>
+                                  </g>
+                                );
+                              })()}
+                            </>
+                          );
+                        })()}
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* AI Volume Insight Box */}
+                  <div className="ai-volume-insight-card">
+                    <h3 className="ai-volume-insight-title">
+                      <span>✨ AI Volume Insight</span>
+                    </h3>
+                    {researchLoading ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--muted)", fontSize: "13px", padding: "6px 0" }}>
+                        <PrismWaitIcon size={20} />
+                        <span>Analyzing volume patterns...</span>
+                      </div>
+                    ) : researchError ? (
+                      <p style={{ fontSize: "12.5px", color: "var(--danger)" }}>Could not load volume insights.</p>
+                    ) : researchData ? (
+                      <div className="ai-volume-insight-text">
+                        {(() => {
+                          const volBullet = researchData.bullets.find((b: string) => b.toLowerCase().includes("volume") || b.toLowerCase().includes("traded"));
+                          const rawText = volBullet || researchData.summary;
+                          const cleanedText = rawText
+                            .replace(/^(Highlight|Key highlight|Key takeaway|Takeaway|Bullet|Highlighting)\s*\d*:\s*/i, "")
+                            .replace(/^•\s*/, "")
+                            .trim();
+                          return cleanedText;
+                        })()}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: "12.5px", color: "var(--muted)" }}>No insight generated yet.</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   AI Research Page — full-page research experience
+   ───────────────────────────────────────────── */
+/* Compact animated prism for the research hero: a dashed beam marches into
+   the glass and four insight rays flow out — one per research capability.
+   Reuses the global lp-dash / lp-flow / lp-spark / lp-halo keyframes. */
+function ResearchPrism() {
+  // Rays fan out from the prism's right face; one color per capability card.
+  const rays = [
+    { c: "#fb7185", y: 28 },
+    { c: "#a78bfa", y: 68 },
+    { c: "#38bdf8", y: 108 },
+    { c: "#4ade80", y: 148 },
+  ];
+  const exit = { x: 175, y: 88 };
+  const rayEndX = 330;
+
+  return (
+    <svg viewBox="0 0 340 190" fill="none" style={{ overflow: "visible", width: "100%", height: "auto" }}>
+      <defs>
+        <radialGradient id="rpGlass" cx="0.5" cy="0.62" r="0.75">
+          <stop offset="0" stopColor="#e9e4fb" />
+          <stop offset="0.55" stopColor="#ddd6f3" />
+          <stop offset="1" stopColor="#cfc7ec" />
+        </radialGradient>
+        <radialGradient id="rpHalo" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#c7d2fe" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#c7d2fe" stopOpacity="0" />
+        </radialGradient>
+        <filter id="rpSoft" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2" />
+        </filter>
+      </defs>
+
+      <ellipse cx="170" cy="95" rx="150" ry="85" fill="url(#rpHalo)" opacity="0.8" />
+
+      {/* ambient blurred rays */}
+      <g filter="url(#rpSoft)">
+        {rays.map((r) => (
+          <path
+            key={`amb-${r.c}`}
+            d={`M ${exit.x} ${exit.y} L ${rayEndX} ${r.y}`}
+            stroke={r.c}
+            strokeOpacity="0.25"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+        ))}
+      </g>
+
+      {/* flowing rays */}
+      {rays.map((r) => (
+        <path
+          key={`ray-${r.c}`}
+          d={`M ${exit.x} ${exit.y} L ${rayEndX} ${r.y}`}
+          pathLength={1}
+          stroke={r.c}
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeDasharray="0.22 0.28"
+        />
+      ))}
+
+      {/* dashed beam marching in */}
+      <line
+        x1="10"
+        y1="128"
+        x2="123"
+        y2="92"
+        stroke="#181c26"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeDasharray="9 8"
+      />
+
+      {/* the prism */}
+      <polygon
+        points="150,30 105,135 195,135"
+        fill="url(#rpGlass)"
+        stroke="#181c26"
+        strokeWidth="4.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="149" cy="102" r="16" fill="#ffffff" opacity="0.55" filter="url(#rpSoft)" />
+
+      {/* sparkles */}
+      <path
+        d="M 176 18 C 176 24.4 177.8 26.2 184 26.2 C 177.8 26.2 176 28 176 34.4 C 176 28 174.2 26.2 168 26.2 C 174.2 26.2 176 24.4 176 18 Z"
+        fill="#a78bfa"
+      />
+      <path
+        d="M 96 52 C 96 56 97.1 57.1 101 57.1 C 97.1 57.1 96 58.2 96 62.2 C 96 58.2 94.9 57.1 91 57.1 C 94.9 57.1 96 56 96 52 Z"
+        fill="#38bdf8"
+      />
+    </svg>
+  );
+}
+
+function AIResearchPage({
+  market,
+  quotes,
+}: {
+  market: Market;
+  quotes: Record<string, Quote>;
+}) {
+  const [researchStock, setResearchStock] = useState<{ symbol: string; name: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals">("research");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // ─── data states ───
+  const [news, setNews] = useState<NewsArticle[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
+
+  const [researchData, setResearchData] = useState<any | null>(null);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
+
+  const [techData, setTechData] = useState<any | null>(null);
+  const [techLoading, setTechLoading] = useState(false);
+  const [techError, setTechError] = useState<string | null>(null);
+
+  const [insiderTrades, setInsiderTrades] = useState<any[]>([]);
+  const [insiderLoading, setInsiderLoading] = useState(false);
+  const [insiderError, setInsiderError] = useState<string | null>(null);
+  const [insiderNote, setInsiderNote] = useState<string>("");
+  const [insiderVerified, setInsiderVerified] = useState(false);
+
+  // Reset on stock change
+  useEffect(() => {
+    if (!researchStock) return;
+    setActiveTab("research");
+    setNews([]);
+    setNewsError(null);
+    setResearchData(null);
+    setResearchError(null);
+    setTechData(null);
+    setTechError(null);
+    setInsiderTrades([]);
+    setInsiderNote("");
+    setInsiderVerified(false);
+  }, [researchStock?.symbol]);
+
+  // Fetch news
+  useEffect(() => {
+    if (!researchStock || activeTab !== "news") return;
+    setNewsLoading(true);
+    const ctrl = new AbortController();
+    fetch(`/api/news?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
+      .then(r => r.json()).then(d => setNews(d.articles ?? []))
+      .catch(e => { if (e.name !== "AbortError") setNewsError(e.message); })
+      .finally(() => setNewsLoading(false));
+    return () => ctrl.abort();
+  }, [researchStock, activeTab]);
+
+  // Fetch AI research
+  useEffect(() => {
+    if (!researchStock || activeTab !== "research") return;
+    setResearchLoading(true);
+    const ctrl = new AbortController();
+    fetch(`/api/research?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
+      .then(r => r.json()).then(d => setResearchData(d))
+      .catch(e => { if (e.name !== "AbortError") setResearchError(e.message); })
+      .finally(() => setResearchLoading(false));
+    return () => ctrl.abort();
+  }, [researchStock, activeTab]);
+
+  // Fetch technicals
+  useEffect(() => {
+    if (!researchStock || activeTab !== "technicals") return;
+    setTechLoading(true);
+    const ctrl = new AbortController();
+    fetch(`/api/technicals?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
+      .then(r => r.json()).then(d => setTechData(d))
+      .catch(e => { if (e.name !== "AbortError") setTechError(e.message); })
+      .finally(() => setTechLoading(false));
+    return () => ctrl.abort();
+  }, [researchStock, activeTab]);
+
+  // Fetch events/insider
+  useEffect(() => {
+    if (!researchStock || activeTab !== "events") return;
+    setInsiderLoading(true);
+    const ctrl = new AbortController();
+    const currentPrice = quotes?.[researchStock.symbol]?.price || "";
+    fetch(`/api/insider?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}&price=${currentPrice}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => { setInsiderTrades(d.trades ?? []); setInsiderNote(d.note ?? ""); setInsiderVerified(!!d.isAiVerified); })
+      .catch(e => { if (e.name !== "AbortError") setInsiderError(e.message); })
+      .finally(() => setInsiderLoading(false));
+    return () => ctrl.abort();
+  }, [researchStock, activeTab, quotes]);
+
+  const quote = researchStock ? quotes?.[researchStock.symbol] : null;
+  const isUp = quote && quote.change >= 0;
+  const formattedPrice = quote ? new Intl.NumberFormat("en-US", { style: "currency", currency: quote.currency }).format(quote.price) : null;
+  const formattedChange = quote ? `${isUp ? "+" : ""}${quote.changePct.toFixed(2)}%` : null;
+
+  const TABS: { id: typeof activeTab; label: string; icon: IconName }[] = [
+    { id: "research", label: "AI Insight", icon: "sparkles" },
+    { id: "news", label: "News", icon: "newspaper" },
+    { id: "technicals", label: "Technicals", icon: "trending" },
+    { id: "events", label: "Events & Insider", icon: "crown" },
+  ];
+
+  return (
+    <div className="rp-root">
+      {/* ── Landing page (no stock selected) ── */}
+      {!researchStock && (
+        <div className="rp-hero">
+          <div className="rp-hero-halo" aria-hidden />
+
+          <div className="rp-hero-prism" aria-hidden>
+            <ResearchPrism />
+          </div>
+
+          <h1 className="rp-hero-title">
+            Research, <span className="rp-hero-accent">refracted</span>.
+          </h1>
+          <p className="rp-hero-sub">
+            Point Lumina at any listed company. One search splits into
+            conviction, news, technicals and insider signals — in seconds.
+          </p>
+
+          <div className="rp-hero-search">
+            <div className="rp-search-shell">
+              <div className="rp-search-wrap">
+                <TickerSearch
+                  market={market}
+                  inputRef={searchRef}
+                  isAdding={false}
+                  onPick={(r) => setResearchStock({ symbol: r.symbol, name: r.name })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rp-hero-grid">
+            {[
+              {
+                icon: "sparkles" as IconName,
+                color: "#8b5cf6",
+                title: "AI Insight",
+                body: "Conviction score, stance and an executive brief.",
+              },
+              {
+                icon: "newspaper" as IconName,
+                color: "#0ea5e9",
+                title: "Curated news",
+                body: "Headlines filtered and tagged bullish or bearish.",
+              },
+              {
+                icon: "trending" as IconName,
+                color: "#6366f1",
+                title: "Technicals",
+                body: "RSI, MACD, moving averages and key levels.",
+              },
+              {
+                icon: "crown" as IconName,
+                color: "#10b981",
+                title: "Events & insider",
+                body: "Corporate calendar, fund flows and insider trades.",
+              },
+            ].map((f, i) => (
+              <button
+                key={f.title}
+                type="button"
+                className="rp-hero-card"
+                style={{ ["--card-accent" as string]: f.color }}
+                onClick={() => searchRef.current?.focus()}
+              >
+                <span className="rp-hero-card-icon">
+                  <Icon name={f.icon} width={18} height={18} />
+                </span>
+                <span className="rp-hero-card-txt">
+                  <span className="rp-hero-card-title">{f.title}</span>
+                  <span className="rp-hero-card-body">{f.body}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Research dashboard (stock selected) ── */}
+      {researchStock && (
+        <div className="rp-dashboard">
+          {/* Identity header — top of the research card */}
+          <div className="rp-active-header">
+            <div className="rp-head-id">
+              <h2 className="rp-head-name">{researchStock.name || researchStock.symbol}</h2>
+              <span className="rp-head-ticker">{researchStock.symbol}</span>
+            </div>
+            {formattedPrice && (
+              <div className="rp-head-price">
+                <span className="rp-head-price-val">{formattedPrice}</span>
+                <span className={`rp-head-chg ${isUp ? "up" : "down"}`}>
+                  {isUp ? "▲" : "▼"} {formattedChange}
+                </span>
+              </div>
+            )}
+            <button
+              className="rp-chip-close"
+              onClick={() => setResearchStock(null)}
+              aria-label="Close research"
+            >✕</button>
+          </div>
+
+          {/* Tab rail */}
+          <div className="rp-tabs">
+            {TABS.map(t => (
+              <button
+                key={t.id}
+                className={`rp-tab ${activeTab === t.id ? "active" : ""}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                <Icon name={t.icon} width={15} height={15} />
+                <span className="rp-tab-label">{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* ── AI Insight Tab ── */}
+          {activeTab === "research" && (
+            <div className="rp-panel">
+              {researchLoading ? (
+                <div className="rp-loading">
+                  <PrismWaitIcon size={48} />
+                  <p>✨ AI is drafting research summary &amp; catalyst stances…</p>
+                </div>
+              ) : researchError ? (
+                <div className="rp-error"><span>⚠️</span><p>{researchError}</p></div>
+              ) : !researchData ? (
+                <div className="rp-error"><span>✨</span><p>Report not generated.</p></div>
+              ) : (
+                <div className="rp-research-content">
+                  {/* Stance card */}
+                  <div className={`rp-stance-card ${researchData.stance?.toLowerCase()}`}>
+                    <div className="rp-stance-ring">
+                      <svg width="88" height="88" viewBox="0 0 36 36">
+                        <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path className="score-svg-progress" strokeDasharray={`${researchData.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      </svg>
+                      <div className="score-svg-text">
+                        <span className="score-num">{researchData.score}</span>
+                        <span className="score-pct">%</span>
+                      </div>
+                    </div>
+                    <div className="rp-stance-meta">
+                      <span className="rp-stance-lbl">AI Conviction Score</span>
+                      <h2 className="rp-stance-val">{researchData.stance}</h2>
+                      <p className="rp-stance-desc">Based on fundamentals, momentum &amp; market context</p>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="rp-card">
+                    <div className="rp-card-header">
+                      <span className="rp-card-icon">📋</span>
+                      <span className="rp-card-title">Executive Summary</span>
+                    </div>
+                    <p className="rp-card-body">{researchData.summary}</p>
+                  </div>
+
+                  {/* Bullets */}
+                  <div className="rp-card">
+                    <div className="rp-card-header">
+                      <span className="rp-card-icon">💡</span>
+                      <span className="rp-card-title">Key Takeaways</span>
+                    </div>
+                    <div className="rp-bullets">
+                      {researchData.bullets?.map((b: string, i: number) => (
+                        <div key={i} className="rp-bullet">
+                          <span className="rp-bullet-dot">▸</span>
+                          <span>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── News Tab ── */}
+          {activeTab === "news" && (
+            <div className="rp-panel">
+              {newsLoading ? (
+                <div className="rp-loading">
+                  <PrismWaitIcon size={48} />
+                  <p>✨ AI is filtering &amp; analyzing news…</p>
+                </div>
+              ) : newsError ? (
+                <div className="rp-error"><span>⚠️</span><p>{newsError}</p></div>
+              ) : news.length === 0 ? (
+                <div className="rp-error"><span>📰</span><p>No recent news found.</p></div>
+              ) : (
+                <div className="rp-news-grid">
+                  {news.map((item, i) => (
+                    <a
+                      key={item.uuid}
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`rp-news-card ${i === 0 ? "featured" : ""}`}
+                    >
+                      {item.thumbnail && i === 0 && (
+                        <div className="rp-news-thumb-wrap">
+                          <img src={item.thumbnail} alt="" className="rp-news-thumb" loading="lazy" />
+                        </div>
+                      )}
+                      <div className="rp-news-body">
+                        <div className="rp-news-meta">
+                          <span>{item.publisher}</span>
+                          <span>·</span>
+                          <span>{fmtRelativeTime(item.time)}</span>
+                          {item.sentiment && (
+                            <span className={`rp-sentiment ${item.sentiment}`}>
+                              {item.sentiment === "bullish" ? "🟢 Bullish" : item.sentiment === "bearish" ? "🔴 Bearish" : "⚪ Neutral"}
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="rp-news-title">{item.title}</h3>
+                        {item.valueRationale && (
+                          <p className="rp-news-rationale">💡 {item.valueRationale}</p>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Technicals Tab ── */}
+          {activeTab === "technicals" && (
+            <div className="rp-panel">
+              {techLoading ? (
+                <div className="rp-loading">
+                  <PrismWaitIcon size={48} />
+                  <p>✨ AI is computing technical indicators &amp; levels…</p>
+                </div>
+              ) : techError ? (
+                <div className="rp-error"><span>⚠️</span><p>{techError}</p></div>
+              ) : !techData ? (
+                <div className="rp-error"><span>📊</span><p>Technical analysis not generated.</p></div>
+              ) : (
+                <div className="rp-research-content">
+                  {/* Stance */}
+                  <div className={`rp-stance-card ${techData.stance?.toLowerCase().includes("buy") ? "bullish" : techData.stance?.toLowerCase().includes("sell") ? "bearish" : "neutral"}`}>
+                    <div className="rp-stance-ring" style={{ background: "transparent", border: "none" }}>
+                      <span style={{ fontSize: "36px" }}>
+                        {techData.stance?.toLowerCase().includes("strong buy") ? "🚀"
+                          : techData.stance?.toLowerCase().includes("buy") ? "📈"
+                          : techData.stance?.toLowerCase().includes("strong sell") ? "💥"
+                          : techData.stance?.toLowerCase().includes("sell") ? "📉" : "⚖️"}
+                      </span>
+                    </div>
+                    <div className="rp-stance-meta">
+                      <span className="rp-stance-lbl">Technical Consensus</span>
+                      <h2 className="rp-stance-val">{techData.stance}</h2>
+                    </div>
+                  </div>
+
+                  {/* Indicators grid */}
+                  <div className="rp-tech-grid">
+                    <div className="rp-tech-card">
+                      <span className="rp-tech-label">RSI (14)</span>
+                      <span className="rp-tech-val">{techData.rsi}</span>
+                      <div className="rp-tech-bar">
+                        <div className="rp-tech-bar-fill" style={{ width: `${techData.rsi}%`, background: techData.rsi > 70 ? "var(--red)" : techData.rsi < 30 ? "var(--green)" : "var(--us)" }} />
+                      </div>
+                      <span className="rp-tech-sub">{techData.rsi > 70 ? "Overbought" : techData.rsi < 30 ? "Oversold" : "Neutral"}</span>
+                    </div>
+                    <div className="rp-tech-card">
+                      <span className="rp-tech-label">MACD Signal</span>
+                      <span className={`val-stance ${techData.macd?.toLowerCase().includes("bullish") ? "undervalued" : techData.macd?.toLowerCase().includes("bearish") ? "premium" : "neutral"}`} style={{ fontSize: "13px", padding: "4px 10px", borderRadius: "8px", fontWeight: 700 }}>
+                        {techData.macd}
+                      </span>
+                    </div>
+                    <div className="rp-tech-card">
+                      <span className="rp-tech-label">Support Floor</span>
+                      <span className="rp-tech-val" style={{ color: "var(--green)" }}>
+                        {quote?.currency === "INR" ? "₹" : "$"}{techData.support}
+                      </span>
+                    </div>
+                    <div className="rp-tech-card">
+                      <span className="rp-tech-label">Resistance Ceiling</span>
+                      <span className="rp-tech-val" style={{ color: "var(--red)" }}>
+                        {quote?.currency === "INR" ? "₹" : "$"}{techData.resistance}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Moving Averages */}
+                  <div className="rp-card">
+                    <div className="rp-card-header">
+                      <span className="rp-card-icon">📉</span>
+                      <span className="rp-card-title">Moving Averages</span>
+                      <span className={`val-stance ${techData.movingAverages?.trend?.toLowerCase() === "bullish" ? "undervalued" : techData.movingAverages?.trend?.toLowerCase() === "bearish" ? "premium" : "neutral"}`} style={{ marginLeft: "auto", fontSize: "11px", padding: "2px 8px", borderRadius: "4px" }}>
+                        {techData.movingAverages?.trend} Trend
+                      </span>
+                    </div>
+                    <div className="rp-ma-rows">
+                      {[["SMA (20)", techData.movingAverages?.sma20], ["SMA (50)", techData.movingAverages?.sma50], ["SMA (200)", techData.movingAverages?.sma200]].map(([lbl, val]) => (
+                        <div key={lbl as string} className="rp-ma-row">
+                          <span>{lbl}</span>
+                          <strong>{quote?.currency === "INR" ? "₹" : "$"}{val}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="rp-card">
+                    <div className="rp-card-header">
+                      <span className="rp-card-icon">📝</span>
+                      <span className="rp-card-title">Technical Summary</span>
+                    </div>
+                    <p className="rp-card-body">{techData.summary}</p>
+                  </div>
+
+                  {/* Bullets */}
+                  {techData.bullets?.length > 0 && (
+                    <div className="rp-card">
+                      <div className="rp-card-header">
+                        <span className="rp-card-icon">🎯</span>
+                        <span className="rp-card-title">Takeaways</span>
+                      </div>
+                      <div className="rp-bullets">
+                        {techData.bullets.map((b: string, i: number) => (
+                          <div key={i} className="rp-bullet">
+                            <span className="rp-bullet-dot">▸</span>
+                            <span>{b}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Events & Insider Tab ── */}
+          {activeTab === "events" && (() => {
+            const events = getUpcomingEvents(researchStock.symbol);
+            const mfActivity = getMutualFundActivity(researchStock.symbol, quote?.currency || "USD");
+            return (
+              <div className="rp-panel">
+                {/* Corporate events */}
+                <div className="rp-card">
+                  <div className="rp-card-header">
+                    <span className="rp-card-icon">📅</span>
+                    <span className="rp-card-title">Upcoming Corporate Events</span>
+                  </div>
+                  <div className="rp-events-list">
+                    {events.map((ev, i) => (
+                      <div key={i} className="rp-event-card">
+                        <div className="rp-event-header">
+                          <span className="rp-event-title">{ev.event}</span>
+                          <span className="rp-event-date">{ev.date}</span>
+                        </div>
+                        <p className="rp-event-desc">{ev.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mutual fund activity */}
+                <div className="rp-card">
+                  <div className="rp-card-header">
+                    <span className="rp-card-icon">📈</span>
+                    <span className="rp-card-title">Mutual Fund Activity</span>
+                    <span className="rp-card-sub">Last 3 months</span>
+                  </div>
+                  <div className="rp-mf-list">
+                    {mfActivity.map((mf, i) => {
+                      const isBuy = mf.action === "Bought" || mf.action === "Increased";
+                      return (
+                        <div key={i} className="rp-mf-card">
+                          <div className="rp-mf-header">
+                            <span className="rp-mf-name">{mf.fundName}</span>
+                            <span className={`mf-badge ${isBuy ? "buy" : "sell"}`}>{mf.action}</span>
+                          </div>
+                          <div className="rp-mf-meta">
+                            <span>{mf.quantity}</span>
+                            <span>·</span>
+                            <span>{mf.value}</span>
+                            <span>·</span>
+                            <span>{mf.date}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Insider trading */}
+                <div className="rp-card">
+                  <div className="rp-card-header">
+                    <span className="rp-card-icon">👔</span>
+                    <span className="rp-card-title">Insider Trading</span>
+                    {insiderVerified && <span className="ai-badge" style={{ marginLeft: "auto", fontSize: "10.5px", background: "rgba(79,70,229,0.08)", color: "var(--us)", padding: "2px 8px", borderRadius: "20px", fontWeight: 650, border: "1px solid rgba(79,70,229,0.2)", display: "flex", alignItems: "center", gap: "4px" }}>✨ AI Verified</span>}
+                  </div>
+                  {insiderLoading ? (
+                    <div className="rp-loading" style={{ padding: "24px 0" }}>
+                      <PrismWaitIcon size={36} />
+                      <p>✨ AI is scanning insider activity…</p>
+                    </div>
+                  ) : insiderError ? (
+                    <p style={{ color: "var(--muted)", fontSize: "13px", padding: "12px 0" }}>⚠️ {insiderError}</p>
+                  ) : insiderTrades.length === 0 ? (
+                    <p style={{ color: "var(--muted)", fontSize: "13px", padding: "12px 0" }}>No recent insider transactions.</p>
+                  ) : (
+                    <div className="rp-events-list">
+                      {insiderTrades.map((trade, i) => {
+                        const isBuy = trade.action === "Buy";
+                        return (
+                          <div key={i} className="rp-event-card">
+                            <div className="rp-event-header">
+                              <span className="rp-event-title">{trade.executive}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                {trade.date && <span className="rp-event-date">{trade.date}</span>}
+                                <span className={`val-stance ${isBuy ? "undervalued" : "premium"}`} style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>{isBuy ? "Buy" : "Sale"}</span>
+                              </div>
+                            </div>
+                            {(trade.shares || trade.price || trade.value) && (
+                              <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--muted)", flexWrap: "wrap", marginTop: "4px" }}>
+                                {trade.shares && <span>Qty: <strong>{trade.shares}</strong></span>}
+                                {trade.price && <span>Price: <strong>{trade.price}</strong></span>}
+                                {trade.value && <span>Value: <strong>{trade.value}</strong></span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {insiderNote && <p style={{ fontSize: "11px", color: "var(--muted)", fontStyle: "italic", marginTop: "6px" }}>ℹ️ {insiderNote}</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1171,7 +2082,7 @@ function TrendingList({
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
   const [sortField, setSortField] = useState<
-    "price" | "change" | "change3m" | "news" | null
+    "price" | "change" | "change3m" | "news" | "volume" | null
   >(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   // Stock whose news-source breakdown popover is open (clicking the News count).
@@ -1196,7 +2107,7 @@ function TrendingList({
     };
   }, [stocks, currentPage, showAll]);
 
-  const handleSort = (field: "price" | "change" | "change3m" | "news") => {
+  const handleSort = (field: "price" | "change" | "change3m" | "news" | "volume") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -1219,7 +2130,9 @@ function TrendingList({
             ? "change3mPct"
             : sortField === "news"
               ? "newsCount"
-              : "price";
+              : sortField === "volume"
+                ? "volume"
+                : "price";
       const valA = a[key] != null ? a[key] : -Infinity;
       const valB = b[key] != null ? b[key] : -Infinity;
       if (valA === valB) return 0;
@@ -1298,6 +2211,14 @@ function TrendingList({
                   )}
                 </span>
               </div>
+              <div className="ai-col-volume">
+                <span className="sortable-header" onClick={() => handleSort("volume")}>
+                  Volume
+                  {sortField === "volume" && (
+                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
+                  )}
+                </span>
+              </div>
               <div className="ai-col-news">
                 <span className="sortable-header" onClick={() => handleSort("news")}>
                   News
@@ -1371,6 +2292,16 @@ function TrendingList({
                       >
                         {s.change3mPct >= 0 ? "+" : ""}
                         {s.change3mPct.toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="ai-col-volume">
+                    {s.volume == null ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      <span style={{ fontSize: "14px", fontWeight: 700 }}>
+                        {fmtVolume(s.volume)}
                       </span>
                     )}
                   </div>
@@ -1691,7 +2622,7 @@ function MarketTable({
 }: TableProps) {
   const bindLongPress = useLongPress(onSelectStock, onLongPress);
   const [filterText, setFilterText] = useState("");
-  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | "volume" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1713,7 +2644,7 @@ function MarketTable({
     };
   }, [items]);
 
-  const handleSort = (field: "price" | "change" | "change3m") => {
+  const handleSort = (field: "price" | "change" | "change3m" | "volume") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -1753,6 +2684,9 @@ function MarketTable({
       } else if (sortField === "change3m") {
         valA = qA?.change3mPct != null ? qA.change3mPct : -999;
         valB = qB?.change3mPct != null ? qB.change3mPct : -999;
+      } else if (sortField === "volume") {
+        valA = qA?.volume != null ? qA.volume : -1;
+        valB = qB?.volume != null ? qB.volume : -1;
       }
       if (valA === valB) return 0;
       return sortOrder === "asc" ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
@@ -1796,6 +2730,17 @@ function MarketTable({
                 >
                   Change
                   {sortField === "change" && (
+                    <span className="sort-indicator">
+                      {sortOrder === "asc" ? "▲" : "▼"}
+                    </span>
+                  )}
+                </th>
+                <th
+                  className="col-num-r sortable"
+                  onClick={() => handleSort("volume")}
+                >
+                  Volume
+                  {sortField === "volume" && (
                     <span className="sort-indicator">
                       {sortOrder === "asc" ? "▲" : "▼"}
                     </span>
@@ -1857,6 +2802,15 @@ function MarketTable({
                             {fmtPrice(Math.abs(q.change), q.currency)}
                           </span>
                         </div>
+                      ) : quotesLoading ? (
+                        <span className="shimmer" />
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td className="col-num-r">
+                      {q && q.volume != null ? (
+                        <span style={{ fontWeight: 600 }}>{fmtVolume(q.volume)}</span>
                       ) : quotesLoading ? (
                         <span className="shimmer" />
                       ) : (
@@ -1973,7 +2927,7 @@ function ResearchTable({
   const [filterText, setFilterText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showAll, setShowAll] = useState(false);
-  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | null>(null);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | "volume" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1996,7 +2950,7 @@ function ResearchTable({
     };
   }, [items, filterText, currentPage, showAll]);
 
-  const handleSort = (field: "price" | "change" | "change3m") => {
+  const handleSort = (field: "price" | "change" | "change3m" | "volume") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -2038,6 +2992,9 @@ function ResearchTable({
       } else if (sortField === "change3m") {
         valA = qA?.change3mPct != null ? qA.change3mPct : -999;
         valB = qB?.change3mPct != null ? qB.change3mPct : -999;
+      } else if (sortField === "volume") {
+        valA = qA?.volume != null ? qA.volume : -1;
+        valB = qB?.volume != null ? qB.volume : -1;
       }
       if (valA === valB) return 0;
       return sortOrder === "asc" ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
@@ -2096,6 +3053,16 @@ function ResearchTable({
             <span className="sortable-header" onClick={() => handleSort("change3m")}>
               3M Chg
               {sortField === "change3m" && (
+                <span className="sort-indicator">
+                  {sortOrder === "asc" ? "▲" : "▼"}
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="ai-col-volume">
+            <span className="sortable-header" onClick={() => handleSort("volume")}>
+              Volume
+              {sortField === "volume" && (
                 <span className="sort-indicator">
                   {sortOrder === "asc" ? "▲" : "▼"}
                 </span>
@@ -2168,6 +3135,21 @@ function ResearchTable({
                     <span className={`ai-price-change ${isUp ? "up" : "down"}`} style={{ fontSize: "14px", fontWeight: 700 }}>
                       {isUp ? "+" : ""}
                       {q.change3mPct.toFixed(2)}%
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* Volume Column */}
+              <div className="ai-col-volume">
+                {quotesLoading && !quotes?.[item.symbol] ? (
+                  <span className="price-loading">...</span>
+                ) : (() => {
+                  const q = quotes?.[item.symbol];
+                  if (!q || q.volume == null) return <span className="muted">—</span>;
+                  return (
+                    <span style={{ fontSize: "14px", fontWeight: 700 }}>
+                      {fmtVolume(q.volume)}
                     </span>
                   );
                 })()}
@@ -2317,7 +3299,7 @@ export default function Dashboard({
     const sm = window.localStorage.getItem(MARKET_STORE_KEY);
     if (sm === "US" || sm === "IN") setMarket(sm);
     const sv = window.localStorage.getItem(VIEW_STORE_KEY);
-    if (sv === "watchlist" || sv === "ai" || sv === "trending" || sv === "headlines")
+    if (sv === "research" || sv === "watchlist" || sv === "ai" || sv === "trending" || sv === "headlines")
       setView(sv);
     try {
       const f = JSON.parse(window.localStorage.getItem(FAV_STORE_KEY) || "[]");
@@ -2461,6 +3443,7 @@ export default function Dashboard({
         change: q?.change,
         changePct: q?.changePct,
         change3mPct: q?.change3mPct,
+        volume: q?.volume,
       };
     });
   }, [trendingRaw, trendingQuotes]);
@@ -2741,7 +3724,7 @@ export default function Dashboard({
         )}
 
         {/* Search card */}
-        {view !== "ai" && view !== "trending" && view !== "headlines" && (
+        {view !== "ai" && view !== "trending" && view !== "headlines" && view !== "research" && (
           <div className="panel search-panel">
             <form
               ref={addFormRef}
@@ -2950,6 +3933,11 @@ export default function Dashboard({
           </div>
         )}
 
+        {/* AI Research Page */}
+        {view === "research" && (
+          <AIResearchPage market={market} quotes={quotes} />
+        )}
+
         {view === "trending" ? (
           <TrendingList
             stocks={trendingStocks}
@@ -2961,7 +3949,7 @@ export default function Dashboard({
           />
         ) : view === "headlines" ? (
           <HeadlinesList stories={headlines} loading={headlinesLoading} />
-        ) : view === "watchlist" && currentListId == null ? (
+        ) : view === "research" ? null : view === "watchlist" && currentListId == null ? (
           <div className="panel empty">
             <div className="ico">🗂️</div>
             <p>No watchlists yet — create one above to get started.</p>
