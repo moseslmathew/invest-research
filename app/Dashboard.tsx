@@ -1414,7 +1414,7 @@ function NewsDrawer({
                   {volumeStats && (
                     <div className="volume-stats-grid">
                       <div className="volume-stat-card">
-                        <span className="volume-stat-label">Avg Daily Vol (2W)</span>
+                        <span className="volume-stat-label">Avg Daily Vol ({volumeRange.toUpperCase()})</span>
                         <span className="volume-stat-val">{fmtVolume(volumeStats.avgVolume)}</span>
                       </div>
                       <div className="volume-stat-card">
@@ -1425,7 +1425,7 @@ function NewsDrawer({
                         <span className="volume-stat-sub">on {volumeStats.peakVolumeDate}</span>
                       </div>
                       <div className="volume-stat-card">
-                        <span className="volume-stat-label">Total Traded (2W)</span>
+                        <span className="volume-stat-label">Total Traded ({volumeRange.toUpperCase()})</span>
                         <span className="volume-stat-val">{fmtVolume(volumeStats.totalVolume)}</span>
                       </div>
                     </div>
