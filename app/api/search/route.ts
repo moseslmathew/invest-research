@@ -101,8 +101,8 @@ function localIndianSearch(q: string): SearchResult[] {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const q = (searchParams.get("q") || "").trim().slice(0, 80);
-  const market: Market = searchParams.get("market") === "IN" ? "IN" : "US";
+  const q = (searchParams.get("q") || "").trim();
+  const market = (searchParams.get("market") || "US") as Market;
 
   if (q.length < 1) {
     return NextResponse.json({ results: [] });

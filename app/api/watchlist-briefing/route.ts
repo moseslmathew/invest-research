@@ -23,8 +23,7 @@ export async function GET(req: Request) {
     const symbols = symbolsStr
       .split(",")
       .map((s) => s.trim().toUpperCase())
-      .filter((s) => s.length > 0 && s.length <= 24)
-      .slice(0, 60);
+      .filter(Boolean);
 
     if (symbols.length === 0) {
       return NextResponse.json({ briefing: [] });

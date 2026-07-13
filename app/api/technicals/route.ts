@@ -21,8 +21,8 @@ async function fetchLivePrice(symbol: string): Promise<number> {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const symbol = (searchParams.get("symbol") || "").trim().slice(0, 24);
-    const name = (searchParams.get("name") || "").trim().slice(0, 80);
+    const symbol = (searchParams.get("symbol") || "").trim();
+    const name = (searchParams.get("name") || "").trim();
 
     if (!symbol) {
       return NextResponse.json({ error: "Symbol is required" }, { status: 400 });

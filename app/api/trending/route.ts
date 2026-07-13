@@ -544,7 +544,7 @@ async function computeTrending(
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const market: Market = searchParams.get("market") === "IN" ? "IN" : "US";
+  const market = (searchParams.get("market") || "US") as Market;
   const forceRefresh = searchParams.get("refresh") === "1";
 
   // Serve a fresh cache hit unless a manual refresh was requested.
