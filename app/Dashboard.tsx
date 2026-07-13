@@ -1700,7 +1700,7 @@ function NewsDrawer({
 
               {/* ── Edge-to-edge Chart ── */}
               <div className="gcp-chart-area">
-                <svg viewBox="0 0 400 200" preserveAspectRatio="none" className="gcp-svg">
+                <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="gcp-svg">
                   <defs>
                     <linearGradient id="gcpGradUp" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />

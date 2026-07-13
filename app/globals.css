@@ -4962,11 +4962,15 @@ th.sortable:hover {
   }
 }
 
-/* Mobile: chart fills available space */
+/* Mobile: chart fills available space but stays proportional */
 @media (max-width: 768px) {
   .gcp-chart-area {
     flex: 1;
-    min-height: 220px;
+    min-height: 180px;
+    max-height: 50vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .gcp-price {
     font-size: 24px;
