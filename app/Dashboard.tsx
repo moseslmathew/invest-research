@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
-import Link from "next/link";
 import {
   addItemAction,
   createWatchlistAction,
@@ -1668,6 +1667,32 @@ function NewsDrawer({
         const isUp = priceDiff >= 0;
         const trendColor = isUp ? "#10b981" : "#ef4444";
 
+        // X-axis date labels
+        const startDate = volumeHistory[0]?.date || "";
+        const endDate = volumeHistory[volumeHistory.length - 1]?.date || "";
+        const midDate = volumeHistory[Math.floor(volumeHistory.length / 2)]?.date || "";
+
+        // Y-axis labels (3 intervals)
+        let yLabels: string[] = [];
+        if (expandedChart === "price") {
+          const minP = Math.min(...prices);
+          const maxP = Math.max(...prices);
+          const range = maxP - minP || 1;
+          yLabels = [
+            fmtPrice(maxP, quote?.currency || "USD"),
+            fmtPrice(minP + range * 0.5, quote?.currency || "USD"),
+            fmtPrice(minP, quote?.currency || "USD")
+          ];
+        } else {
+          const vols = volumeHistory.map(d => d.volume);
+          const maxV = Math.max(...vols) || 1;
+          yLabels = [
+            fmtVolume(maxV),
+            fmtVolume(maxV * 0.5),
+            "0"
+          ];
+        }
+
         return (
           <>
             <div
@@ -1700,109 +1725,121 @@ function NewsDrawer({
 
               {/* ── Edge-to-edge Chart ── */}
               <div className="gcp-chart-area">
-                <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="gcp-svg">
-                  <defs>
-                    <linearGradient id="gcpGradUp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                    </linearGradient>
-                    <linearGradient id="gcpGradDown" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ef4444" stopOpacity="0.18" />
-                      <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
+                {/* Y Axis (Desktop only) */}
+                <div className="gcp-y-axis">
+                  <div className="gcp-axis-label">{yLabels[0]}</div>
+                  <div className="gcp-axis-label">{yLabels[1]}</div>
+                  <div className="gcp-axis-label">{yLabels[2]}</div>
+                </div>
 
-                  {expandedChart === "price" ? (() => {
-                    const minP = Math.min(...prices);
-                    const maxP = Math.max(...prices);
-                    const range = maxP - minP || 1;
-                    const padMin = minP - range * 0.05;
-                    const padMax = maxP + range * 0.05;
-                    const padRange = padMax - padMin || 1;
+                <div className="gcp-svg-container">
+                  <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="gcp-svg">
+                    <defs>
+                      <linearGradient id="gcpGradUp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="gcpGradDown" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.18" />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
 
-                    const pts = volumeHistory.map((d, i) => {
-                      const x = (i / (volumeHistory.length - 1 || 1)) * 400;
-                      const y = 200 - ((d.close - padMin) / padRange) * 190;
-                      return { x, y: Math.max(5, Math.min(195, y)) };
-                    });
+                    {expandedChart === "price" ? (() => {
+                      const minP = Math.min(...prices);
+                      const maxP = Math.max(...prices);
+                      const range = maxP - minP || 1;
+                      const padMin = minP - range * 0.05;
+                      const padMax = maxP + range * 0.05;
+                      const padRange = padMax - padMin || 1;
 
-                    const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-                    const area = `${line} L400,200 L0,200 Z`;
+                      const pts = volumeHistory.map((d, i) => {
+                        const x = (i / (volumeHistory.length - 1 || 1)) * 400;
+                        const y = 200 - ((d.close - padMin) / padRange) * 190;
+                        return { x, y: Math.max(5, Math.min(195, y)) };
+                      });
 
-                    // Reference line at first price
-                    const refY = 200 - ((firstPrice - padMin) / padRange) * 190;
+                      const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                      const area = `${line} L400,200 L0,200 Z`;
 
-                    return (
-                      <>
-                        <line x1="0" y1={refY} x2="400" y2={refY} stroke="var(--muted)" strokeWidth="0.5" strokeDasharray="4 3" opacity="0.5" />
-                        <path d={area} fill={isUp ? "url(#gcpGradUp)" : "url(#gcpGradDown)"} />
-                        <path d={line} fill="none" stroke={trendColor} strokeWidth="2" />
+                      return (
+                        <>
+                          <path d={area} fill={isUp ? "url(#gcpGradUp)" : "url(#gcpGradDown)"} />
+                          <path d={line} fill="none" stroke={trendColor} strokeWidth="2" />
 
-                        {/* Touch / hover hit areas */}
-                        {pts.map((p, i) => (
-                          <rect
-                            key={i}
-                            x={p.x - 200 / (volumeHistory.length || 1)}
-                            y="0"
-                            width={400 / (volumeHistory.length || 1)}
-                            height="200"
-                            fill="transparent"
-                            onMouseEnter={() => setHoveredBarIndex(i)}
-                            onMouseLeave={() => setHoveredBarIndex(null)}
-                            onTouchStart={() => setHoveredBarIndex(i)}
-                            onTouchEnd={() => setHoveredBarIndex(null)}
-                          />
-                        ))}
-
-                        {hoveredBarIndex !== null && (() => {
-                          const p = pts[hoveredBarIndex];
-                          return (
-                            <>
-                              <line x1={p.x} y1="0" x2={p.x} y2="200" stroke={trendColor} strokeWidth="0.8" opacity="0.5" />
-                              <circle cx={p.x} cy={p.y} r="3.5" fill={trendColor} stroke="var(--surface-solid)" strokeWidth="1.5" />
-                            </>
-                          );
-                        })()}
-                      </>
-                    );
-                  })() : (() => {
-                    // Volume bars
-                    const vols = volumeHistory.map(d => d.volume);
-                    const maxV = Math.max(...vols) || 1;
-
-                    return (
-                      <>
-                        {volumeHistory.map((d, i) => {
-                          const barW = 400 / volumeHistory.length * 0.7;
-                          const gap = 400 / volumeHistory.length * 0.3;
-                          const xPos = i * (barW + gap) + gap / 2;
-                          const barH = (d.volume / maxV) * 185;
-                          const yPos = 200 - barH;
-                          return (
-                            <g
+                          {/* Touch / hover hit areas */}
+                          {pts.map((p, i) => (
+                            <rect
                               key={i}
+                              x={p.x - 200 / (volumeHistory.length || 1)}
+                              y="0"
+                              width={400 / (volumeHistory.length || 1)}
+                              height="200"
+                              fill="transparent"
                               onMouseEnter={() => setHoveredBarIndex(i)}
                               onMouseLeave={() => setHoveredBarIndex(null)}
                               onTouchStart={() => setHoveredBarIndex(i)}
                               onTouchEnd={() => setHoveredBarIndex(null)}
-                            >
-                              <rect x={xPos} y="0" width={barW} height="200" fill="transparent" />
-                              <rect
-                                x={xPos}
-                                y={yPos}
-                                width={barW}
-                                height={Math.max(barH, 1)}
-                                rx="2"
-                                fill={d.up ? "#10b981" : "#ef4444"}
-                                opacity={hoveredBarIndex === i ? 1 : 0.7}
-                              />
-                            </g>
-                          );
-                        })}
-                      </>
-                    );
-                  })()}
-                </svg>
+                            />
+                          ))}
+
+                          {hoveredBarIndex !== null && (() => {
+                            const p = pts[hoveredBarIndex];
+                            return (
+                              <>
+                                <line x1={p.x} y1="0" x2={p.x} y2="200" stroke={trendColor} strokeWidth="0.8" opacity="0.5" />
+                                <circle cx={p.x} cy={p.y} r="3.5" fill={trendColor} stroke="var(--surface-solid)" strokeWidth="1.5" />
+                              </>
+                            );
+                          })()}
+                        </>
+                      );
+                    })() : (() => {
+                      // Volume bars
+                      const vols = volumeHistory.map(d => d.volume);
+                      const maxV = Math.max(...vols) || 1;
+
+                      return (
+                        <>
+                          {volumeHistory.map((d, i) => {
+                            const barW = 400 / volumeHistory.length * 0.7;
+                            const gap = 400 / volumeHistory.length * 0.3;
+                            const xPos = i * (barW + gap) + gap / 2;
+                            const barH = (d.volume / maxV) * 185;
+                            const yPos = 200 - barH;
+                            return (
+                              <g
+                                key={i}
+                                onMouseEnter={() => setHoveredBarIndex(i)}
+                                onMouseLeave={() => setHoveredBarIndex(null)}
+                                onTouchStart={() => setHoveredBarIndex(i)}
+                                onTouchEnd={() => setHoveredBarIndex(null)}
+                              >
+                                <rect x={xPos} y="0" width={barW} height="200" fill="transparent" />
+                                <rect
+                                  x={xPos}
+                                  y={yPos}
+                                  width={barW}
+                                  height={Math.max(barH, 1)}
+                                  rx="2"
+                                  fill={d.up ? "#10b981" : "#ef4444"}
+                                  opacity={hoveredBarIndex === i ? 1 : 0.7}
+                                />
+                              </g>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
+                  </svg>
+                </div>
+
+                {/* X Axis (Desktop only) */}
+                <div className="gcp-x-axis">
+                  <div className="gcp-axis-label">{startDate}</div>
+                  <div className="gcp-axis-label">{midDate}</div>
+                  <div className="gcp-axis-label">{endDate}</div>
+                </div>
 
                 {/* Hover info overlay */}
                 {hoveredBarIndex !== null && (() => {
@@ -4309,14 +4346,15 @@ export default function Dashboard({
             <span className="side-profile-name">Guest</span>
             <span className="side-profile-sub">Browsing locally</span>
           </span>
-          <Link
-            href="/"
+          {/* Plain <a>: next/link would prefetch the logout route and end the session. */}
+          <a
+            href="/api/auth/logout"
             className="side-profile-logout"
             aria-label="Log out"
             title="Log out"
           >
             <Icon name="logout" />
-          </Link>
+          </a>
         </div>
       </aside>
 
