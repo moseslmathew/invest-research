@@ -67,8 +67,8 @@ async function fetchInsiderNews(symbol: string, name: string): Promise<Headline[
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const symbol = (searchParams.get("symbol") || "").trim();
-  const name = (searchParams.get("name") || "").trim();
+  const symbol = (searchParams.get("symbol") || "").trim().slice(0, 24);
+  const name = (searchParams.get("name") || "").trim().slice(0, 80);
   const priceParam = searchParams.get("price");
   const currentPrice = priceParam ? parseFloat(priceParam) : null;
 

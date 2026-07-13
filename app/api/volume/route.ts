@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const symbol = (searchParams.get("symbol") || "").trim();
+    const symbol = (searchParams.get("symbol") || "").trim().slice(0, 24);
 
     if (!symbol) {
       return NextResponse.json({ error: "Symbol is required" }, { status: 400 });

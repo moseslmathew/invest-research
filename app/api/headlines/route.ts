@@ -375,7 +375,7 @@ Respond ONLY with JSON:
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const market = (searchParams.get("market") || "US") as Market;
+  const market: Market = searchParams.get("market") === "IN" ? "IN" : "US";
   const forceRefresh = searchParams.get("refresh") === "1";
 
   if (!forceRefresh) {

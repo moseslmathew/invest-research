@@ -12,6 +12,7 @@ import {
 import TickerSearch from "./TickerSearch";
 import PrismWaitIcon from "./PrismWaitIcon";
 import { Icon, type IconName } from "./Icon";
+import { useUser, useClerk } from "@clerk/nextjs";
 import type { Quote } from "./api/quotes/route";
 import type { Market, Watchlist, WatchlistItem } from "@/lib/db";
 
@@ -4005,6 +4006,8 @@ export default function Dashboard({
 }: {
   data: Record<Market, MarketData>;
 }) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const [market, setMarket] = useState<Market>("US");
   const [view, setView] = useState<View>("watchlist");
   const [activeList, setActiveList] = useState<number | null>(null);
@@ -4340,21 +4343,26 @@ export default function Dashboard({
 
         <div className="side-profile">
           <span className="side-profile-avatar" aria-hidden>
-            G
+            {user?.firstName?.[0] || user?.username?.[0] || "U"}
           </span>
           <span className="side-profile-info">
-            <span className="side-profile-name">Guest</span>
-            <span className="side-profile-sub">Browsing locally</span>
+            <span className="side-profile-name">{user?.fullName || user?.username || "User"}</span>
+            <span className="side-profile-sub" style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "120px" }}>
+              {user?.primaryEmailAddress?.emailAddress || "Logged in"}
+            </span>
           </span>
-          {/* Plain <a>: next/link would prefetch the logout route and end the session. */}
-          <a
-            href="/api/auth/logout"
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              signOut({ redirectUrl: "/" });
+            }}
             className="side-profile-logout"
             aria-label="Log out"
             title="Log out"
+            style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}
           >
             <Icon name="logout" />
-          </a>
+          </button>
         </div>
       </aside>
 
