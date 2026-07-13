@@ -1728,7 +1728,7 @@ function NewsDrawer({
               </div>
               
               {/* Range switcher line */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", width: "100%" }}>
                 <div className="volume-range-selectors" style={{ display: "flex", gap: "4px", background: "var(--bg)", padding: "3px", borderRadius: "8px", border: "1px solid var(--border)" }}>
                   {["2w", "1m", "3m", "1y"].map((r) => (
                     <button
@@ -1751,16 +1751,12 @@ function NewsDrawer({
                     </button>
                   ))}
                 </div>
-                <span className="scroll-hint" style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
-                  Swipe to scroll ↔
-                </span>
               </div>
             </div>
 
-            {/* Modal Body: Large SVG Chart */}
-            <div className="popup-chart-scroll-wrapper" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", marginTop: "8px" }}>
-              <div style={{ minWidth: "800px", height: "400px", position: "relative" }}>
-                <svg viewBox="0 0 880 400" style={{ width: "100%", height: "100%" }}>
+            {/* Modal Body: Responsive SVG Chart */}
+            <div style={{ width: "100%", aspectRatio: "880 / 420", position: "relative" }}>
+              <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid meet" style={{ width: "100%", height: "100%", display: "block" }}>
                   <defs>
                     <linearGradient id="popPriceUpGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
@@ -2062,7 +2058,6 @@ function NewsDrawer({
                     );
                   })()}
                 </svg>
-              </div>
             </div>
           </div>
         </>

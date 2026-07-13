@@ -4824,44 +4824,21 @@ th.sortable:hover {
   color: var(--text-2);
 }
 
-/* --- Large Chart Pop-up Responsive Design & Scrollbar Styling --- */
-.popup-chart-scroll-wrapper::-webkit-scrollbar {
-  height: 6px;
-}
-.popup-chart-scroll-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-.popup-chart-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.1);
-  border-radius: 3px;
-}
-.popup-chart-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.2);
-}
-
+/* --- Large Chart Pop-up Responsive Design --- */
 @media (max-width: 768px) {
   .large-chart-popup {
-    padding: 16px !important;
-    width: 95vw !important;
+    padding: 14px !important;
+    width: 96vw !important;
     max-height: 90vh;
     overflow-y: auto;
-    gap: 12px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
   }
   .popup-modal-header {
-    gap: 10px !important;
+    gap: 8px !important;
     padding-bottom: 10px !important;
   }
   .popup-title {
-    font-size: 15px !important;
-  }
-  .scroll-hint {
-    display: inline-flex !important;
+    font-size: 14px !important;
   }
 }
-@media (min-width: 769px) {
-  .scroll-hint {
-    display: none !important;
-  }
-}
-
-
