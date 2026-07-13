@@ -1689,15 +1689,46 @@ function NewsDrawer({
             }}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "var(--text)" }}>
-                  {stock.name || stock.symbol} — {expandedChart === "price" ? "Historical Price" : "Daily Traded Volume"}
-                </h3>
-                <span className="drawer-ticker" style={{ fontSize: "11px" }}>{stock.symbol}</span>
+            <div className="popup-modal-header" style={{ display: "flex", flexDirection: "column", gap: "12px", borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", width: "100%" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
+                  <h3 className="popup-title" style={{ margin: 0, fontSize: "17px", fontWeight: 850, color: "var(--text)", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {stock.name || stock.symbol}
+                  </h3>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span className="drawer-ticker" style={{ fontSize: "11px", background: "rgba(15, 23, 42, 0.05)", padding: "2px 6px", borderRadius: "4px" }}>{stock.symbol}</span>
+                    <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>
+                      {expandedChart === "price" ? "Historical Price" : "Daily Traded Volume"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedChart(null)}
+                  style={{
+                    border: "none",
+                    background: "rgba(15, 23, 42, 0.05)",
+                    color: "var(--text)",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginLeft: "12px",
+                  }}
+                  aria-label="Close popup"
+                >
+                  ✕
+                </button>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                {/* Range switcher */}
+              
+              {/* Range switcher line */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "8px" }}>
                 <div className="volume-range-selectors" style={{ display: "flex", gap: "4px", background: "var(--bg)", padding: "3px", borderRadius: "8px", border: "1px solid var(--border)" }}>
                   {["2w", "1m", "3m", "1y"].map((r) => (
                     <button
@@ -1707,7 +1738,7 @@ function NewsDrawer({
                         border: "none",
                         background: volumeRange === r ? "var(--surface-solid)" : "transparent",
                         color: volumeRange === r ? "var(--accent)" : "var(--muted)",
-                        padding: "4px 10px",
+                        padding: "5px 12px",
                         borderRadius: "6px",
                         fontSize: "11.5px",
                         fontWeight: 800,
@@ -1720,334 +1751,318 @@ function NewsDrawer({
                     </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setExpandedChart(null)}
-                  style={{
-                    border: "none",
-                    background: "rgba(15, 23, 42, 0.04)",
-                    color: "var(--text)",
-                    fontSize: "16px",
-                    fontWeight: "bold",
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  aria-label="Close popup"
-                >
-                  ✕
-                </button>
+                <span className="scroll-hint" style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+                  Swipe to scroll ↔
+                </span>
               </div>
             </div>
 
             {/* Modal Body: Large SVG Chart */}
-            <div style={{ width: "100%", height: "420px", position: "relative" }}>
-              <svg viewBox="0 0 880 400" style={{ width: "100%", height: "100%" }}>
-                <defs>
-                  <linearGradient id="popPriceUpGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                  </linearGradient>
-                  <linearGradient id="popPriceDownGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
-                  </linearGradient>
-                  <linearGradient id="popVolUpGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
-                    <stop offset="100%" stopColor="#047857" stopOpacity="0.85" />
-                  </linearGradient>
-                  <linearGradient id="popVolDownGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
-                    <stop offset="100%" stopColor="#b91c1c" stopOpacity="0.85" />
-                  </linearGradient>
-                </defs>
+            <div className="popup-chart-scroll-wrapper" style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", marginTop: "8px" }}>
+              <div style={{ minWidth: "800px", height: "400px", position: "relative" }}>
+                <svg viewBox="0 0 880 400" style={{ width: "100%", height: "100%" }}>
+                  <defs>
+                    <linearGradient id="popPriceUpGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="popPriceDownGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                    </linearGradient>
+                    <linearGradient id="popVolUpGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="#047857" stopOpacity="0.85" />
+                    </linearGradient>
+                    <linearGradient id="popVolDownGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
+                      <stop offset="100%" stopColor="#b91c1c" stopOpacity="0.85" />
+                    </linearGradient>
+                  </defs>
 
-                {expandedChart === "price" ? (
-                  // Large Price Chart Rendering Logic
-                  (() => {
-                    const prices = volumeHistory.map(d => d.close);
-                    const minPrice = Math.min(...prices);
-                    const maxPrice = Math.max(...prices);
-                    const priceRange = maxPrice - minPrice || 1;
-                    const paddedMin = minPrice - (priceRange * 0.08);
-                    const paddedMax = maxPrice + (priceRange * 0.08);
-                    const paddedRange = paddedMax - paddedMin || 1;
+                  {expandedChart === "price" ? (
+                    // Large Price Chart Rendering Logic
+                    (() => {
+                      const prices = volumeHistory.map(d => d.close);
+                      const minPrice = Math.min(...prices);
+                      const maxPrice = Math.max(...prices);
+                      const priceRange = maxPrice - minPrice || 1;
+                      const paddedMin = minPrice - (priceRange * 0.08);
+                      const paddedMax = maxPrice + (priceRange * 0.08);
+                      const paddedRange = paddedMax - paddedMin || 1;
 
-                    const chartHeight = 310;
-                    const chartWidth = 800;
-                    const startX = 60;
-                    
-                    const points = volumeHistory.map((d, index) => {
-                      const x = startX + index * (chartWidth / (volumeHistory.length - 1 || 1));
-                      const y = 340 - ((d.close - paddedMin) / paddedRange) * chartHeight;
-                      return { x, y, date: d.date, close: d.close };
-                    });
+                      const chartHeight = 310;
+                      const chartWidth = 800;
+                      const startX = 60;
+                      
+                      const points = volumeHistory.map((d, index) => {
+                        const x = startX + index * (chartWidth / (volumeHistory.length - 1 || 1));
+                        const y = 340 - ((d.close - paddedMin) / paddedRange) * chartHeight;
+                        return { x, y, date: d.date, close: d.close };
+                      });
 
-                    const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
-                    const areaPath = `${linePath} L${points[points.length - 1].x},340 L${points[0].x},340 Z`;
+                      const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                      const areaPath = `${linePath} L${points[points.length - 1].x},340 L${points[0].x},340 Z`;
 
-                    const firstPrice = prices[0];
-                    const lastPrice = prices[prices.length - 1];
-                    const isUpTrend = lastPrice >= firstPrice;
-                    const trendColor = isUpTrend ? "#10b981" : "#ef4444";
-                    const trendGrad = isUpTrend ? "url(#popPriceUpGrad)" : "url(#popPriceDownGrad)";
-                    const gridLines = [0, 0.25, 0.5, 0.75, 1];
+                      const firstPrice = prices[0];
+                      const lastPrice = prices[prices.length - 1];
+                      const isUpTrend = lastPrice >= firstPrice;
+                      const trendColor = isUpTrend ? "#10b981" : "#ef4444";
+                      const trendGrad = isUpTrend ? "url(#popPriceUpGrad)" : "url(#popPriceDownGrad)";
+                      const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
-                    return (
-                      <>
-                        {gridLines.map((ratio, idx) => {
-                          const yPos = 340 - (ratio * chartHeight);
-                          const labelVal = paddedMin + (ratio * paddedRange);
-                          return (
-                            <g key={idx}>
-                              <line
-                                x1="60"
-                                y1={yPos}
-                                x2="860"
-                                y2={yPos}
-                                stroke="var(--border)"
-                                strokeWidth="1"
-                                strokeDasharray="4 4"
-                                opacity="0.6"
-                              />
-                              <text
-                                x="50"
-                                y={yPos + 4}
-                                textAnchor="end"
-                                fontSize="13px"
-                                fill="var(--text)"
-                                fontWeight="700"
-                              >
-                                {fmtPrice(labelVal, quote?.currency || "USD")}
-                              </text>
-                            </g>
-                          );
-                        })}
+                      return (
+                        <>
+                          {gridLines.map((ratio, idx) => {
+                            const yPos = 340 - (ratio * chartHeight);
+                            const labelVal = paddedMin + (ratio * paddedRange);
+                            return (
+                              <g key={idx}>
+                                <line
+                                  x1="60"
+                                  y1={yPos}
+                                  x2="860"
+                                  y2={yPos}
+                                  stroke="var(--border)"
+                                  strokeWidth="1"
+                                  strokeDasharray="4 4"
+                                  opacity="0.6"
+                                />
+                                <text
+                                  x="50"
+                                  y={yPos + 4}
+                                  textAnchor="end"
+                                  fontSize="13px"
+                                  fill="var(--text)"
+                                  fontWeight="700"
+                                >
+                                  {fmtPrice(labelVal, quote?.currency || "USD")}
+                                </text>
+                              </g>
+                            );
+                          })}
 
-                        <path d={areaPath} fill={trendGrad} />
-                        <path d={linePath} fill="none" stroke={trendColor} strokeWidth="3" />
+                          <path d={areaPath} fill={trendGrad} />
+                          <path d={linePath} fill="none" stroke={trendColor} strokeWidth="3" />
 
-                        {/* Interactive Hover Areas */}
-                        {points.map((p, index) => {
-                          const rectWidth = chartWidth / (volumeHistory.length - 1 || 1);
-                          return (
-                            <rect
-                              key={index}
-                              x={p.x - rectWidth / 2}
-                              y="30"
-                              width={rectWidth}
-                              height={chartHeight}
-                              fill="transparent"
-                              style={{ cursor: "pointer" }}
-                              onMouseEnter={() => setHoveredBarIndex(index)}
-                              onMouseLeave={() => setHoveredBarIndex(null)}
-                            />
-                          );
-                        })}
-
-                        {hoveredBarIndex !== null && (() => {
-                          const p = points[hoveredBarIndex];
-                          return (
-                            <>
-                              <line
-                                x1={p.x}
-                                y1="30"
-                                x2={p.x}
-                                y2="340"
-                                stroke="var(--border)"
-                                strokeWidth="1.5"
-                                strokeDasharray="3 3"
-                              />
-                              <circle
-                                cx={p.x}
-                                cy={p.y}
-                                r="6"
-                                fill={trendColor}
-                                stroke="var(--surface-solid)"
-                                strokeWidth="3"
-                                style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}
-                              />
-                            </>
-                          );
-                        })()}
-
-                        {/* X-Axis Date Labels */}
-                        {points.map((p, index) => {
-                          let showDate = true;
-                          if (points.length > 50) {
-                            showDate = index % 8 === 0;
-                          } else if (points.length > 25) {
-                            showDate = index % 4 === 0;
-                          } else if (points.length > 12) {
-                            showDate = index % 2 === 0;
-                          }
-                          return (
-                            showDate && (
-                              <text
-                                key={index}
-                                x={p.x}
-                                y="364"
-                                textAnchor="middle"
-                                fontSize="13px"
-                                fill="var(--text)"
-                                fontWeight="700"
-                              >
-                                {p.date}
-                              </text>
-                            )
-                          );
-                        })}
-                      </>
-                    );
-                  })()
-                ) : (
-                  // Large Volume Chart Rendering Logic
-                  (() => {
-                    const maxVol = volumeStats?.peakVolume || Math.max(...volumeHistory.map(d => d.volume)) || 1;
-                    const gridLines = [0, 0.25, 0.5, 0.75, 1];
-                    const chartHeight = 310;
-                    const chartWidth = 800;
-                    const barWidth = volumeHistory.length > 50 ? 8 : (volumeHistory.length > 25 ? 16 : (volumeHistory.length > 12 ? 26 : 56));
-                    const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
-
-                    return (
-                      <>
-                        {gridLines.map((ratio, idx) => {
-                          const yPos = 340 - (ratio * chartHeight);
-                          const labelVal = ratio * maxVol;
-                          return (
-                            <g key={idx}>
-                              <line
-                                x1="60"
-                                y1={yPos}
-                                x2="860"
-                                y2={yPos}
-                                stroke="var(--border)"
-                                strokeWidth="1"
-                                strokeDasharray="4 4"
-                                opacity="0.6"
-                              />
-                              <text
-                                x="50"
-                                y={yPos + 4}
-                                textAnchor="end"
-                                fontSize="13px"
-                                fill="var(--text)"
-                                fontWeight="700"
-                              >
-                                {fmtVolume(labelVal)}
-                              </text>
-                            </g>
-                          );
-                        })}
-
-                        {volumeHistory.map((d, index) => {
-                          const barHeight = (d.volume / maxVol) * chartHeight;
-                          const xPos = 60 + index * (barWidth + spacing) + spacing / 2;
-                          const yPos = 340 - barHeight;
-
-                          return (
-                            <g
-                              key={index}
-                              onMouseEnter={() => setHoveredBarIndex(index)}
-                              onMouseLeave={() => setHoveredBarIndex(null)}
-                              style={{ cursor: "pointer" }}
-                            >
+                          {/* Interactive Hover Areas */}
+                          {points.map((p, index) => {
+                            const rectWidth = chartWidth / (volumeHistory.length - 1 || 1);
+                            return (
                               <rect
-                                x={xPos - 5}
-                                y="20"
-                                width={barWidth + 10}
+                                key={index}
+                                x={p.x - rectWidth / 2}
+                                y="30"
+                                width={rectWidth}
                                 height={chartHeight}
                                 fill="transparent"
+                                style={{ cursor: "pointer" }}
+                                onMouseEnter={() => setHoveredBarIndex(index)}
+                                onMouseLeave={() => setHoveredBarIndex(null)}
                               />
-                              <rect
-                                x={xPos}
-                                y={yPos}
-                                width={barWidth}
-                                height={Math.max(barHeight, 2)}
-                                rx="4"
-                                fill={d.up ? "url(#popVolUpGrad)" : "url(#popVolDownGrad)"}
-                                className="volume-bar"
-                                style={{ transition: "all 0.2s ease" }}
-                              />
-                              {(() => {
-                                let showDate = true;
-                                if (volumeHistory.length > 50) {
-                                  showDate = index % 8 === 0;
-                                } else if (volumeHistory.length > 25) {
-                                  showDate = index % 4 === 0;
-                                } else if (volumeHistory.length > 12) {
-                                  showDate = index % 2 === 0;
-                                }
-                                return (
-                                  showDate && (
-                                    <text
-                                      x={xPos + barWidth / 2}
-                                      y="364"
-                                      textAnchor="middle"
-                                      fontSize="13px"
-                                      fill="var(--text)"
-                                      fontWeight="700"
-                                    >
-                                      {d.date}
-                                    </text>
-                                  )
-                                );
-                              })()}
-                            </g>
-                          );
-                        })}
-                      </>
-                    );
-                  })()
-                )}
+                            );
+                          })}
 
-                {/* Unified Large Hover Tooltip */}
-                {hoveredBarIndex !== null && (() => {
-                  const d = volumeHistory[hoveredBarIndex];
-                  let tooltipX = 0;
-                  if (expandedChart === "price") {
-                    const rectWidth = 800 / (volumeHistory.length - 1 || 1);
-                    tooltipX = 60 + hoveredBarIndex * rectWidth;
-                  } else {
-                    const barWidth = volumeHistory.length > 50 ? 8 : (volumeHistory.length > 25 ? 16 : (volumeHistory.length > 12 ? 26 : 56));
-                    const spacing = (800 - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
-                    tooltipX = 60 + hoveredBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
-                  }
-                  
-                  const tooltipWidth = 190;
-                  const finalX = tooltipX + tooltipWidth > 860 ? tooltipX - tooltipWidth - 15 : tooltipX + 15;
-                  
-                  return (
-                    <g pointerEvents="none" style={{ zIndex: 10 }}>
-                      <rect
-                        x={finalX}
-                        y="50"
-                        width={tooltipWidth}
-                        height="100"
-                        rx="8"
-                        fill="var(--surface-solid)"
-                        stroke="var(--border)"
-                        strokeWidth="1.5"
-                        style={{ filter: "drop-shadow(0 6px 20px rgba(0, 0, 0, 0.15))" }}
-                      />
-                      <text x={finalX + 16} y="76" fontSize="14px" fontWeight="800" fill="var(--text)">
-                        {d.date}
-                      </text>
-                      <text x={finalX + 16} y="102" fontSize="12.5px" fontWeight="600" fill="var(--muted)">
-                        Price: <tspan fontWeight="800" fill="var(--text)">{fmtPrice(d.close, quote?.currency || "USD")}</tspan>
-                      </text>
-                      <text x={finalX + 16} y="126" fontSize="12.5px" fontWeight="600" fill="var(--muted)">
-                        Volume: <tspan fontWeight="800" fill="var(--text)">{fmtVolume(d.volume)}</tspan>
-                      </text>
-                    </g>
-                  );
-                })()}
-              </svg>
+                          {hoveredBarIndex !== null && (() => {
+                            const p = points[hoveredBarIndex];
+                            return (
+                              <>
+                                <line
+                                  x1={p.x}
+                                  y1="30"
+                                  x2={p.x}
+                                  y2="340"
+                                  stroke="var(--border)"
+                                  strokeWidth="1.5"
+                                  strokeDasharray="3 3"
+                                />
+                                <circle
+                                  cx={p.x}
+                                  cy={p.y}
+                                  r="6"
+                                  fill={trendColor}
+                                  stroke="var(--surface-solid)"
+                                  strokeWidth="3"
+                                  style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}
+                                />
+                              </>
+                            );
+                          })()}
+
+                          {/* X-Axis Date Labels */}
+                          {points.map((p, index) => {
+                            let showDate = true;
+                            if (points.length > 50) {
+                              showDate = index % 8 === 0;
+                            } else if (points.length > 25) {
+                              showDate = index % 4 === 0;
+                            } else if (points.length > 12) {
+                              showDate = index % 2 === 0;
+                            }
+                            return (
+                              showDate && (
+                                <text
+                                  key={index}
+                                  x={p.x}
+                                  y="364"
+                                  textAnchor="middle"
+                                  fontSize="13px"
+                                  fill="var(--text)"
+                                  fontWeight="700"
+                                >
+                                  {p.date}
+                                </text>
+                              )
+                            );
+                          })}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    // Large Volume Chart Rendering Logic
+                    (() => {
+                      const maxVol = volumeStats?.peakVolume || Math.max(...volumeHistory.map(d => d.volume)) || 1;
+                      const gridLines = [0, 0.25, 0.5, 0.75, 1];
+                      const chartHeight = 310;
+                      const chartWidth = 800;
+                      const barWidth = volumeHistory.length > 50 ? 8 : (volumeHistory.length > 25 ? 16 : (volumeHistory.length > 12 ? 26 : 56));
+                      const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
+
+                      return (
+                        <>
+                          {gridLines.map((ratio, idx) => {
+                            const yPos = 340 - (ratio * chartHeight);
+                            const labelVal = ratio * maxVol;
+                            return (
+                              <g key={idx}>
+                                <line
+                                  x1="60"
+                                  y1={yPos}
+                                  x2="860"
+                                  y2={yPos}
+                                  stroke="var(--border)"
+                                  strokeWidth="1"
+                                  strokeDasharray="4 4"
+                                  opacity="0.6"
+                                />
+                                <text
+                                  x="50"
+                                  y={yPos + 4}
+                                  textAnchor="end"
+                                  fontSize="13px"
+                                  fill="var(--text)"
+                                  fontWeight="700"
+                                >
+                                  {fmtVolume(labelVal)}
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {volumeHistory.map((d, index) => {
+                            const barHeight = (d.volume / maxVol) * chartHeight;
+                            const xPos = 60 + index * (barWidth + spacing) + spacing / 2;
+                            const yPos = 340 - barHeight;
+
+                            return (
+                              <g
+                                key={index}
+                                onMouseEnter={() => setHoveredBarIndex(index)}
+                                onMouseLeave={() => setHoveredBarIndex(null)}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <rect
+                                  x={xPos - 5}
+                                  y="20"
+                                  width={barWidth + 10}
+                                  height={chartHeight}
+                                  fill="transparent"
+                                />
+                                <rect
+                                  x={xPos}
+                                  y={yPos}
+                                  width={barWidth}
+                                  height={Math.max(barHeight, 2)}
+                                  rx="4"
+                                  fill={d.up ? "url(#popVolUpGrad)" : "url(#popVolDownGrad)"}
+                                  className="volume-bar"
+                                  style={{ transition: "all 0.2s ease" }}
+                                />
+                                {(() => {
+                                  let showDate = true;
+                                  if (volumeHistory.length > 50) {
+                                    showDate = index % 8 === 0;
+                                  } else if (volumeHistory.length > 25) {
+                                    showDate = index % 4 === 0;
+                                  } else if (volumeHistory.length > 12) {
+                                    showDate = index % 2 === 0;
+                                  }
+                                  return (
+                                    showDate && (
+                                      <text
+                                        x={xPos + barWidth / 2}
+                                        y="364"
+                                        textAnchor="middle"
+                                        fontSize="13px"
+                                        fill="var(--text)"
+                                        fontWeight="700"
+                                      >
+                                        {d.date}
+                                      </text>
+                                    )
+                                  );
+                                })()}
+                              </g>
+                            );
+                          })}
+                        </>
+                      );
+                    })()
+                  )}
+
+                  {/* Unified Large Hover Tooltip */}
+                  {hoveredBarIndex !== null && (() => {
+                    const d = volumeHistory[hoveredBarIndex];
+                    let tooltipX = 0;
+                    if (expandedChart === "price") {
+                      const rectWidth = 800 / (volumeHistory.length - 1 || 1);
+                      tooltipX = 60 + hoveredBarIndex * rectWidth;
+                    } else {
+                      const barWidth = volumeHistory.length > 50 ? 8 : (volumeHistory.length > 25 ? 16 : (volumeHistory.length > 12 ? 26 : 56));
+                      const spacing = (800 - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
+                      tooltipX = 60 + hoveredBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
+                    }
+                    
+                    const tooltipWidth = 190;
+                    const finalX = tooltipX + tooltipWidth > 860 ? tooltipX - tooltipWidth - 15 : tooltipX + 15;
+                    
+                    return (
+                      <g pointerEvents="none" style={{ zIndex: 10 }}>
+                        <rect
+                          x={finalX}
+                          y="50"
+                          width={tooltipWidth}
+                          height="100"
+                          rx="8"
+                          fill="var(--surface-solid)"
+                          stroke="var(--border)"
+                          strokeWidth="1.5"
+                          style={{ filter: "drop-shadow(0 6px 20px rgba(0, 0, 0, 0.15))" }}
+                        />
+                        <text x={finalX + 16} y="76" fontSize="14px" fontWeight="800" fill="var(--text)">
+                          {d.date}
+                        </text>
+                        <text x={finalX + 16} y="102" fontSize="12.5px" fontWeight="600" fill="var(--muted)">
+                          Price: <tspan fontWeight="800" fill="var(--text)">{fmtPrice(d.close, quote?.currency || "USD")}</tspan>
+                        </text>
+                        <text x={finalX + 16} y="126" fontSize="12.5px" fontWeight="600" fill="var(--muted)">
+                          Volume: <tspan fontWeight="800" fill="var(--text)">{fmtVolume(d.volume)}</tspan>
+                        </text>
+                      </g>
+                    );
+                  })()}
+                </svg>
+              </div>
             </div>
           </div>
         </>
