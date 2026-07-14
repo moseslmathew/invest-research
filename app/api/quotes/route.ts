@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export interface Quote {
   price: number;
@@ -255,6 +256,8 @@ async function pooledMap(symbols: string[]): Promise<Record<string, Quote>> {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req);
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
   const raw = (searchParams.get("symbols") || "").trim();
   if (!raw) return NextResponse.json({ quotes: {} });

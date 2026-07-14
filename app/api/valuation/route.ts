@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,8 @@ async function fetchGoogleFinancePage(symbol: string) {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req);
+  if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "").trim();
@@ -145,6 +148,7 @@ export async function GET(req: Request) {
       summary,
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    console.error("valuation route error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

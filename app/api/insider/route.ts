@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const runtime = "edge";
 
@@ -66,6 +67,8 @@ async function fetchInsiderNews(symbol: string, name: string): Promise<Headline[
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
   const symbol = (searchParams.get("symbol") || "").trim();
   const name = (searchParams.get("name") || "").trim();

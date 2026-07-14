@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 import type { Market } from "@/lib/db";
 
 export const runtime = "edge";
@@ -100,6 +101,8 @@ function localIndianSearch(q: string): SearchResult[] {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req);
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").trim();
   const market = (searchParams.get("market") || "US") as Market;

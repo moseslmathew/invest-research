@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ interface StockInput {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbolsStr = searchParams.get("symbols") || "";
@@ -190,7 +193,8 @@ Format the response as a JSON object:
 
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      return NextResponse.json({ error: `OpenAI API error: ${errText}` }, { status: 502 });
+      console.error("OpenAI API error (watchlist-briefing):", apiRes.status, errText);
+      return NextResponse.json({ error: "Upstream briefing service is unavailable." }, { status: 502 });
     }
 
     const resData = await apiRes.json();
@@ -200,7 +204,8 @@ Format the response as a JSON object:
     }
 
     return NextResponse.json(JSON.parse(content));
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+  } catch (err) {
+    console.error("watchlist-briefing route error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

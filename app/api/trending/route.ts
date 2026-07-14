@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 import { sql } from "@/lib/db";
 import type { Market } from "@/lib/db";
 
@@ -543,6 +544,8 @@ async function computeTrending(
 /* ---------- Route ---------- */
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
   const market = (searchParams.get("market") || "US") as Market;
   const forceRefresh = searchParams.get("refresh") === "1";

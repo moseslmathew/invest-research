@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req);
+  if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "").trim();
@@ -100,6 +103,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
+    console.error("volume route error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const runtime = "edge";
 
@@ -14,6 +15,8 @@ interface NewsArticle {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
   const symbol = (searchParams.get("symbol") || "").trim();
   const name = (searchParams.get("name") || "").trim();
@@ -173,7 +176,8 @@ Respond ONLY with a JSON object matching this structure:
 
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      throw new Error(`OpenAI API error: ${errText}`);
+      console.error("OpenAI API error (news):", apiRes.status, errText);
+      throw new Error("OpenAI request failed");
     }
 
     const resData = await apiRes.json();
@@ -212,7 +216,8 @@ Respond ONLY with a JSON object matching this structure:
     // Re-sort: the AI returns articles in its own order, so order by recency.
     filteredArticles.sort(byLatest);
     return NextResponse.json({ articles: filteredArticles });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e) {
+    console.error("news route error:", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

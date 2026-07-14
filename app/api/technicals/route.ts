@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ async function fetchLivePrice(symbol: string): Promise<number> {
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "").trim();

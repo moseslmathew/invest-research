@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardRequest } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,8 @@ async function fetchVolumeHistory(symbol: string): Promise<{ date: string; volum
 }
 
 export async function GET(req: Request) {
+  const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
+  if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "").trim();
@@ -176,7 +179,8 @@ Respond ONLY with a JSON object matching this structure:
 
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      return NextResponse.json({ error: `OpenAI API error: ${errText}` }, { status: 502 });
+      console.error("OpenAI API error (research):", apiRes.status, errText);
+      return NextResponse.json({ error: "Upstream analysis service is unavailable." }, { status: 502 });
     }
 
     const resData = await apiRes.json();
@@ -187,7 +191,8 @@ Respond ONLY with a JSON object matching this structure:
 
     const parsed = JSON.parse(content);
     return NextResponse.json(parsed);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error) {
+    console.error("research route error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
