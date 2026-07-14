@@ -4267,33 +4267,13 @@ export default function Dashboard({
           </div>
           <div className="mobile-profile-wrap">
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      userButtonAvatarBox: { width: 32, height: 32 },
-                    }
-                  }} 
-                />
-                <span className="mobile-profile-info" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                  <span className="mobile-profile-name" style={{ fontSize: '12px', fontWeight: 600 }}>{user.fullName || user.username}</span>
-                  <span className="mobile-profile-sub" style={{ fontSize: '10px', color: 'var(--muted)', maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {user.primaryEmailAddress?.emailAddress}
-                  </span>
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    signOut({ redirectUrl: "/" });
-                  }}
-                  className="side-profile-logout"
-                  aria-label="Log out"
-                  title="Log out"
-                  style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}
-                >
-                  <Icon name="logout" width={16} height={16} />
-                </button>
-              </div>
+              <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: { width: 36, height: 36 },
+                  }
+                }} 
+              />
             ) : (
               <SignInButton mode="modal">
                 <button className="btn" style={{ padding: '6px 12px', fontSize: '12px' }}>Sign In</button>
