@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@clerk/nextjs/server";
 import {
   addWatchlistItem,
   createWatchlist,
@@ -37,12 +38,17 @@ export async function addItemAction(
     return { ok: false, message: "Symbol is too long." };
   }
 
+  const { userId } = await auth();
+  if (!userId) {
+    return { ok: false, message: "Unauthorized. Please sign in." };
+  }
+
   try {
     if (!hasId) {
-      const list = await createWatchlist(market, listName);
+      const list = await createWatchlist(market, listName, userId);
       watchlistId = list.id;
     }
-    await addWatchlistItem({ market, watchlistId, symbol, name });
+    await addWatchlistItem({ market, watchlistId, userId, symbol, name });
   } catch (err) {
     console.error(err);
     return { ok: false, message: "Could not save. Check your DB connection." };
@@ -69,8 +75,13 @@ export async function createWatchlistAction(
     return { ok: false, message: "Name is too long (max 40 chars)." };
   }
 
+  const { userId } = await auth();
+  if (!userId) {
+    return { ok: false, message: "Unauthorized. Please sign in." };
+  }
+
   try {
-    await createWatchlist(market, name);
+    await createWatchlist(market, name, userId);
   } catch (err) {
     console.error(err);
     return { ok: false, message: "Could not create watchlist." };
@@ -81,17 +92,23 @@ export async function createWatchlistAction(
 }
 
 export async function deleteItemAction(formData: FormData): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) return;
+
   const id = Number(formData.get("id"));
   if (Number.isFinite(id)) {
-    await deleteWatchlistItem(id);
+    await deleteWatchlistItem(id, userId);
     revalidatePath("/");
   }
 }
 
 export async function deleteWatchlistAction(formData: FormData): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) return;
+
   const id = Number(formData.get("id"));
   if (Number.isFinite(id) && id > 0) {
-    await deleteWatchlist(id);
+    await deleteWatchlist(id, userId);
     revalidatePath("/");
   }
 }

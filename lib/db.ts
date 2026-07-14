@@ -15,6 +15,7 @@ export type Market = "US" | "IN";
 
 export interface Watchlist {
   id: number;
+  user_id: string;
   market: Market;
   name: string;
   item_count: number;

@@ -11,6 +11,7 @@
     "db:seed": "node --experimental-strip-types scripts/seed.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.5.17",
     "@neondatabase/serverless": "^0.10.4",
     "next": "^15.5.4",
     "react": "^19.0.0",

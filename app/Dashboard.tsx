@@ -12,6 +12,8 @@ import {
 import TickerSearch from "./TickerSearch";
 import PrismWaitIcon from "./PrismWaitIcon";
 import { Icon, type IconName } from "./Icon";
+import ThemeSwitcher from "./ThemeSwitcher";
+import { useUser, useClerk, SignInButton, UserButton } from "@clerk/nextjs";
 import type { Quote } from "./api/quotes/route";
 import type { Market, Watchlist, WatchlistItem } from "@/lib/db";
 
@@ -52,7 +54,6 @@ const NAV: {
 }[] = [
   { id: "research", label: "AI Research", icon: "search", view: "research" },
   { id: "watchlist", label: "Watchlist", icon: "bookmark", view: "watchlist" },
-  { id: "ai", label: "AI Stocks", icon: "sparkles", view: "ai" },
   { id: "trending", label: "Trending", icon: "trending", view: "trending" },
   { id: "headlines", label: "Headlines", icon: "newspaper", view: "headlines" },
 ];
@@ -1888,97 +1889,6 @@ function NewsDrawer({
 /* Compact animated prism for the research hero: a dashed beam marches into
    the glass and four insight rays flow out — one per research capability.
    Reuses the global lp-dash / lp-flow / lp-spark / lp-halo keyframes. */
-function ResearchPrism() {
-  // Rays fan out from the prism's right face; one color per capability card.
-  const rays = [
-    { c: "#fb7185", y: 28 },
-    { c: "#a78bfa", y: 68 },
-    { c: "#38bdf8", y: 108 },
-    { c: "#4ade80", y: 148 },
-  ];
-  const exit = { x: 175, y: 88 };
-  const rayEndX = 330;
-
-  return (
-    <svg viewBox="0 0 340 190" fill="none" style={{ overflow: "visible", width: "100%", height: "auto" }}>
-      <defs>
-        <radialGradient id="rpGlass" cx="0.5" cy="0.62" r="0.75">
-          <stop offset="0" stopColor="#e9e4fb" />
-          <stop offset="0.55" stopColor="#ddd6f3" />
-          <stop offset="1" stopColor="#cfc7ec" />
-        </radialGradient>
-        <radialGradient id="rpHalo" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#c7d2fe" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#c7d2fe" stopOpacity="0" />
-        </radialGradient>
-        <filter id="rpSoft" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2" />
-        </filter>
-      </defs>
-
-      <ellipse cx="170" cy="95" rx="150" ry="85" fill="url(#rpHalo)" opacity="0.8" />
-
-      {/* ambient blurred rays */}
-      <g filter="url(#rpSoft)">
-        {rays.map((r) => (
-          <path
-            key={`amb-${r.c}`}
-            d={`M ${exit.x} ${exit.y} L ${rayEndX} ${r.y}`}
-            stroke={r.c}
-            strokeOpacity="0.25"
-            strokeWidth="5"
-            strokeLinecap="round"
-          />
-        ))}
-      </g>
-
-      {/* flowing rays */}
-      {rays.map((r) => (
-        <path
-          key={`ray-${r.c}`}
-          d={`M ${exit.x} ${exit.y} L ${rayEndX} ${r.y}`}
-          pathLength={1}
-          stroke={r.c}
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeDasharray="0.22 0.28"
-        />
-      ))}
-
-      {/* dashed beam marching in */}
-      <line
-        x1="10"
-        y1="128"
-        x2="123"
-        y2="92"
-        stroke="#181c26"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray="9 8"
-      />
-
-      {/* the prism */}
-      <polygon
-        points="150,30 105,135 195,135"
-        fill="url(#rpGlass)"
-        stroke="#181c26"
-        strokeWidth="4.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="149" cy="102" r="16" fill="#ffffff" opacity="0.55" filter="url(#rpSoft)" />
-
-      {/* sparkles */}
-      <path
-        d="M 176 18 C 176 24.4 177.8 26.2 184 26.2 C 177.8 26.2 176 28 176 34.4 C 176 28 174.2 26.2 168 26.2 C 174.2 26.2 176 24.4 176 18 Z"
-        fill="#a78bfa"
-      />
-      <path
-        d="M 96 52 C 96 56 97.1 57.1 101 57.1 C 97.1 57.1 96 58.2 96 62.2 C 96 58.2 94.9 57.1 91 57.1 C 94.9 57.1 96 56 96 52 Z"
-        fill="#38bdf8"
-      />
-    </svg>
-  );
-}
 
 function AIResearchPage({
   market,
@@ -2094,12 +2004,8 @@ function AIResearchPage({
         <div className="rp-hero">
           <div className="rp-hero-halo" aria-hidden />
 
-          <div className="rp-hero-prism" aria-hidden>
-            <ResearchPrism />
-          </div>
-
           <h1 className="rp-hero-title">
-            Research, <span className="rp-hero-accent">refracted</span>.
+            Research, <span className="rp-hero-accent">distilled</span>.
           </h1>
           <p className="rp-hero-sub">
             Point Lumina at any listed company. One search splits into
@@ -2752,14 +2658,6 @@ function TrendingList({
                   )}
                 </span>
               </div>
-              <div className="ai-col-news">
-                <span className="sortable-header" onClick={() => handleSort("news")}>
-                  News
-                  {sortField === "news" && (
-                    <span className="sort-indicator">{sortOrder === "asc" ? "▲" : "▼"}</span>
-                  )}
-                </span>
-              </div>
               <div className="ai-col-notes">Why in News</div>
             </div>
 
@@ -2839,23 +2737,6 @@ function TrendingList({
                     )}
                   </div>
 
-                  <div className="ai-col-news">
-                    {s.newsCount ? (
-                      <button
-                        type="button"
-                        className="news-count news-count-btn"
-                        title={`Referenced across ${s.newsCount} news article${s.newsCount === 1 ? "" : "s"} — click to see the channels`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNewsPopoverStock(s);
-                        }}
-                      >
-                        {s.newsCount}
-                      </button>
-                    ) : (
-                      <span className="news-count">—</span>
-                    )}
-                  </div>
 
                   <div className="ai-col-notes">
                     <span className="ai-notes-bullet">✦</span>
@@ -4005,6 +3886,8 @@ export default function Dashboard({
 }: {
   data: Record<Market, MarketData>;
 }) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const [market, setMarket] = useState<Market>("US");
   const [view, setView] = useState<View>("watchlist");
   const [activeList, setActiveList] = useState<number | null>(null);
@@ -4339,22 +4222,39 @@ export default function Dashboard({
         </nav>
 
         <div className="side-profile">
-          <span className="side-profile-avatar" aria-hidden>
-            G
-          </span>
-          <span className="side-profile-info">
-            <span className="side-profile-name">Guest</span>
-            <span className="side-profile-sub">Browsing locally</span>
-          </span>
-          {/* Plain <a>: next/link would prefetch the logout route and end the session. */}
-          <a
-            href="/api/auth/logout"
-            className="side-profile-logout"
-            aria-label="Log out"
-            title="Log out"
-          >
-            <Icon name="logout" />
-          </a>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <UserButton 
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: { width: 36, height: 36 },
+                  }
+                }} 
+              />
+              <span className="side-profile-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <span className="side-profile-name" style={{ fontSize: '14px', fontWeight: 600 }}>{user.fullName || user.username}</span>
+                <span className="side-profile-sub" style={{ fontSize: '12px', color: 'var(--muted)', textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: "120px" }}>
+                  {user.primaryEmailAddress?.emailAddress}
+                </span>
+              </span>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  signOut({ redirectUrl: "/" });
+                }}
+                className="side-profile-logout"
+                aria-label="Log out"
+                title="Log out"
+                style={{ border: "none", background: "none", cursor: "pointer", padding: 0 }}
+              >
+                <Icon name="logout" />
+              </button>
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button className="btn w-full" style={{ justifyContent: 'center' }}>Sign In</button>
+            </SignInButton>
+          )}
         </div>
       </aside>
 
@@ -4365,11 +4265,24 @@ export default function Dashboard({
             <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
             <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
           </div>
+          <ThemeSwitcher />
         </div>
 
 
 
-        {view === "watchlist" && (
+        {view === "watchlist" && !user && (
+          <div className="news-empty-state" style={{ marginTop: '40px' }}>
+            <span className="icon">🔒</span>
+            <p>Sign In to view and manage your personal watchlists.</p>
+            <div style={{ marginTop: '16px' }}>
+              <SignInButton mode="modal">
+                <button className="btn">Sign In</button>
+              </SignInButton>
+            </div>
+          </div>
+        )}
+
+        {view === "watchlist" && user && (
           <div className="wl-bar">
             {/* Left side: Tabs & New Watchlist Trigger */}
             <div className="wl-tabs-left">

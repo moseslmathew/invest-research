@@ -1,11 +1,15 @@
 import Dashboard, { type MarketData } from "../Dashboard";
+import { auth } from "@clerk/nextjs/server";
 import { getWatchlists, getWatchlistItems } from "@/lib/watchlist";
 import type { Market } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-async function loadMarket(market: Market): Promise<MarketData> {
-  const lists = await getWatchlists(market);
+async function loadMarket(market: Market, userId: string | null): Promise<MarketData> {
+  if (!userId) {
+    return { lists: [], items: {} };
+  }
+  const lists = await getWatchlists(market, userId);
   const items: MarketData["items"] = {};
   await Promise.all(
     lists.map(async (l) => {
@@ -21,10 +25,12 @@ export default async function DashboardPage() {
     IN: { lists: [], items: {} },
   };
 
+  const { userId } = await auth();
+
   try {
     const [us, india] = await Promise.all([
-      loadMarket("US"),
-      loadMarket("IN"),
+      loadMarket("US", userId),
+      loadMarket("IN", userId),
     ]);
     data = { US: us, IN: india };
   } catch (err) {
