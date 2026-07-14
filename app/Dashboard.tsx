@@ -2008,8 +2008,7 @@ function AIResearchPage({
             Research, <span className="rp-hero-accent">distilled</span>.
           </h1>
           <p className="rp-hero-sub">
-            Point Lumina at any listed company. One search splits into
-            conviction, news, technicals and insider signals — in seconds.
+            Search any stock to get instant AI research, key news, technicals, and insider trade signals.
           </p>
 
           <div className="rp-hero-search">

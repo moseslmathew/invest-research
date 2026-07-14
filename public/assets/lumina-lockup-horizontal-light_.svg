@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 216 95"
+     width="216"
+     height="95">
+
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff2d55"/>
+      <stop offset="16%" stop-color="#ff7a00"/>
+      <stop offset="33%" stop-color="#ffc300"/>
+      <stop offset="50%" stop-color="#7bc043"/>
+      <stop offset="67%" stop-color="#00b8d9"/>
+      <stop offset="84%" stop-color="#2f6bff"/>
+      <stop offset="100%" stop-color="#6f3cff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Group shifted with reduced vertical padding (y:5 instead of 15) -->
+  <g transform="translate(18, 5)">
+    
+    <!-- Main Brand Name -->
+    <text x="0"
+          y="32"
+          font-family="Inter, Arial, Helvetica, sans-serif"
+          font-size="28"
+          font-weight="700"
+          letter-spacing="3"
+          fill="#18233A">
+      LUMINA
+    </text>
+
+    <!-- Extended Gradient Divider -->
+    <rect x="0"
+          y="45"
+          width="200"
+          height="3"
+          rx="1.5"
+          fill="url(#g)"/>
+
+    <!-- Subtitle Tagline -->
+    <text x="0"
+          y="66"
+          font-family="Inter, Arial, Helvetica, sans-serif"
+          font-size="12"
+          font-weight="500"
+          letter-spacing="1.5"
+          fill="#6B7280">
+      AI INVESTMENT RESEARCH
+    </text>
+    
+  </g>
+</svg>
