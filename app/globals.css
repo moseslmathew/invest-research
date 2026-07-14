@@ -5419,18 +5419,15 @@ th.sortable:hover {
   }
   
   .table-scroll {
-    overflow-x: auto !important; /* Enable horizontal scrolling */
+    overflow-x: visible !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    padding-bottom: 8px !important;
-    -webkit-overflow-scrolling: touch;
   }
   
   /* Convert the table itself into a modern card list */
   .wl-table {
     display: block !important;
     width: 100% !important;
-    min-width: 580px !important; /* Ensure min-width so columns don't squish */
     border: none !important;
   }
   
@@ -5485,16 +5482,16 @@ th.sortable:hover {
   /* Left side: Company Details */
   .wl-table thead th:nth-child(1),
   .wl-table tbody td:nth-child(1) {
-    flex: 1.5 !important;
-    min-width: 140px !important;
+    flex: 1.4 !important;
+    min-width: 0 !important;
     text-align: left !important;
   }
   
   /* Price Column */
   .wl-table thead th:nth-child(2),
   .wl-table tbody td:nth-child(2) {
-    flex: 1.0 !important;
-    min-width: 90px !important;
+    flex: 0.8 !important;
+    min-width: 0 !important;
     text-align: right !important;
     display: flex !important;
     flex-direction: column !important;
@@ -5502,41 +5499,40 @@ th.sortable:hover {
     justify-content: center !important;
   }
   
-  /* Change Column */
+  /* Change Column (Toggleable) */
   .wl-table thead th:nth-child(3),
   .wl-table tbody td:nth-child(3) {
     flex: 1.2 !important;
-    min-width: 100px !important;
+    min-width: 0 !important;
     text-align: right !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-end !important;
     justify-content: center !important;
   }
-  
-  /* Volume Column */
-  .wl-table thead th:nth-child(4),
-  .wl-table tbody td:nth-child(4) {
-    flex: 1.0 !important;
-    min-width: 90px !important;
-    text-align: right !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-  }
-  
-  /* 3M Change Column */
-  .wl-table thead th:nth-child(5),
-  .wl-table tbody td:nth-child(5) {
-    flex: 1.2 !important;
-    min-width: 100px !important;
-    text-align: right !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-  }
+}
+
+/* --- Change mode toggle button --- */
+.change-mode-toggle {
+  background: var(--border);
+  border: none;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.change-mode-toggle:hover {
+  background: var(--text-2);
+  color: var(--surface-solid);
 }
 
 

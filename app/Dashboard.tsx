@@ -3037,6 +3037,7 @@ function MarketTable({
   const [filterText, setFilterText] = useState("");
   const [sortField, setSortField] = useState<"price" | "change" | "change3m" | "volume" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [changeMode, setChangeMode] = useState<"1d" | "3m">("1d");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -3137,38 +3138,30 @@ function MarketTable({
                     </span>
                   )}
                 </th>
-                <th
-                  className="col-num-r sortable"
-                  onClick={() => handleSort("change")}
-                >
-                  Change
-                  {sortField === "change" && (
-                    <span className="sort-indicator">
-                      {sortOrder === "asc" ? "▲" : "▼"}
+                <th className="col-num-r sortable">
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChangeMode(prev => prev === "1d" ? "3m" : "1d");
+                      }}
+                      className="change-mode-toggle"
+                    >
+                      {changeMode === "1d" ? "1D" : "3M"} ⇆
+                    </button>
+                    <span 
+                      onClick={() => handleSort(changeMode === "1d" ? "change" : "change3m")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {changeMode === "1d" ? "Change" : "3M Change"}
                     </span>
-                  )}
-                </th>
-                <th
-                  className="col-num-r sortable"
-                  onClick={() => handleSort("volume")}
-                >
-                  Volume
-                  {sortField === "volume" && (
-                    <span className="sort-indicator">
-                      {sortOrder === "asc" ? "▲" : "▼"}
-                    </span>
-                  )}
-                </th>
-                <th
-                  className="col-num-r sortable"
-                  onClick={() => handleSort("change3m")}
-                >
-                  3M Change
-                  {sortField === "change3m" && (
-                    <span className="sort-indicator">
-                      {sortOrder === "asc" ? "▲" : "▼"}
-                    </span>
-                  )}
+                    {sortField === (changeMode === "1d" ? "change" : "change3m") && (
+                      <span className="sort-indicator">
+                        {sortOrder === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -3204,41 +3197,27 @@ function MarketTable({
                     </td>
                     <td className="col-num-r">
                       {q ? (
-                        <div className={`chg ${up ? "up" : "down"}`}>
-                          <span className="chg-pct">
-                            <Icon name={up ? "arrowUp" : "arrowDown"} />
-                            {up ? "+" : ""}
-                            {q.changePct.toFixed(2)}%
-                          </span>
-                          <span className="chg-abs">
-                            {up ? "+" : "−"}
-                            {fmtPrice(Math.abs(q.change), q.currency)}
-                          </span>
-                        </div>
-                      ) : quotesLoading ? (
-                        <span className="shimmer" />
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="col-num-r">
-                      {q && q.volume != null ? (
-                        <span style={{ fontWeight: 600 }}>{fmtVolume(q.volume)}</span>
-                      ) : quotesLoading ? (
-                        <span className="shimmer" />
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="col-num-r">
-                      {q && q.change3mPct != null ? (
-                        <div className={`chg ${q.change3mPct >= 0 ? "up" : "down"}`}>
-                          <span className="chg-pct">
-                            <Icon name={q.change3mPct >= 0 ? "arrowUp" : "arrowDown"} />
-                            {q.change3mPct >= 0 ? "+" : ""}
-                            {q.change3mPct.toFixed(2)}%
-                          </span>
-                        </div>
+                        changeMode === "1d" ? (
+                          <div className={`chg ${up ? "up" : "down"}`}>
+                            <span className="chg-pct">
+                              <Icon name={up ? "arrowUp" : "arrowDown"} />
+                              {up ? "+" : ""}
+                              {q.changePct.toFixed(2)}%
+                            </span>
+                            <span className="chg-abs">
+                              {up ? "+" : "−"}
+                              {fmtPrice(Math.abs(q.change), q.currency)}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className={`chg ${q.change3mPct != null && q.change3mPct >= 0 ? "up" : "down"}`}>
+                            <span className="chg-pct">
+                              <Icon name={q.change3mPct != null && q.change3mPct >= 0 ? "arrowUp" : "arrowDown"} />
+                              {q.change3mPct != null && q.change3mPct >= 0 ? "+" : ""}
+                              {q.change3mPct != null ? q.change3mPct.toFixed(2) : "0.00"}%
+                            </span>
+                          </div>
+                        )
                       ) : quotesLoading ? (
                         <span className="shimmer" />
                       ) : (
