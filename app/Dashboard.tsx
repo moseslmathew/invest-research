@@ -3138,8 +3138,8 @@ function MarketTable({
                     </span>
                   )}
                 </th>
-                <th className="col-num-r sortable">
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+                <th className="col-num-r sortable" style={{ paddingLeft: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", justifyContent: "flex-end" }}>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -3147,14 +3147,16 @@ function MarketTable({
                         setChangeMode(prev => prev === "1d" ? "3m" : "1d");
                       }}
                       className="change-mode-toggle"
+                      style={{ padding: "2px 6px" }}
+                      title="Toggle 1D / 3M change"
                     >
-                      {changeMode === "1d" ? "1D" : "3M"} ⇆
+                      ⇆
                     </button>
                     <span 
                       onClick={() => handleSort(changeMode === "1d" ? "change" : "change3m")}
-                      style={{ cursor: "pointer" }}
+                      style={{ cursor: "pointer", whiteSpace: "nowrap" }}
                     >
-                      {changeMode === "1d" ? "Change" : "3M Change"}
+                      {changeMode === "1d" ? "1D Chg" : "3M Chg"}
                     </span>
                     {sortField === (changeMode === "1d" ? "change" : "change3m") && (
                       <span className="sort-indicator">
