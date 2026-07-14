@@ -655,24 +655,24 @@ function NewsDrawer({
     <>
       <div className="drawer-backdrop" onClick={onClose} />
       <div className="news-drawer" role="dialog" aria-modal="true">
-        <div className="drawer-header">
-          <div className="drawer-title-wrap">
-            <h2 className="drawer-title">{stock.name || stock.symbol}</h2>
-            <span className="drawer-ticker">{stock.symbol}</span>
-            {formattedPrice && (
-              <div className="ai-price-wrap" style={{ marginLeft: "12px", flexDirection: "row", alignItems: "center", gap: "6px" }}>
-                <span className="ai-price" style={{ fontSize: "14px" }}>{formattedPrice}</span>
-                <span className={`ai-price-change ${isUp ? "up" : "down"}`} style={{ fontSize: "12px" }}>
-                  {formattedChange}
-                </span>
-              </div>
-            )}
+        <div className="drawer-header" style={{ alignItems: "flex-start", gap: "16px" }}>
+          <div className="drawer-title-wrap" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px", flex: 1, minWidth: 0 }}>
+            <h2 className="drawer-title" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{stock.name || stock.symbol}</h2>
+            <div className="drawer-meta-row" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <span className="drawer-ticker">{stock.symbol}</span>
+              {formattedPrice && (
+                <div className="ai-price-wrap" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "6px" }}>
+                  <span className="ai-price" style={{ fontSize: "14px", fontWeight: 700 }}>{formattedPrice}</span>
+                  <span className={`ai-price-change ${isUp ? "up" : "down"}`} style={{ fontSize: "12px", fontWeight: 600 }}>
+                    {formattedChange}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
-              ✕
-            </button>
-          </div>
+          <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer" style={{ flexShrink: 0, marginTop: "2px" }}>
+            ✕
+          </button>
         </div>
 
         <div className="drawer-tabs">

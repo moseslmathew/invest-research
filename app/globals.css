@@ -5404,6 +5404,10 @@ th.sortable:hover {
     align-items: center;
     gap: 8px;
   }
+  .news-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 
