@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
+import { safeUrl } from "@/lib/safe-url";
 import { sql } from "@/lib/db";
 import type { Market } from "@/lib/db";
 
@@ -356,7 +357,7 @@ Respond ONLY with JSON:
         sentiment: s.sentiment,
         channels,
         channelCount: channels.length,
-        url: rep?.link || undefined,
+        url: safeUrl(rep?.link) || undefined,
         time: rep?.time,
       };
     })

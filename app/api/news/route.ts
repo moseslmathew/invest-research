@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
+import { safeUrl } from "@/lib/safe-url";
 
 export const runtime = "edge";
 
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
     while ((match = itemRegex.exec(xml)) !== null && articles.length < 15) {
       const itemContent = match[1];
       const rawTitle = itemContent.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "";
-      const link = itemContent.match(/<link>([\s\S]*?)<\/link>/)?.[1] || "";
+      const link = safeUrl(itemContent.match(/<link>([\s\S]*?)<\/link>/)?.[1]);
       const pubDate = itemContent.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] || "";
       const source = itemContent.match(/<source[^>]*>([\s\S]*?)<\/source>/)?.[1] || "News";
 

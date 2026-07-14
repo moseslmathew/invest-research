@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
+import { safeUrl } from "@/lib/safe-url";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,7 @@ export async function GET(req: Request) {
             if (title.trim() && link) {
               items.push({
                 title: title.trim(),
-                url: link.trim(),
+                url: safeUrl(link),
                 dateStr: pubDateText,
                 source: source.trim() || "Google News",
                 ageHours,
