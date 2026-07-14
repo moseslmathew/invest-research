@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "./Icon";
-import ThemeSwitcher from "./ThemeSwitcher";
+
 
 const FEATURES: {
   icon: "bookmark" | "sparkles" | "trending" | "newspaper";
@@ -77,7 +77,6 @@ export default function Landing() {
             alt="Lumina"
             className="lp-nav-logo"
           />
-          <ThemeSwitcher />
         </nav>
 
         <div className="lp-hero-inner">
