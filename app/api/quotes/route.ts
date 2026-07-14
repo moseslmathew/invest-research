@@ -8,6 +8,8 @@ export interface Quote {
   currency: string;
   time: number | null;
   change3mPct?: number | null;
+  change6mPct?: number | null;
+  change1yPct?: number | null;
   volume?: number | null;
 }
 
@@ -21,6 +23,8 @@ interface CacheEntry {
   currency: string;
   time: number | null;
   change3mPct?: number | null;
+  change6mPct?: number | null;
+  change1yPct?: number | null;
   volume?: number | null;
   liveTimestamp: number;
   histTimestamp: number;
@@ -131,11 +135,15 @@ async function fetchYahooFinanceLive(symbol: string): Promise<{ price: number; c
   }
 }
 
-async function fetchYahooFinance3M(symbol: string): Promise<number | null> {
+async function fetchYahooFinanceHistory(symbol: string): Promise<{
+  change3mPct: number | null;
+  change6mPct: number | null;
+  change1yPct: number | null;
+} | null> {
   try {
     const url =
       `https://query1.finance.yahoo.com/v8/finance/chart/` +
-      `${encodeURIComponent(symbol)}?range=3mo&interval=1d`;
+      `${encodeURIComponent(symbol)}?range=1y&interval=1d`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; LuminaResearch/1.0)" },
       next: { revalidate: 3600 },
@@ -145,18 +153,43 @@ async function fetchYahooFinance3M(symbol: string): Promise<number | null> {
     const result = data.chart?.result?.[0];
     const meta = result?.meta;
     const price = Number(meta?.regularMarketPrice);
+    const timestamps = result?.timestamp || [];
     const closePrices = result?.indicators?.quote?.[0]?.close || [];
-    let startPrice: number | null = null;
-    for (const p of closePrices) {
-      if (p !== null && Number.isFinite(p) && p > 0) {
-        startPrice = p;
-        break;
+    
+    if (!price || timestamps.length === 0 || closePrices.length === 0) return null;
+
+    const findPctChange = (targetAgeSecs: number): number | null => {
+      const nowSecs = Math.floor(Date.now() / 1000);
+      const targetTime = nowSecs - targetAgeSecs;
+      
+      let closestIdx = -1;
+      let minDiff = Infinity;
+      for (let i = 0; i < timestamps.length; i++) {
+        const t = timestamps[i];
+        if (t === null || closePrices[i] === null || !Number.isFinite(closePrices[i]) || closePrices[i] <= 0) continue;
+        const diff = Math.abs(t - targetTime);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
       }
-    }
-    if (price && startPrice && startPrice > 0) {
-      return ((price - startPrice) / startPrice) * 100;
-    }
-    return null;
+      
+      if (closestIdx !== -1) {
+        const startPrice = closePrices[closestIdx];
+        return ((price - startPrice) / startPrice) * 100;
+      }
+      return null;
+    };
+
+    const change3mPct = findPctChange(90 * 24 * 60 * 60);
+    const change6mPct = findPctChange(180 * 24 * 60 * 60);
+    const change1yPct = findPctChange(365 * 24 * 60 * 60);
+
+    return {
+      change3mPct,
+      change6mPct,
+      change1yPct,
+    };
   } catch {
     return null;
   }
@@ -202,20 +235,28 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
     return cached ? [symbol, cached] : null;
   }
 
-  // 3. Fetch/Resolve 3M change percentage if stale or missing
+  // 3. Fetch/Resolve historical change percentages if stale or missing
   let change3mPct: number | null | undefined = null;
+  let change6mPct: number | null | undefined = null;
+  let change1yPct: number | null | undefined = null;
   let histTimestamp = cached ? cached.histTimestamp : 0;
 
   if (!cached || (now - cached.histTimestamp >= HIST_TTL_MS)) {
-    const val3m = await fetchYahooFinance3M(symbol);
-    if (val3m != null) {
-      change3mPct = val3m;
+    const histData = await fetchYahooFinanceHistory(symbol);
+    if (histData != null) {
+      change3mPct = histData.change3mPct;
+      change6mPct = histData.change6mPct;
+      change1yPct = histData.change1yPct;
       histTimestamp = now;
     } else if (cached) {
       change3mPct = cached.change3mPct;
+      change6mPct = cached.change6mPct;
+      change1yPct = cached.change1yPct;
     }
   } else if (cached) {
     change3mPct = cached.change3mPct;
+    change6mPct = cached.change6mPct;
+    change1yPct = cached.change1yPct;
   }
 
   const quote: Quote = {
@@ -225,6 +266,8 @@ async function fetchOne(symbol: string): Promise<[string, Quote] | null> {
     currency: liveQuote.currency,
     time: liveQuote.time,
     change3mPct,
+    change6mPct,
+    change1yPct,
     volume: liveQuote.volume,
   };
 

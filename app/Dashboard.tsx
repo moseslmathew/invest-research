@@ -3035,9 +3035,16 @@ function MarketTable({
 }: TableProps) {
   const bindLongPress = useLongPress(onSelectStock, onLongPress);
   const [filterText, setFilterText] = useState("");
-  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | "volume" | null>(null);
+  const [sortField, setSortField] = useState<"price" | "change" | "change3m" | "change6m" | "change1y" | "volume" | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [changeMode, setChangeMode] = useState<"1d" | "3m">("1d");
+  const [changeMode, setChangeMode] = useState<"1d" | "3m" | "6m" | "1y">("1d");
+
+  const modeToField = {
+    "1d": "change",
+    "3m": "change3m",
+    "6m": "change6m",
+    "1y": "change1y"
+  } as const;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -3058,7 +3065,7 @@ function MarketTable({
     };
   }, [items]);
 
-  const handleSort = (field: "price" | "change" | "change3m" | "volume") => {
+  const handleSort = (field: "price" | "change" | "change3m" | "change6m" | "change1y" | "volume") => {
     if (sortField === field) {
       if (sortOrder === "desc") {
         setSortOrder("asc");
@@ -3098,6 +3105,12 @@ function MarketTable({
       } else if (sortField === "change3m") {
         valA = qA?.change3mPct != null ? qA.change3mPct : -999;
         valB = qB?.change3mPct != null ? qB.change3mPct : -999;
+      } else if (sortField === "change6m") {
+        valA = qA?.change6mPct != null ? qA.change6mPct : -999;
+        valB = qB?.change6mPct != null ? qB.change6mPct : -999;
+      } else if (sortField === "change1y") {
+        valA = qA?.change1yPct != null ? qA.change1yPct : -999;
+        valB = qB?.change1yPct != null ? qB.change1yPct : -999;
       } else if (sortField === "volume") {
         valA = qA?.volume != null ? qA.volume : -1;
         valB = qB?.volume != null ? qB.volume : -1;
@@ -3144,21 +3157,26 @@ function MarketTable({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setChangeMode(prev => prev === "1d" ? "3m" : "1d");
+                        setChangeMode(prev => {
+                          if (prev === "1d") return "3m";
+                          if (prev === "3m") return "6m";
+                          if (prev === "6m") return "1y";
+                          return "1d";
+                        });
                       }}
                       className="change-mode-toggle"
                       style={{ padding: "2px 6px" }}
-                      title="Toggle 1D / 3M change"
+                      title="Toggle 1D / 3M / 6M / 1Y change"
                     >
                       ⇆
                     </button>
                     <span 
-                      onClick={() => handleSort(changeMode === "1d" ? "change" : "change3m")}
+                      onClick={() => handleSort(modeToField[changeMode])}
                       style={{ cursor: "pointer", whiteSpace: "nowrap" }}
                     >
-                      {changeMode === "1d" ? "1D Chg" : "3M Chg"}
+                      {changeMode === "1d" ? "1D Chg" : changeMode === "3m" ? "3M Chg" : changeMode === "6m" ? "6M Chg" : "1Y Chg"}
                     </span>
-                    {sortField === (changeMode === "1d" ? "change" : "change3m") && (
+                    {sortField === modeToField[changeMode] && (
                       <span className="sort-indicator">
                         {sortOrder === "asc" ? "▲" : "▼"}
                       </span>
@@ -3199,27 +3217,44 @@ function MarketTable({
                     </td>
                     <td className="col-num-r">
                       {q ? (
-                        changeMode === "1d" ? (
-                          <div className={`chg ${up ? "up" : "down"}`}>
-                            <span className="chg-pct">
-                              <Icon name={up ? "arrowUp" : "arrowDown"} />
-                              {up ? "+" : ""}
-                              {q.changePct.toFixed(2)}%
-                            </span>
-                            <span className="chg-abs">
-                              {up ? "+" : "−"}
-                              {fmtPrice(Math.abs(q.change), q.currency)}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className={`chg ${q.change3mPct != null && q.change3mPct >= 0 ? "up" : "down"}`}>
-                            <span className="chg-pct">
-                              <Icon name={q.change3mPct != null && q.change3mPct >= 0 ? "arrowUp" : "arrowDown"} />
-                              {q.change3mPct != null && q.change3mPct >= 0 ? "+" : ""}
-                              {q.change3mPct != null ? q.change3mPct.toFixed(2) : "0.00"}%
-                            </span>
-                          </div>
-                        )
+                        (() => {
+                          let displayPct = 0;
+                          let isUp = false;
+                          let showAbs = false;
+                          let absVal = 0;
+                          
+                          if (changeMode === "1d") {
+                            displayPct = q.changePct;
+                            isUp = q.change >= 0;
+                            showAbs = true;
+                            absVal = Math.abs(q.change);
+                          } else if (changeMode === "3m") {
+                            displayPct = q.change3mPct ?? 0;
+                            isUp = displayPct >= 0;
+                          } else if (changeMode === "6m") {
+                            displayPct = q.change6mPct ?? 0;
+                            isUp = displayPct >= 0;
+                          } else if (changeMode === "1y") {
+                            displayPct = q.change1yPct ?? 0;
+                            isUp = displayPct >= 0;
+                          }
+
+                          return (
+                            <div className={`chg ${isUp ? "up" : "down"}`}>
+                              <span className="chg-pct">
+                                <Icon name={isUp ? "arrowUp" : "arrowDown"} />
+                                {isUp ? "+" : ""}
+                                {displayPct.toFixed(2)}%
+                              </span>
+                              {showAbs && (
+                                <span className="chg-abs">
+                                  {isUp ? "+" : "−"}
+                                  {fmtPrice(absVal, q.currency)}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : quotesLoading ? (
                         <span className="shimmer" />
                       ) : (
