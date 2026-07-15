@@ -475,8 +475,12 @@ function NewsDrawer({
   const [volLoading, setVolLoading] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
-  const [volumeRange, setVolumeRange] = useState<"2w" | "1m" | "3m" | "1y">("2w");
+  const [volumeRange, setVolumeRange] = useState<"2w" | "1m" | "3m" | "1y" | "3y" | "5y" | "all">("2w");
   const [expandedChart, setExpandedChart] = useState<"price" | "volume" | null>(null);
+  // Drag-to-select a time block on the expanded chart
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
+  const draggingRef = useRef(false);
+  const selAnchorRef = useRef<number | null>(null);
 
   // Reset expanded chart on stock change
   useEffect(() => {
@@ -503,6 +507,14 @@ function NewsDrawer({
       document.body.style.overflow = prev;
     };
   }, [expandedChart]);
+
+  // A selection's indices only make sense for the current series — clear it
+  // whenever the data, range, or chart type changes.
+  useEffect(() => {
+    setSelection(null);
+    draggingRef.current = false;
+    selAnchorRef.current = null;
+  }, [expandedChart, volumeRange, volumeHistory]);
 
   useEffect(() => {
     if (!stock) return;
@@ -800,10 +812,10 @@ function NewsDrawer({
                 <>
                   {/* SVG Price Chart */}
                   <div className="volume-chart-section">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
                       <h3 className="volume-chart-title" style={{ margin: 0 }}>Historical Price Chart</h3>
-                      <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                        {["2w", "1m", "3m", "1y"].map((r) => (
+                      <div className="volume-range-selectors" style={{ display: "flex", flexWrap: "wrap", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        {["2w", "1m", "3m", "1y", "3y", "5y", "all"].map((r) => (
                           <button
                             key={r}
                             className={`volume-range-btn ${volumeRange === r ? "active" : ""}`}
@@ -1532,10 +1544,10 @@ function NewsDrawer({
 
                   {/* SVG Bar Chart */}
                   <div className="volume-chart-section">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
                       <h3 className="volume-chart-title" style={{ margin: 0 }}>Daily Traded Volume</h3>
-                      <div className="volume-range-selectors" style={{ display: "flex", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
-                        {["2w", "1m", "3m", "1y"].map((r) => (
+                      <div className="volume-range-selectors" style={{ display: "flex", flexWrap: "wrap", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                        {["2w", "1m", "3m", "1y", "3y", "5y", "all"].map((r) => (
                           <button
                             key={r}
                             className={`volume-range-btn ${volumeRange === r ? "active" : ""}`}
@@ -1794,14 +1806,44 @@ function NewsDrawer({
         const hovered = hoveredBarIndex != null ? volumeHistory[hoveredBarIndex] : null;
         const hoveredPt = hoveredBarIndex != null ? pricePts[hoveredBarIndex] : null;
 
-        // Scrub state: while hovering a point, the header reflects that point
-        // (price + change since the start of the range), reverting on leave.
+        // Header reflects, in priority order: an active block selection, then a
+        // hover scrub, then the latest price for the whole range.
         const scrubbing = hoveredBarIndex != null;
-        const activeIdx = scrubbing ? hoveredBarIndex! : n - 1;
-        const activeClose = prices[activeIdx] ?? lastPrice;
-        const activeDiff = activeClose - firstPrice;
-        const activePct = firstPrice ? (activeDiff / firstPrice) * 100 : 0;
+        const hasSel = selection != null && selection.start !== selection.end;
+        let activeClose: number;
+        let activeDiff: number;
+        let activePct: number;
+        let activeLabel: string;
+        if (hasSel) {
+          const s = prices[selection!.start] ?? firstPrice;
+          const e = prices[selection!.end] ?? lastPrice;
+          activeClose = e;
+          activeDiff = e - s;
+          activePct = s ? (activeDiff / s) * 100 : 0;
+          activeLabel = `${volumeHistory[selection!.start]?.date ?? ""} → ${volumeHistory[selection!.end]?.date ?? ""}`;
+        } else if (scrubbing) {
+          activeClose = prices[hoveredBarIndex!] ?? lastPrice;
+          activeDiff = activeClose - firstPrice;
+          activePct = firstPrice ? (activeDiff / firstPrice) * 100 : 0;
+          activeLabel = volumeHistory[hoveredBarIndex!]?.date || volumeRange.toUpperCase();
+        } else {
+          activeClose = lastPrice;
+          activeDiff = priceDiff;
+          activePct = pctDiff;
+          activeLabel = volumeRange.toUpperCase();
+        }
         const activeUp = activeDiff >= 0;
+
+        // Selection band edges (percent across the plot)
+        const selStartPct = hasSel ? pricePts[selection!.start].xPct : 0;
+        const selEndPct = hasSel ? pricePts[selection!.end].xPct : 0;
+
+        // Nearest data index under a pointer's clientX within an element
+        const idxFromClientX = (clientX: number, el: HTMLElement) => {
+          const r = el.getBoundingClientRect();
+          const rel = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+          return Math.round(rel * (n - 1 || 1));
+        };
 
         return (
           <>
@@ -1829,7 +1871,7 @@ function NewsDrawer({
                 </span>
                 <span className={`gcp-change ${activeUp ? "up" : "down"}`}>
                   {activeUp ? "+" : "−"}{fmtPrice(Math.abs(activeDiff), cur)} ({activeUp ? "+" : "−"}{Math.abs(activePct).toFixed(2)}%)
-                  <span className="gcp-range-label">{scrubbing ? volumeHistory[activeIdx]?.date : volumeRange.toUpperCase()}</span>
+                  <span className="gcp-range-label">{activeLabel}</span>
                 </span>
               </div>
 
@@ -1923,22 +1965,53 @@ function NewsDrawer({
                       })
                     )}
 
-                    {/* Hover/touch hit areas */}
-                    {volumeHistory.map((d, i) => (
-                      <rect
-                        key={`hit${i}`}
-                        x={(i / (n - 1 || 1)) * 400 - 200 / (n || 1)}
-                        y="0"
-                        width={400 / (n || 1)}
-                        height="200"
-                        fill="transparent"
-                        onMouseEnter={() => setHoveredBarIndex(i)}
-                        onMouseLeave={() => setHoveredBarIndex(null)}
-                        onTouchStart={() => setHoveredBarIndex(i)}
-                        onTouchEnd={() => setHoveredBarIndex(null)}
-                      />
-                    ))}
+                    {/* Selected time block */}
+                    {hasSel && (
+                      <>
+                        <rect
+                          x={(selStartPct / 100) * 400}
+                          y="0"
+                          width={((selEndPct - selStartPct) / 100) * 400}
+                          height="200"
+                          fill={activeUp ? "#10b981" : "#ef4444"}
+                          opacity="0.1"
+                        />
+                        <line x1={(selStartPct / 100) * 400} y1="0" x2={(selStartPct / 100) * 400} y2="200" stroke={activeUp ? "#10b981" : "#ef4444"} strokeWidth="1.25" vectorEffect="non-scaling-stroke" opacity="0.6" />
+                        <line x1={(selEndPct / 100) * 400} y1="0" x2={(selEndPct / 100) * 400} y2="200" stroke={activeUp ? "#10b981" : "#ef4444"} strokeWidth="1.25" vectorEffect="non-scaling-stroke" opacity="0.6" />
+                      </>
+                    )}
                   </svg>
+
+                  {/* Pointer capture: hover to scrub, press-drag to select a block */}
+                  <div
+                    className="gcp-capture"
+                    onPointerDown={(e) => {
+                      const el = e.currentTarget;
+                      el.setPointerCapture(e.pointerId);
+                      const i = idxFromClientX(e.clientX, el);
+                      selAnchorRef.current = i;
+                      draggingRef.current = true;
+                      setSelection({ start: i, end: i });
+                      setHoveredBarIndex(i);
+                    }}
+                    onPointerMove={(e) => {
+                      const i = idxFromClientX(e.clientX, e.currentTarget);
+                      setHoveredBarIndex(i);
+                      if (draggingRef.current && selAnchorRef.current != null) {
+                        const a = selAnchorRef.current;
+                        setSelection({ start: Math.min(a, i), end: Math.max(a, i) });
+                      }
+                    }}
+                    onPointerUp={() => {
+                      if (draggingRef.current) {
+                        draggingRef.current = false;
+                        setSelection((prev) => (prev && prev.start === prev.end ? null : prev));
+                      }
+                    }}
+                    onPointerLeave={() => {
+                      if (!draggingRef.current) setHoveredBarIndex(null);
+                    }}
+                  />
 
                   {/* HTML overlays — perfect circles & crisp text, positioned by % */}
                   {isPrice && hoveredBarIndex === null && lastPt && (
@@ -1962,8 +2035,8 @@ function NewsDrawer({
                     </span>
                   )}
 
-                  {/* Tooltip that follows the crosshair */}
-                  {hovered && hoveredPt && (
+                  {/* Tooltip that follows the crosshair (hidden while a block is selected) */}
+                  {hovered && hoveredPt && !hasSel && (
                     <div
                       className="gcp-hover-pill"
                       style={{ left: `${Math.min(92, Math.max(8, hoveredPt.xPct))}%` }}
@@ -1972,6 +2045,19 @@ function NewsDrawer({
                         {fmtPrice(hovered.close, cur)}
                       </span>
                       <span className="gcp-hover-vol">Vol {fmtVolume(hovered.volume)}</span>
+                    </div>
+                  )}
+
+                  {/* Selected block badge: % change over the span + clear */}
+                  {hasSel && (
+                    <div
+                      className="gcp-sel-badge"
+                      style={{ left: `${Math.min(88, Math.max(12, (selStartPct + selEndPct) / 2))}%` }}
+                    >
+                      <span className={activeUp ? "up" : "down"}>
+                        {activeUp ? "+" : "−"}{Math.abs(activePct).toFixed(2)}%
+                      </span>
+                      <button type="button" onClick={() => setSelection(null)} aria-label="Clear selection">×</button>
                     </div>
                   )}
                 </div>
@@ -1999,7 +2085,7 @@ function NewsDrawer({
               {/* ── Bottom bar: range + chart type ── */}
               <div className="gcp-ranges">
                 <div className="gcp-range-group">
-                  {["2w", "1m", "3m", "1y"].map((r) => (
+                  {["2w", "1m", "3m", "1y", "3y", "5y", "all"].map((r) => (
                     <button
                       key={r}
                       className={`gcp-range-btn ${volumeRange === r ? "active" : ""}`}
@@ -2046,11 +2132,14 @@ function NewsDrawer({
 function AIResearchPage({
   market,
   quotes,
+  researchStock,
+  setResearchStock,
 }: {
   market: Market;
   quotes: Record<string, Quote>;
+  researchStock: { symbol: string; name: string } | null;
+  setResearchStock: (s: { symbol: string; name: string } | null) => void;
 }) {
-  const [researchStock, setResearchStock] = useState<{ symbol: string; name: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals">("research");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -4073,6 +4162,8 @@ export default function Dashboard({
   const [selectedStock, setSelectedStock] = useState<WatchlistItem | null>(null);
   const [activeLongPressItem, setActiveLongPressItem] = useState<WatchlistItem | null>(null);
   const [watchlistToDelete, setWatchlistToDelete] = useState<Watchlist | null>(null);
+  const [researchStock, setResearchStock] = useState<{ symbol: string; name: string } | null>(null);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [, startDelete] = useTransition();
   const [, startAdd] = useTransition();
 
@@ -4091,6 +4182,7 @@ export default function Dashboard({
   const symbolRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const globalSearchInputRef = useRef<HTMLInputElement>(null);
 
   const md = data[market];
   const aiList = useMemo(() => data["US"].lists.find(isAiList) ?? null, [data]);
@@ -4118,6 +4210,28 @@ export default function Dashboard({
   useEffect(() => {
     setWatchlistTab("table");
   }, [view, activeList]);
+
+  // Keyboard shortcut to open search modal
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        setIsGlobalSearchOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Auto-focus search input when modal opens
+  useEffect(() => {
+    if (isGlobalSearchOpen) {
+      const timer = setTimeout(() => {
+        globalSearchInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isGlobalSearchOpen]);
 
   function selectMarket(m: Market) {
     setMarket(m);
@@ -4431,20 +4545,35 @@ export default function Dashboard({
             <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
             <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
           </div>
-          <div className="mobile-profile-wrap">
-            {user ? (
-              <UserButton 
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: { width: 36, height: 36 },
-                  }
-                }} 
-              />
-            ) : (
-              <SignInButton mode="modal">
-                <button className="btn" style={{ padding: '6px 12px', fontSize: '12px' }}>Sign In</button>
-              </SignInButton>
-            )}
+          
+          <div className="header-actions">
+            <button
+              onClick={() => setIsGlobalSearchOpen(true)}
+              className="header-search-trigger"
+              aria-label="Search markets"
+              title="Search stock (Press /)"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+
+            <div className="mobile-profile-wrap">
+              {user ? (
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      userButtonAvatarBox: { width: 36, height: 36 },
+                    }
+                  }} 
+                />
+              ) : (
+                <SignInButton mode="modal">
+                  <button className="btn" style={{ padding: '6px 12px', fontSize: '12px' }}>Sign In</button>
+                </SignInButton>
+              )}
+            </div>
           </div>
         </div>
 
@@ -4569,59 +4698,29 @@ export default function Dashboard({
           <Toast state={createState} lastProcessedRef={lastCreateStateRef} className="inline-toast" />
         )}
 
-        {/* Search card */}
-        {view !== "ai" && view !== "trending" && view !== "headlines" && view !== "research" && (
-          <div className="panel search-panel">
-            <form
-              ref={addFormRef}
-              action={addAction}
-              className="add-form search-form"
-              key={`${market}-${view}-${currentListId}`}
-            >
-              <input type="hidden" name="market" value={market} />
-              <input
-                type="hidden"
-                name="watchlistId"
-                value={currentListId ?? ""}
-              />
-              {/* In AI Stocks, add to the "AI" list — auto-created per market. */}
-              <input
-                type="hidden"
-                name="listName"
-                value=""
-              />
-              <input ref={symbolRef} type="hidden" name="symbol" />
-              <input ref={nameRef} type="hidden" name="name" />
+        {/* Hidden form to submit added watchlist items programmatically */}
+        <form
+          ref={addFormRef}
+          action={addAction}
+          key={`${market}-${view}-${currentListId}`}
+          style={{ display: "none" }}
+        >
+          <input type="hidden" name="market" value={market} />
+          <input
+            type="hidden"
+            name="watchlistId"
+            value={currentListId ?? ""}
+          />
+          <input
+            type="hidden"
+            name="listName"
+            value=""
+          />
+          <input ref={symbolRef} type="hidden" name="symbol" />
+          <input ref={nameRef} type="hidden" name="name" />
+        </form>
 
-              <TickerSearch
-                market={market}
-                disabled={view === "watchlist" && currentListId == null}
-                inputRef={searchInputRef}
-                isAdding={isAddPending}
-                onPick={(r) => {
-                  if (symbolRef.current) symbolRef.current.value = r.symbol;
-                  if (nameRef.current) nameRef.current.value = r.name;
-                  addFormRef.current?.requestSubmit();
-                }}
-              />
-            </form>
-
-            <p className="search-examples">
-              Examples:{" "}
-              {market === "US"
-                ? "Apple, AAPL, Nvidia, Microsoft"
-                : "Reliance, TCS, Infosys, HDFC Bank"}
-            </p>
-
-            {view === "watchlist" && currentListId == null && (
-              <div className="search-hint">
-                Create or pick a watchlist above, then search a ticker to add it.
-              </div>
-            )}
-
-            <Toast state={addState} lastProcessedRef={lastAddStateRef} />
-          </div>
-        )}
+        <Toast state={addState} lastProcessedRef={lastAddStateRef} />
 
         {/* Results card */}
         {view === "ai" &&
@@ -4781,7 +4880,12 @@ export default function Dashboard({
 
         {/* AI Research Page */}
         {view === "research" && (
-          <AIResearchPage market={market} quotes={quotes} />
+          <AIResearchPage
+            market={market}
+            quotes={quotes}
+            researchStock={researchStock}
+            setResearchStock={setResearchStock}
+          />
         )}
 
         {/* Watchlist Sub-Tabs (Table vs AI Briefing) */}
@@ -5082,6 +5186,62 @@ export default function Dashboard({
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </>
+      )}
+      {/* ---------- Global Search Overlay & Modal ---------- */}
+      {isGlobalSearchOpen && (
+        <>
+          <div 
+            className="global-search-overlay" 
+            onClick={() => setIsGlobalSearchOpen(false)}
+          />
+          <div 
+            className="global-search-modal"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="global-search-header">
+              <h3>Search Markets ({market})</h3>
+              <button 
+                className="global-search-close" 
+                onClick={() => setIsGlobalSearchOpen(false)}
+                aria-label="Close search"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="global-search-body">
+              <TickerSearch
+                market={market}
+                disabled={view === "watchlist" && currentListId == null}
+                inputRef={globalSearchInputRef}
+                isAdding={isAddPending}
+                onPick={(r) => {
+                  if (view === "watchlist") {
+                    if (currentListId != null) {
+                      if (symbolRef.current) symbolRef.current.value = r.symbol;
+                      if (nameRef.current) nameRef.current.value = r.name;
+                      addFormRef.current?.requestSubmit();
+                    }
+                  } else {
+                    setResearchStock({ symbol: r.symbol, name: r.name });
+                    selectView("research");
+                  }
+                  setIsGlobalSearchOpen(false);
+                }}
+              />
+              <div className="global-search-hints" style={{ marginTop: "16px" }}>
+                <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)", lineHeight: "1.4" }}>
+                  {view === "watchlist" 
+                    ? "Type to search and select a stock to add to your current watchlist." 
+                    : "Type to search and select a stock to view in-depth AI research."}
+                </p>
+                <p style={{ margin: "6px 0 0 0", fontSize: "11px", color: "var(--muted)" }}>
+                  Examples: {market === "US" ? "Apple, AAPL, Nvidia" : "Reliance, TCS, HDFC Bank"}
+                </p>
+              </div>
             </div>
           </div>
         </>

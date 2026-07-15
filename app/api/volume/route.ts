@@ -16,6 +16,8 @@ export async function GET(req: Request) {
 
     const range = (searchParams.get("range") || "2w").toLowerCase();
 
+    // Yahoo's chart API only accepts a fixed set of ranges (…1y, 2y, 5y, 10y,
+    // max). "3y" isn't one of them, so fetch 5y weekly and slice it below.
     let yahooRange = "1mo";
     let interval = "1d";
     if (range === "3m") {
@@ -23,7 +25,16 @@ export async function GET(req: Request) {
     } else if (range === "1y") {
       yahooRange = "1y";
       interval = "1wk";
+    } else if (range === "3y" || range === "5y") {
+      yahooRange = "5y";
+      interval = "1wk";
+    } else if (range === "all") {
+      yahooRange = "max";
+      interval = "1mo";
     }
+
+    // Multi-year spans need the year in the axis label to stay unambiguous.
+    const showYear = range === "3y" || range === "5y" || range === "all";
 
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${yahooRange}&interval=${interval}`;
     const res = await fetch(url, {
@@ -56,13 +67,9 @@ export async function GET(req: Request) {
 
       if (vol != null && Number.isFinite(vol) && close != null && Number.isFinite(close) && time != null) {
         const dateObj = new Date(time * 1000);
-        let dateStr = "";
-        if (range === "1y") {
-          // For weekly data, show Month + Year or Month Day
-          dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        } else {
-          dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-        }
+        const dateStr = showYear
+          ? dateObj.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+          : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         history.push({
           date: dateStr,
           volume: vol,
@@ -81,8 +88,10 @@ export async function GET(req: Request) {
       }
     }
 
-    // Keep either the last 10 trading days (2 weeks) or all items for wider ranges
-    const slicedHistory = range === "2w" ? history.slice(-10) : history;
+    // 2w → last 10 trading days; 3y → last ~156 weeks of the 5y weekly series;
+    // everything else uses the full fetched series.
+    const slicedHistory =
+      range === "2w" ? history.slice(-10) : range === "3y" ? history.slice(-156) : history;
 
     if (slicedHistory.length === 0) {
       return NextResponse.json({ error: "No valid volume data points available" }, { status: 404 });
