@@ -2048,16 +2048,21 @@ function NewsDrawer({
                     </div>
                   )}
 
-                  {/* Selected block badge: % change over the span + clear */}
+                  {/* Selected block badge: % change + date range + clear */}
                   {hasSel && (
                     <div
                       className="gcp-sel-badge"
                       style={{ left: `${Math.min(88, Math.max(12, (selStartPct + selEndPct) / 2))}%` }}
                     >
-                      <span className={activeUp ? "up" : "down"}>
-                        {activeUp ? "+" : "−"}{Math.abs(activePct).toFixed(2)}%
+                      <div className="gcp-sel-top">
+                        <span className={activeUp ? "up" : "down"}>
+                          {activeUp ? "+" : "−"}{Math.abs(activePct).toFixed(2)}%
+                        </span>
+                        <button type="button" onClick={() => setSelection(null)} aria-label="Clear selection">×</button>
+                      </div>
+                      <span className="gcp-sel-range">
+                        {volumeHistory[selection!.start]?.date} → {volumeHistory[selection!.end]?.date}
                       </span>
-                      <button type="button" onClick={() => setSelection(null)} aria-label="Clear selection">×</button>
                     </div>
                   )}
                 </div>
