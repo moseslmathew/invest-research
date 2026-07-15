@@ -23,7 +23,14 @@ export async function GET(req: Request) {
   const name = (searchParams.get("name") || "").trim();
 
   // Prioritize company name search for high quality results, fallback to ticker symbol
-  const query = name || symbol;
+  let query = name || symbol;
+  
+  // Guard against common symbol/name mismatches (e.g. AZAD.BO / Azad Maidan)
+  const lSymbol = symbol.toLowerCase();
+  const lName = name.toLowerCase();
+  if ((lSymbol.includes("azad") || lName.includes("azad")) && (lName.includes("maidan") || lName.includes("kashmir"))) {
+    query = "Azad Engineering";
+  }
 
   if (!query) {
     return NextResponse.json({ error: "Missing query" }, { status: 400 });
@@ -100,11 +107,24 @@ export async function GET(req: Request) {
       return NextResponse.json({ articles: [] });
     }
 
-    // Show the most recent coverage first everywhere. Sorting the raw pool up
-    // front means the mock slice picks the latest articles; the AI path is
-    // re-sorted again after filtering (below) since it returns in its own order.
+    // Filter out irrelevant geographic/entity overlaps (e.g. Azad Maidan/Kashmir)
+    const filteredPool = articles.filter(art => {
+      const lTitle = art.title.toLowerCase();
+      if (symbol.toLowerCase().includes("azad") || name.toLowerCase().includes("azad")) {
+        if (lTitle.includes("maidan") || lTitle.includes("kashmir") || lTitle.includes("stadium") || lTitle.includes("cricket ground")) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (filteredPool.length === 0) {
+      return NextResponse.json({ articles: [] });
+    }
+
+    // Show the most recent coverage first everywhere
     const byLatest = (a: NewsArticle, b: NewsArticle) => (b.time ?? 0) - (a.time ?? 0);
-    articles.sort(byLatest);
+    filteredPool.sort(byLatest);
 
     // Connect OpenAI to filter & analyze news sentiment
     const apiKey = process.env.OPENAI_API_KEY || "";
@@ -112,7 +132,7 @@ export async function GET(req: Request) {
 
     if (isMock) {
       // Local Heuristic Filter & Mock Sentiment Fallback
-      const filtered: NewsArticle[] = articles.slice(0, 6).map((art) => {
+      const filtered: NewsArticle[] = filteredPool.slice(0, 6).map((art) => {
         const ltitle = art.title.toLowerCase();
         let sentiment: "bullish" | "bearish" | "neutral" = "neutral";
         let rationale = "[Demo Mode] General industry update or sector correlation.";
@@ -144,8 +164,10 @@ Your goals:
 1. Filter out duplicates, irrelevant mentions, and low-value clickbait. Only select articles that add real value (e.g. key financials, major partnerships, product releases, regulatory actions, leadership shifts).
 2. For each kept article, determine the sentiment ('bullish', 'bearish', or 'neutral') and write a 1-sentence business value rationale.
 
+CRITICAL DISAMBIGUATION RULE: Distinguish the public company strictly from unrelated entities, venues, or places. For instance, if checking news for an "Azad" stock (like Azad Engineering), you MUST reject any news regarding "Azad Maidan" (the sports ground/venue) or "Azad Kashmir" (the geopolitical region). Ensure all articles kept strictly concern the business operations or stock performance of the target corporate entity.
+
 Raw Articles:
-${JSON.stringify(articles.map(a => ({ uuid: a.uuid, title: a.title, publisher: a.publisher })), null, 2)}
+${JSON.stringify(filteredPool.map(a => ({ uuid: a.uuid, title: a.title, publisher: a.publisher })), null, 2)}
 
 Respond ONLY with a JSON object matching this structure:
 {
@@ -193,7 +215,7 @@ Respond ONLY with a JSON object matching this structure:
     // Map AI analysis back to matching original articles
     const filteredArticles: NewsArticle[] = [];
     for (const aiArt of aiArticles) {
-      const original = articles.find(a => a.uuid === aiArt.uuid);
+      const original = filteredPool.find(a => a.uuid === aiArt.uuid);
       if (original) {
         filteredArticles.push({
           ...original,
@@ -206,7 +228,7 @@ Respond ONLY with a JSON object matching this structure:
     // If OpenAI returns empty or parsing errors, return raw slice
     if (filteredArticles.length === 0) {
       return NextResponse.json({
-        articles: articles.slice(0, 6).map(a => ({
+        articles: filteredPool.slice(0, 6).map(a => ({
           ...a,
           sentiment: "neutral",
           valueRationale: "Relevance validation failed. Listed as general industry news.",
