@@ -101,6 +101,54 @@ function fmtDate(time: number) {
   });
 }
 
+/* ---------- chart geometry helpers ---------- */
+// Smooth a polyline into a gentle cubic-bezier curve (Catmull-Rom → Bézier).
+// A low tension keeps the curve faithful to the data while removing the jagged
+// straight-segment look. Returns an SVG path `d` string.
+function smoothLinePath(pts: { x: number; y: number }[]): string {
+  if (pts.length === 0) return "";
+  if (pts.length < 3) {
+    return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+  }
+  const t = 0.16; // smoothing tension — subtle, avoids overshoot
+  const d: string[] = [`M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) * t;
+    const c1y = p1.y + (p2.y - p0.y) * t;
+    const c2x = p2.x - (p3.x - p1.x) * t;
+    const c2y = p2.y - (p3.y - p1.y) * t;
+    d.push(
+      `C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`
+    );
+  }
+  return d.join(" ");
+}
+
+// Round a raw step up to a "nice" 1/2/5 × 10ⁿ value so axis labels read cleanly.
+function niceStep(raw: number): number {
+  if (!(raw > 0)) return 1;
+  const exp = Math.floor(Math.log10(raw));
+  const frac = raw / Math.pow(10, exp);
+  const nf = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10;
+  return nf * Math.pow(10, exp);
+}
+
+// Evenly spaced "nice" tick values covering [min, max].
+function niceTicks(min: number, max: number, count = 5): number[] {
+  if (!(max > min) || count < 2) return [min];
+  const step = niceStep((max - min) / (count - 1));
+  const start = Math.ceil(min / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= max + step * 1e-6; v += step) {
+    ticks.push(Math.abs(v) < step * 1e-6 ? 0 : v);
+  }
+  return ticks;
+}
+
 /* ---------- live quotes ---------- */
 function useQuotes(symbols: string[]) {
   const key = symbols.join(",");
@@ -803,7 +851,7 @@ function NewsDrawer({
                             return { x, y, date: d.date, close: d.close };
                           });
 
-                          const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
+                          const linePath = smoothLinePath(points);
                           const areaPath = `${linePath} L${points[points.length - 1].x},250 L${points[0].x},250 Z`;
 
                           // Overall trend color
@@ -813,14 +861,14 @@ function NewsDrawer({
                           const trendColor = isUpTrend ? "#10b981" : "#ef4444";
                           const trendGrad = isUpTrend ? "url(#priceUpGrad)" : "url(#priceDownGrad)";
 
-                          const gridLines = [0, 0.25, 0.5, 0.75, 1];
+                          const gridLines = niceTicks(paddedMin, paddedMax, 6)
+                            .filter((v) => v >= paddedMin && v <= paddedMax);
 
                           return (
                             <>
-                              {/* Grid lines */}
-                              {gridLines.map((ratio, idx) => {
-                                const yPos = 250 - (ratio * chartHeight);
-                                const labelVal = paddedMin + (ratio * paddedRange);
+                              {/* Grid lines at clean, rounded price levels */}
+                              {gridLines.map((tickVal, idx) => {
+                                const yPos = 250 - ((tickVal - paddedMin) / paddedRange) * chartHeight;
                                 return (
                                   <g key={idx}>
                                     <line
@@ -831,17 +879,17 @@ function NewsDrawer({
                                       stroke="var(--border)"
                                       strokeWidth="1"
                                       strokeDasharray="4 4"
-                                      opacity="0.6"
+                                      opacity="0.5"
                                     />
                                     <text
                                       x="50"
                                       y={yPos + 4}
                                       textAnchor="end"
                                       fontSize="12.5"
-                                      fill="var(--text)"
+                                      fill="var(--muted)"
                                       fontWeight="600"
                                     >
-                                      {fmtPrice(labelVal, quote?.currency || "USD")}
+                                      {fmtPrice(tickVal, quote?.currency || "USD")}
                                     </text>
                                   </g>
                                 );
@@ -851,7 +899,35 @@ function NewsDrawer({
                               <path d={areaPath} fill={trendGrad} />
 
                               {/* Trend Line */}
-                              <path d={linePath} fill="none" stroke={trendColor} strokeWidth="2.5" />
+                              <path
+                                d={linePath}
+                                fill="none"
+                                stroke={trendColor}
+                                strokeWidth="2.5"
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                              />
+
+                              {/* Latest-price marker (hidden while hovering a point) */}
+                              {hoveredBarIndex === null && points.length > 0 && (() => {
+                                const last = points[points.length - 1];
+                                return (
+                                  <g>
+                                    <circle cx={last.x} cy={last.y} r="8" fill={trendColor} opacity="0.16">
+                                      <animate attributeName="r" values="6;11;6" dur="2.2s" repeatCount="indefinite" />
+                                      <animate attributeName="opacity" values="0.22;0;0.22" dur="2.2s" repeatCount="indefinite" />
+                                    </circle>
+                                    <circle
+                                      cx={last.x}
+                                      cy={last.y}
+                                      r="4.5"
+                                      fill={trendColor}
+                                      stroke="var(--surface-solid)"
+                                      strokeWidth="2"
+                                    />
+                                  </g>
+                                );
+                              })()}
 
                               {/* Interactive Hover Areas */}
                               {points.map((p, index) => {
@@ -1679,10 +1755,12 @@ function NewsDrawer({
           const minP = Math.min(...prices);
           const maxP = Math.max(...prices);
           const range = maxP - minP || 1;
+          const padMin = minP - range * 0.05;
+          const padMax = maxP + range * 0.05;
           yLabels = [
-            fmtPrice(maxP, quote?.currency || "USD"),
-            fmtPrice(minP + range * 0.5, quote?.currency || "USD"),
-            fmtPrice(minP, quote?.currency || "USD")
+            fmtPrice(padMax, quote?.currency || "USD"),
+            fmtPrice((padMin + padMax) / 2, quote?.currency || "USD"),
+            fmtPrice(padMin, quote?.currency || "USD")
           ];
         } else {
           const vols = volumeHistory.map(d => d.volume);
@@ -1756,17 +1834,50 @@ function NewsDrawer({
 
                       const pts = volumeHistory.map((d, i) => {
                         const x = (i / (volumeHistory.length - 1 || 1)) * 400;
-                        const y = 200 - ((d.close - padMin) / padRange) * 190;
-                        return { x, y: Math.max(5, Math.min(195, y)) };
+                        const y = 200 - ((d.close - padMin) / padRange) * 200;
+                        return { x, y: Math.max(2, Math.min(198, y)) };
                       });
 
-                      const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                      const line = smoothLinePath(pts);
                       const area = `${line} L400,200 L0,200 Z`;
+                      const lastPt = pts[pts.length - 1];
 
                       return (
                         <>
+                          {/* Horizontal reference grid for easier reading */}
+                          {[0, 50, 100, 150, 200].map((gy) => (
+                            <line
+                              key={gy}
+                              x1="0"
+                              y1={gy}
+                              x2="400"
+                              y2={gy}
+                              stroke="var(--border)"
+                              strokeWidth="0.5"
+                              strokeDasharray="3 3"
+                              opacity="0.45"
+                            />
+                          ))}
                           <path d={area} fill={isUp ? "url(#gcpGradUp)" : "url(#gcpGradDown)"} />
-                          <path d={line} fill="none" stroke={trendColor} strokeWidth="2" />
+                          <path
+                            d={line}
+                            fill="none"
+                            stroke={trendColor}
+                            strokeWidth="2"
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                          />
+
+                          {/* Latest-price marker */}
+                          {hoveredBarIndex === null && lastPt && (
+                            <>
+                              <circle cx={lastPt.x} cy={lastPt.y} r="6" fill={trendColor} opacity="0.16">
+                                <animate attributeName="r" values="4;8;4" dur="2.2s" repeatCount="indefinite" />
+                                <animate attributeName="opacity" values="0.22;0;0.22" dur="2.2s" repeatCount="indefinite" />
+                              </circle>
+                              <circle cx={lastPt.x} cy={lastPt.y} r="3" fill={trendColor} stroke="var(--surface-solid)" strokeWidth="1.5" />
+                            </>
+                          )}
 
                           {/* Touch / hover hit areas */}
                           {pts.map((p, i) => (
@@ -1802,6 +1913,20 @@ function NewsDrawer({
 
                       return (
                         <>
+                          {/* Horizontal reference grid for easier reading */}
+                          {[0, 50, 100, 150, 200].map((gy) => (
+                            <line
+                              key={gy}
+                              x1="0"
+                              y1={gy}
+                              x2="400"
+                              y2={gy}
+                              stroke="var(--border)"
+                              strokeWidth="0.5"
+                              strokeDasharray="3 3"
+                              opacity="0.45"
+                            />
+                          ))}
                           {volumeHistory.map((d, i) => {
                             const barW = 400 / volumeHistory.length * 0.7;
                             const gap = 400 / volumeHistory.length * 0.3;
@@ -3913,6 +4038,7 @@ export default function Dashboard({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<WatchlistItem | null>(null);
   const [activeLongPressItem, setActiveLongPressItem] = useState<WatchlistItem | null>(null);
+  const [watchlistToDelete, setWatchlistToDelete] = useState<Watchlist | null>(null);
   const [, startDelete] = useTransition();
   const [, startAdd] = useTransition();
 
@@ -4182,16 +4308,7 @@ export default function Dashboard({
   }
 
   function removeWatchlist(list: Watchlist) {
-    const label =
-      list.item_count > 0
-        ? `Delete “${list.name}” and its ${list.item_count} ${
-            list.item_count === 1 ? "stock" : "stocks"
-          }?`
-        : `Delete “${list.name}”?`;
-    if (!window.confirm(label)) return;
-    const fd = new FormData();
-    fd.set("id", String(list.id));
-    startDelete(() => deleteWatchlistAction(fd));
+    setWatchlistToDelete(list);
   }
 
   function navClick(item: (typeof NAV)[number]) {
@@ -4837,6 +4954,99 @@ export default function Dashboard({
                 onMouseLeave={(e) => e.currentTarget.style.background = "rgba(239, 68, 68, 0.06)"}
               >
                 🗑️ Delete from Watchlist
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ---------- Delete Watchlist Confirmation Modal ---------- */}
+      {watchlistToDelete && (
+        <>
+          <div 
+            className="dialog-backdrop"
+            onClick={() => setWatchlistToDelete(null)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100vw",
+              height: "100vh",
+              background: "rgba(15, 23, 42, 0.4)",
+              backdropFilter: "blur(4px)",
+              zIndex: 102,
+              animation: "fadeIn 0.2s ease",
+            }}
+          />
+          <div 
+            className="dialog-container"
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "calc(100% - 32px)",
+              maxWidth: "400px",
+              background: "var(--surface-solid)",
+              border: "1px solid var(--border)",
+              borderRadius: "24px",
+              boxShadow: "0 20px 40px rgba(15, 23, 42, 0.15)",
+              padding: "24px",
+              zIndex: 103,
+              animation: "dialogScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            <h3 style={{ fontSize: "19px", fontWeight: 800, margin: "0 0 8px 0", color: "var(--text)" }}>
+              Delete Watchlist
+            </h3>
+            <p style={{ fontSize: "14px", color: "var(--muted)", margin: "0 0 24px 0", lineHeight: "1.5" }}>
+              {watchlistToDelete.item_count > 0
+                ? `Are you sure you want to delete “${watchlistToDelete.name}” and its ${watchlistToDelete.item_count} ${watchlistToDelete.item_count === 1 ? "stock" : "stocks"}? This action cannot be undone.`
+                : `Are you sure you want to delete “${watchlistToDelete.name}”? This action cannot be undone.`}
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setWatchlistToDelete(null)}
+                style={{
+                  padding: "10px 18px",
+                  background: "var(--border)",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(15, 23, 42, 0.08)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--border)"}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const fd = new FormData();
+                  fd.set("id", String(watchlistToDelete.id));
+                  startDelete(() => deleteWatchlistAction(fd));
+                  setWatchlistToDelete(null);
+                }}
+                style={{
+                  padding: "10px 18px",
+                  background: "rgb(239, 68, 68)",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  color: "#fff",
+                  cursor: "pointer",
+                  transition: "background 0.2s, transform 0.1s",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgb(220, 38, 38)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "rgb(239, 68, 68)"}
+              >
+                Delete
               </button>
             </div>
           </div>
