@@ -105,12 +105,12 @@ function fmtDate(time: number) {
 // Smooth a polyline into a gentle cubic-bezier curve (Catmull-Rom → Bézier).
 // A low tension keeps the curve faithful to the data while removing the jagged
 // straight-segment look. Returns an SVG path `d` string.
-function smoothLinePath(pts: { x: number; y: number }[]): string {
+function smoothLinePath(pts: { x: number; y: number }[], tension = 0.16): string {
   if (pts.length === 0) return "";
   if (pts.length < 3) {
     return pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
   }
-  const t = 0.16; // smoothing tension — subtle, avoids overshoot
+  const t = tension; // smoothing tension — subtle, avoids overshoot
   const d: string[] = [`M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`];
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] || pts[i];
@@ -1736,41 +1736,51 @@ function NewsDrawer({
 
       {/* ── Groww-style Chart Popup ── */}
       {expandedChart && (() => {
+        const cur = quote?.currency || "USD";
+        const isPrice = expandedChart === "price";
+        const n = volumeHistory.length;
         const prices = volumeHistory.map(d => d.close);
-        const lastPrice = prices[prices.length - 1] ?? 0;
+        const lastPrice = prices[n - 1] ?? 0;
         const firstPrice = prices[0] ?? 0;
         const priceDiff = lastPrice - firstPrice;
         const pctDiff = firstPrice ? (priceDiff / firstPrice) * 100 : 0;
         const isUp = priceDiff >= 0;
         const trendColor = isUp ? "#10b981" : "#ef4444";
 
-        // X-axis date labels
-        const startDate = volumeHistory[0]?.date || "";
-        const endDate = volumeHistory[volumeHistory.length - 1]?.date || "";
-        const midDate = volumeHistory[Math.floor(volumeHistory.length / 2)]?.date || "";
+        // ── Price geometry: padded domain → viewBox coords (0..400 / 0..200)
+        //    plus percentage coords for the HTML overlays (dots, tags, axes) ──
+        const minP = Math.min(...prices);
+        const maxP = Math.max(...prices);
+        const pSpan = maxP - minP || 1;
+        const padMin = minP - pSpan * 0.06;
+        const padMax = maxP + pSpan * 0.06;
+        const padRange = padMax - padMin || 1;
+        const pricePct = (v: number) => (1 - (v - padMin) / padRange) * 100;
+        const pricePts = volumeHistory.map((d, i) => ({
+          x: (i / (n - 1 || 1)) * 400,
+          y: 200 - ((d.close - padMin) / padRange) * 200,
+          xPct: (i / (n - 1 || 1)) * 100,
+          yPct: pricePct(d.close),
+        }));
+        const priceLine = smoothLinePath(pricePts, 0.1);
+        const priceArea = `${priceLine} L400,200 L0,200 Z`;
+        const lastPt = pricePts[n - 1];
+        const priceTicks = niceTicks(padMin, padMax, 5).filter((v) => v >= padMin && v <= padMax);
 
-        // Y-axis labels (3 intervals)
-        let yLabels: string[] = [];
-        if (expandedChart === "price") {
-          const minP = Math.min(...prices);
-          const maxP = Math.max(...prices);
-          const range = maxP - minP || 1;
-          const padMin = minP - range * 0.05;
-          const padMax = maxP + range * 0.05;
-          yLabels = [
-            fmtPrice(padMax, quote?.currency || "USD"),
-            fmtPrice((padMin + padMax) / 2, quote?.currency || "USD"),
-            fmtPrice(padMin, quote?.currency || "USD")
-          ];
-        } else {
-          const vols = volumeHistory.map(d => d.volume);
-          const maxV = Math.max(...vols) || 1;
-          yLabels = [
-            fmtVolume(maxV),
-            fmtVolume(maxV * 0.5),
-            "0"
-          ];
-        }
+        // ── Volume geometry ──
+        const vols = volumeHistory.map(d => d.volume);
+        const maxV = Math.max(...vols) || 1;
+
+        // Axis ticks for the active chart type
+        const yTicks = isPrice
+          ? priceTicks.map((v) => ({ pct: pricePct(v), label: fmtPrice(v, cur) }))
+          : [1, 0.75, 0.5, 0.25, 0].map((f) => ({ pct: (1 - f) * 100, label: fmtVolume(maxV * f) }));
+        const xTicks = [0, Math.floor((n - 1) / 2), n - 1]
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .map((i) => ({ pct: (i / (n - 1 || 1)) * 100, label: volumeHistory[i]?.date || "" }));
+
+        const hovered = hoveredBarIndex != null ? volumeHistory[hoveredBarIndex] : null;
+        const hoveredPt = hoveredBarIndex != null ? pricePts[hoveredBarIndex] : null;
 
         return (
           <>
@@ -3818,8 +3828,11 @@ function WatchlistBriefing({ items }: { items: WatchlistItem[] }) {
     let active = true;
     setLoading(true);
     setError(null);
-    const symbols = items.map(i => i.symbol).join(",");
-    fetch(`/api/watchlist-briefing?symbols=${encodeURIComponent(symbols)}`)
+    fetch(`/api/watchlist-briefing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(items.map(i => ({ symbol: i.symbol, name: i.name || i.symbol }))),
+    })
       .then(res => {
         if (!res.ok) throw new Error("Failed to load AI briefing");
         return res.json();
@@ -3861,8 +3874,11 @@ function WatchlistBriefing({ items }: { items: WatchlistItem[] }) {
           onClick={() => {
             setLoading(true);
             setError(null);
-            const symbols = items.map(i => i.symbol).join(",");
-            fetch(`/api/watchlist-briefing?symbols=${encodeURIComponent(symbols)}`)
+            fetch(`/api/watchlist-briefing`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(items.map(i => ({ symbol: i.symbol, name: i.name || i.symbol }))),
+            })
               .then(res => res.json())
               .then(data => {
                 setBriefing(data.briefing || []);

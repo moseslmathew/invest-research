@@ -18,26 +18,22 @@ interface StockInput {
   news: NewsItem[];
 }
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
   if (gate instanceof NextResponse) return gate;
   try {
-    const { searchParams } = new URL(req.url);
-    const symbolsStr = searchParams.get("symbols") || "";
-    const symbols = symbolsStr
-      .split(",")
-      .map((s) => s.trim().toUpperCase())
-      .filter(Boolean);
-
-    if (symbols.length === 0) {
+    const itemsInput = await req.json() as { symbol: string; name: string }[];
+    if (!Array.isArray(itemsInput) || itemsInput.length === 0) {
       return NextResponse.json({ briefing: [] });
     }
 
     const inputData: Record<string, StockInput> = {};
 
     await Promise.all(
-      symbols.map(async (sym) => {
-        const query = sym;
+      itemsInput.map(async (item) => {
+        const sym = item.symbol;
+        const name = item.name || sym;
+        const query = name;
         const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
         
         try {
@@ -88,8 +84,29 @@ export async function GET(req: Request) {
             }
           }
 
+          // Generic relevance pre-filter to block matches on unrelated entities
+          const filteredPool = items.filter(art => {
+            const lTitle = art.title.toLowerCase();
+            const cleanSymbol = sym.split(".")[0].toLowerCase();
+            
+            const stopWords = new Set([
+              "limited", "ltd", "inc", "corp", "corporation", "co", "company", 
+              "india", "plc", "sa", "group", "holdings", "solutions", "technologies"
+            ]);
+            const nameTokens = name
+              .toLowerCase()
+              .replace(/[^\w\s]/g, "")
+              .split(/\s+/)
+              .filter(t => t.length > 2 && t !== cleanSymbol && !stopWords.has(t));
+              
+            if (nameTokens.length > 0) {
+              return nameTokens.some(t => lTitle.includes(t));
+            }
+            return lTitle.includes(cleanSymbol);
+          });
+
           // Filter news within the last 48 hours
-          const freshNews = items.filter((item) => item.ageHours <= 48).slice(0, 5);
+          const freshNews = filteredPool.filter((item) => item.ageHours <= 48).slice(0, 5);
           inputData[sym] = {
             symbol: sym,
             hasFreshNews: freshNews.length > 0,
@@ -110,18 +127,20 @@ export async function GET(req: Request) {
 
     if (isMock) {
       // Logic-based local fallback that returns actual parsed Google News RSS headlines
-      const briefing = symbols.map((sym) => {
+      const briefing = itemsInput.map((item) => {
+        const sym = item.symbol;
+        const name = item.name || sym;
         const data = inputData[sym];
         if (!data || !data.hasFreshNews || data.news.length === 0) {
           return {
-            company: sym,
+            company: name,
             symbol: sym,
             bullets: [
               {
                 headline: "No significant news since last check",
                 summary: "No significant news updates have been indexed in the last 24-48 hours.",
                 source: "Google News",
-                url: `https://news.google.com/search?q=${encodeURIComponent(sym)}`,
+                url: `https://news.google.com/search?q=${encodeURIComponent(name)}`,
               },
             ],
             noNews: true,
@@ -131,13 +150,13 @@ export async function GET(req: Request) {
         // Return up to 3 fresh bulletins
         const bullets = data.news.slice(0, 3).map((item) => ({
           headline: item.title,
-          summary: `Recent report regarding ${sym} highlights key market activity.`,
+          summary: `Recent report regarding ${name} highlights key market activity.`,
           source: item.source,
           url: item.url,
         }));
 
         return {
-          company: sym,
+          company: name,
           symbol: sym,
           bullets,
           noNews: false,
@@ -157,6 +176,8 @@ Follow these strict rules:
 3. For each bullet point, write a clear, one-sentence summary explaining the news, and include the exact source name and link provided.
 4. If a company is marked as having "hasFreshNews": false, write exactly: "No significant news since last check" as the bullet point, and do not invent any news.
 5. Keep it skimmable, concise, and objective. Do not include long-winded analysis, intro text, outro text, or investment advice.
+
+CRITICAL DISAMBIGUATION RULE: Strictly ensure each summary is directly about the business operations, financials, or stock performance of the target corporate entity. Reject any news regarding unrelated geographic places, sports venues, or politicians/individuals sharing a name with the company.
 
 Input data:
 ${JSON.stringify(inputData, null, 2)}
