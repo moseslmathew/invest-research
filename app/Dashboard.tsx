@@ -483,14 +483,26 @@ function NewsDrawer({
     setExpandedChart(null);
   }, [stock]);
 
-  // Close on Escape press
+  // Escape closes the expanded chart first (if open), otherwise the drawer
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (expandedChart) setExpandedChart(null);
+      else onClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, expandedChart]);
+
+  // Lock background scroll while the full-screen chart popup is open
+  useEffect(() => {
+    if (!expandedChart) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [expandedChart]);
 
   useEffect(() => {
     if (!stock) return;
@@ -1782,6 +1794,15 @@ function NewsDrawer({
         const hovered = hoveredBarIndex != null ? volumeHistory[hoveredBarIndex] : null;
         const hoveredPt = hoveredBarIndex != null ? pricePts[hoveredBarIndex] : null;
 
+        // Scrub state: while hovering a point, the header reflects that point
+        // (price + change since the start of the range), reverting on leave.
+        const scrubbing = hoveredBarIndex != null;
+        const activeIdx = scrubbing ? hoveredBarIndex! : n - 1;
+        const activeClose = prices[activeIdx] ?? lastPrice;
+        const activeDiff = activeClose - firstPrice;
+        const activePct = firstPrice ? (activeDiff / firstPrice) * 100 : 0;
+        const activeUp = activeDiff >= 0;
+
         return (
           <>
             <div
@@ -1801,14 +1822,14 @@ function NewsDrawer({
                 </div>
               </div>
 
-              {/* ── Price Display ── */}
+              {/* ── Price Display (updates as you scrub the chart) ── */}
               <div className="gcp-price-section">
                 <span className="gcp-price">
-                  {fmtPrice(lastPrice, quote?.currency || "USD")}
+                  {fmtPrice(activeClose, cur)}
                 </span>
-                <span className={`gcp-change ${isUp ? "up" : "down"}`}>
-                  {isUp ? "+" : ""}{fmtPrice(Math.abs(priceDiff), quote?.currency || "USD")} ({isUp ? "+" : ""}{pctDiff.toFixed(2)}%)
-                  <span className="gcp-range-label">{volumeRange.toUpperCase()}</span>
+                <span className={`gcp-change ${activeUp ? "up" : "down"}`}>
+                  {activeUp ? "+" : "−"}{fmtPrice(Math.abs(activeDiff), cur)} ({activeUp ? "+" : "−"}{Math.abs(activePct).toFixed(2)}%)
+                  <span className="gcp-range-label">{scrubbing ? volumeHistory[activeIdx]?.date : volumeRange.toUpperCase()}</span>
                 </span>
               </div>
 
@@ -1932,23 +1953,36 @@ function NewsDrawer({
                       style={{ left: `${hoveredPt.xPct}%`, top: `${hoveredPt.yPct}%`, ["--dot" as any]: trendColor }}
                     />
                   )}
+                  {isPrice && lastPt && (
+                    <span
+                      className={`gcp-price-tag ${isUp ? "up" : "down"}`}
+                      style={{ left: `${lastPt.xPct}%`, top: `${lastPt.yPct}%` }}
+                    >
+                      {fmtPrice(lastPrice, cur)}
+                    </span>
+                  )}
+
+                  {/* Tooltip that follows the crosshair */}
+                  {hovered && hoveredPt && (
+                    <div
+                      className="gcp-hover-pill"
+                      style={{ left: `${Math.min(92, Math.max(8, hoveredPt.xPct))}%` }}
+                    >
+                      <span className="gcp-hover-val" style={{ color: trendColor }}>
+                        {fmtPrice(hovered.close, cur)}
+                      </span>
+                      <span className="gcp-hover-vol">Vol {fmtVolume(hovered.volume)}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Y axis */}
+                {/* Y axis (left) */}
                 <div className="gcp-y-axis">
                   {yTicks.map((t, i) => (
                     <span key={i} className="gcp-axis-label" style={{ top: `${t.pct}%` }}>
                       {t.label}
                     </span>
                   ))}
-                  {isPrice && lastPt && (
-                    <span
-                      className={`gcp-price-tag ${isUp ? "up" : "down"}`}
-                      style={{ top: `${lastPt.yPct}%` }}
-                    >
-                      {fmtPrice(lastPrice, cur)}
-                    </span>
-                  )}
                 </div>
 
                 {/* X axis */}
@@ -1960,16 +1994,6 @@ function NewsDrawer({
                   ))}
                 </div>
 
-                {/* Hover tooltip */}
-                {hovered && (
-                  <div className="gcp-hover-pill">
-                    <span className="gcp-hover-date">{hovered.date}</span>
-                    <span className="gcp-hover-val" style={{ color: trendColor }}>
-                      {fmtPrice(hovered.close, cur)}
-                    </span>
-                    <span className="gcp-hover-vol">Vol {fmtVolume(hovered.volume)}</span>
-                  </div>
-                )}
               </div>
 
               {/* ── Bottom bar: range + chart type ── */}

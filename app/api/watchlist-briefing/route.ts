@@ -4,6 +4,16 @@ import { safeUrl } from "@/lib/safe-url";
 
 export const runtime = "edge";
 
+function fetchWithTimeout(url: string, options: RequestInit & { timeout?: number }) {
+  const { timeout = 8000, ...fetchOpts } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  return fetch(url, {
+    ...fetchOpts,
+    signal: controller.signal
+  }).finally(() => clearTimeout(id));
+}
+
 interface NewsItem {
   title: string;
   url: string;
@@ -37,9 +47,9 @@ export async function POST(req: Request) {
         const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
         
         try {
-          const res = await fetch(url, { 
+          const res = await fetchWithTimeout(url, { 
             next: { revalidate: 300 },
-            signal: AbortSignal.timeout(6000)
+            timeout: 6000
           });
           if (!res.ok) {
             inputData[sym] = { symbol: sym, hasFreshNews: false, news: [] };
@@ -199,7 +209,7 @@ Format the response as a JSON object:
   ]
 }`;
 
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    const apiRes = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -214,7 +224,7 @@ Format the response as a JSON object:
         response_format: { type: "json_object" },
         temperature: 0.3,
       }),
-      signal: AbortSignal.timeout(12000)
+      timeout: 12000
     });
 
     if (!apiRes.ok) {

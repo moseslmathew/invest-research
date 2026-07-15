@@ -4973,8 +4973,8 @@ th.sortable:hover {
 .gcp-plot {
   position: absolute;
   top: 16px;
-  left: 22px;
-  right: 80px;
+  left: 80px;
+  right: 22px;
   bottom: 36px;
 }
 
@@ -5012,18 +5012,25 @@ th.sortable:hover {
   100% { transform: scale(2.3); opacity: 0; }
 }
 
-/* Y axis (right gutter) */
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .groww-chart-popup { animation: none; }
+  .gcp-dot--pulse::before { animation: none; }
+  .gcp-hover-pill { transition: none; }
+}
+
+/* Y axis (left gutter) */
 .gcp-y-axis {
   position: absolute;
   top: 16px;
   bottom: 36px;
-  right: 0;
+  left: 0;
   width: 80px;
-  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
 }
 .gcp-y-axis .gcp-axis-label {
   position: absolute;
-  left: 10px;
+  right: 10px;
   transform: translateY(-50%);
   font-size: 11px;
   font-weight: 600;
@@ -5031,10 +5038,11 @@ th.sortable:hover {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Current-price tag — floats just left of the endpoint dot */
 .gcp-price-tag {
   position: absolute;
-  left: 7px;
-  transform: translateY(-50%);
+  transform: translate(-100%, -50%);
+  margin-left: -10px;
   font-size: 11px;
   font-weight: 800;
   color: #fff;
@@ -5042,7 +5050,8 @@ th.sortable:hover {
   border-radius: 4px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  z-index: 2;
+  pointer-events: none;
+  z-index: 4;
 }
 .gcp-price-tag.up   { background: #10b981; }
 .gcp-price-tag.down { background: #ef4444; }
@@ -5050,8 +5059,8 @@ th.sortable:hover {
 /* X axis (bottom gutter) */
 .gcp-x-axis {
   position: absolute;
-  left: 22px;
-  right: 80px;
+  left: 80px;
+  right: 22px;
   bottom: 0;
   height: 36px;
   border-top: 1px solid var(--border);
@@ -5080,8 +5089,8 @@ th.sortable:hover {
   }
   .gcp-plot {
     top: 12px;
-    left: 10px;
-    right: 62px;
+    left: 62px;
+    right: 10px;
     bottom: 30px;
   }
   .gcp-y-axis {
@@ -5090,17 +5099,16 @@ th.sortable:hover {
     width: 62px;
   }
   .gcp-x-axis {
-    left: 10px;
-    right: 62px;
+    left: 62px;
+    right: 10px;
     height: 30px;
   }
 }
 
-/* ── Hover tooltip (floating on chart) ── */
+/* ── Hover tooltip — follows the crosshair (left set inline) ── */
 .gcp-hover-pill {
   position: absolute;
-  top: 8px;
-  left: 50%;
+  top: -6px;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -5108,11 +5116,12 @@ th.sortable:hover {
   background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 6px 12px;
+  padding: 5px 11px;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
   white-space: nowrap;
   z-index: 6;
   pointer-events: none;
+  transition: left 0.08s ease-out;
 }
 .gcp-hover-date {
   font-size: 11px;
