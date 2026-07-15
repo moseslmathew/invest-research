@@ -1812,203 +1812,197 @@ function NewsDrawer({
                 </span>
               </div>
 
-              {/* ── Edge-to-edge Chart ── */}
+              {/* ── Chart ── */}
               <div className="gcp-chart-area">
-                {/* Y Axis (Desktop only) */}
-                <div className="gcp-y-axis">
-                  <div className="gcp-axis-label">{yLabels[0]}</div>
-                  <div className="gcp-axis-label">{yLabels[1]}</div>
-                  <div className="gcp-axis-label">{yLabels[2]}</div>
-                </div>
-
-                <div className="gcp-svg-container">
-                  <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid meet" className="gcp-svg">
+                <div className="gcp-plot">
+                  <svg className="gcp-svg" viewBox="0 0 400 200" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="gcpGradUp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.16" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
                       </linearGradient>
                       <linearGradient id="gcpGradDown" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.16" />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
                       </linearGradient>
                     </defs>
 
-                    {expandedChart === "price" ? (() => {
-                      const minP = Math.min(...prices);
-                      const maxP = Math.max(...prices);
-                      const range = maxP - minP || 1;
-                      const padMin = minP - range * 0.05;
-                      const padMax = maxP + range * 0.05;
-                      const padRange = padMax - padMin || 1;
+                    {/* Gridlines aligned to axis ticks */}
+                    {yTicks.map((t, i) => (
+                      <line
+                        key={`g${i}`}
+                        x1="0"
+                        y1={t.pct * 2}
+                        x2="400"
+                        y2={t.pct * 2}
+                        stroke="var(--border)"
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0.55"
+                      />
+                    ))}
 
-                      const pts = volumeHistory.map((d, i) => {
-                        const x = (i / (volumeHistory.length - 1 || 1)) * 400;
-                        const y = 200 - ((d.close - padMin) / padRange) * 200;
-                        return { x, y: Math.max(2, Math.min(198, y)) };
-                      });
-
-                      const line = smoothLinePath(pts);
-                      const area = `${line} L400,200 L0,200 Z`;
-                      const lastPt = pts[pts.length - 1];
-
-                      return (
-                        <>
-                          {/* Horizontal reference grid for easier reading */}
-                          {[0, 50, 100, 150, 200].map((gy) => (
-                            <line
-                              key={gy}
-                              x1="0"
-                              y1={gy}
-                              x2="400"
-                              y2={gy}
-                              stroke="var(--border)"
-                              strokeWidth="0.5"
-                              strokeDasharray="3 3"
-                              opacity="0.45"
-                            />
-                          ))}
-                          <path d={area} fill={isUp ? "url(#gcpGradUp)" : "url(#gcpGradDown)"} />
-                          <path
-                            d={line}
-                            fill="none"
+                    {isPrice ? (
+                      <>
+                        <path d={priceArea} fill={isUp ? "url(#gcpGradUp)" : "url(#gcpGradDown)"} />
+                        {/* Last-price reference line */}
+                        {lastPt && (
+                          <line
+                            x1="0"
+                            y1={lastPt.y}
+                            x2="400"
+                            y2={lastPt.y}
                             stroke={trendColor}
-                            strokeWidth="2"
-                            strokeLinejoin="round"
-                            strokeLinecap="round"
+                            strokeWidth="1"
+                            strokeDasharray="4 4"
+                            vectorEffect="non-scaling-stroke"
+                            opacity="0.45"
                           />
+                        )}
+                        <path
+                          d={priceLine}
+                          fill="none"
+                          stroke={trendColor}
+                          strokeWidth="2.25"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        {hoveredPt && (
+                          <line
+                            x1={hoveredPt.x}
+                            y1="0"
+                            x2={hoveredPt.x}
+                            y2="200"
+                            stroke={trendColor}
+                            strokeWidth="1"
+                            strokeDasharray="3 3"
+                            vectorEffect="non-scaling-stroke"
+                            opacity="0.55"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      volumeHistory.map((d, i) => {
+                        const gap = 400 / n;
+                        const bw = gap * 0.6;
+                        const xc = i * gap + gap / 2;
+                        const bh = (d.volume / maxV) * 196;
+                        return (
+                          <rect
+                            key={i}
+                            x={xc - bw / 2}
+                            y={200 - bh}
+                            width={bw}
+                            height={Math.max(bh, 0.5)}
+                            fill={d.up ? "#10b981" : "#ef4444"}
+                            opacity={hoveredBarIndex === i ? 1 : 0.5}
+                          />
+                        );
+                      })
+                    )}
 
-                          {/* Latest-price marker */}
-                          {hoveredBarIndex === null && lastPt && (
-                            <>
-                              <circle cx={lastPt.x} cy={lastPt.y} r="6" fill={trendColor} opacity="0.16">
-                                <animate attributeName="r" values="4;8;4" dur="2.2s" repeatCount="indefinite" />
-                                <animate attributeName="opacity" values="0.22;0;0.22" dur="2.2s" repeatCount="indefinite" />
-                              </circle>
-                              <circle cx={lastPt.x} cy={lastPt.y} r="3" fill={trendColor} stroke="var(--surface-solid)" strokeWidth="1.5" />
-                            </>
-                          )}
-
-                          {/* Touch / hover hit areas */}
-                          {pts.map((p, i) => (
-                            <rect
-                              key={i}
-                              x={p.x - 200 / (volumeHistory.length || 1)}
-                              y="0"
-                              width={400 / (volumeHistory.length || 1)}
-                              height="200"
-                              fill="transparent"
-                              onMouseEnter={() => setHoveredBarIndex(i)}
-                              onMouseLeave={() => setHoveredBarIndex(null)}
-                              onTouchStart={() => setHoveredBarIndex(i)}
-                              onTouchEnd={() => setHoveredBarIndex(null)}
-                            />
-                          ))}
-
-                          {hoveredBarIndex !== null && (() => {
-                            const p = pts[hoveredBarIndex];
-                            return (
-                              <>
-                                <line x1={p.x} y1="0" x2={p.x} y2="200" stroke={trendColor} strokeWidth="0.8" opacity="0.5" />
-                                <circle cx={p.x} cy={p.y} r="3.5" fill={trendColor} stroke="var(--surface-solid)" strokeWidth="1.5" />
-                              </>
-                            );
-                          })()}
-                        </>
-                      );
-                    })() : (() => {
-                      // Volume bars
-                      const vols = volumeHistory.map(d => d.volume);
-                      const maxV = Math.max(...vols) || 1;
-
-                      return (
-                        <>
-                          {/* Horizontal reference grid for easier reading */}
-                          {[0, 50, 100, 150, 200].map((gy) => (
-                            <line
-                              key={gy}
-                              x1="0"
-                              y1={gy}
-                              x2="400"
-                              y2={gy}
-                              stroke="var(--border)"
-                              strokeWidth="0.5"
-                              strokeDasharray="3 3"
-                              opacity="0.45"
-                            />
-                          ))}
-                          {volumeHistory.map((d, i) => {
-                            const barW = 400 / volumeHistory.length * 0.7;
-                            const gap = 400 / volumeHistory.length * 0.3;
-                            const xPos = i * (barW + gap) + gap / 2;
-                            const barH = (d.volume / maxV) * 185;
-                            const yPos = 200 - barH;
-                            return (
-                              <g
-                                key={i}
-                                onMouseEnter={() => setHoveredBarIndex(i)}
-                                onMouseLeave={() => setHoveredBarIndex(null)}
-                                onTouchStart={() => setHoveredBarIndex(i)}
-                                onTouchEnd={() => setHoveredBarIndex(null)}
-                              >
-                                <rect x={xPos} y="0" width={barW} height="200" fill="transparent" />
-                                <rect
-                                  x={xPos}
-                                  y={yPos}
-                                  width={barW}
-                                  height={Math.max(barH, 1)}
-                                  rx="2"
-                                  fill={d.up ? "#10b981" : "#ef4444"}
-                                  opacity={hoveredBarIndex === i ? 1 : 0.7}
-                                />
-                              </g>
-                            );
-                          })}
-                        </>
-                      );
-                    })()}
+                    {/* Hover/touch hit areas */}
+                    {volumeHistory.map((d, i) => (
+                      <rect
+                        key={`hit${i}`}
+                        x={(i / (n - 1 || 1)) * 400 - 200 / (n || 1)}
+                        y="0"
+                        width={400 / (n || 1)}
+                        height="200"
+                        fill="transparent"
+                        onMouseEnter={() => setHoveredBarIndex(i)}
+                        onMouseLeave={() => setHoveredBarIndex(null)}
+                        onTouchStart={() => setHoveredBarIndex(i)}
+                        onTouchEnd={() => setHoveredBarIndex(null)}
+                      />
+                    ))}
                   </svg>
+
+                  {/* HTML overlays — perfect circles & crisp text, positioned by % */}
+                  {isPrice && hoveredBarIndex === null && lastPt && (
+                    <span
+                      className="gcp-dot gcp-dot--pulse"
+                      style={{ left: `${lastPt.xPct}%`, top: `${lastPt.yPct}%`, ["--dot" as any]: trendColor }}
+                    />
+                  )}
+                  {isPrice && hoveredPt && (
+                    <span
+                      className="gcp-dot"
+                      style={{ left: `${hoveredPt.xPct}%`, top: `${hoveredPt.yPct}%`, ["--dot" as any]: trendColor }}
+                    />
+                  )}
                 </div>
 
-                {/* X Axis (Desktop only) */}
+                {/* Y axis */}
+                <div className="gcp-y-axis">
+                  {yTicks.map((t, i) => (
+                    <span key={i} className="gcp-axis-label" style={{ top: `${t.pct}%` }}>
+                      {t.label}
+                    </span>
+                  ))}
+                  {isPrice && lastPt && (
+                    <span
+                      className={`gcp-price-tag ${isUp ? "up" : "down"}`}
+                      style={{ top: `${lastPt.yPct}%` }}
+                    >
+                      {fmtPrice(lastPrice, cur)}
+                    </span>
+                  )}
+                </div>
+
+                {/* X axis */}
                 <div className="gcp-x-axis">
-                  <div className="gcp-axis-label">{startDate}</div>
-                  <div className="gcp-axis-label">{midDate}</div>
-                  <div className="gcp-axis-label">{endDate}</div>
+                  {xTicks.map((t, i) => (
+                    <span key={i} className="gcp-axis-label" style={{ left: `${t.pct}%` }}>
+                      {t.label}
+                    </span>
+                  ))}
                 </div>
 
-                {/* Hover info overlay */}
-                {hoveredBarIndex !== null && (() => {
-                  const d = volumeHistory[hoveredBarIndex];
-                  return (
-                    <div className="gcp-hover-pill">
-                      <span className="gcp-hover-date">{d.date}</span>
-                      <span className="gcp-hover-val">{fmtPrice(d.close, quote?.currency || "USD")}</span>
-                      <span className="gcp-hover-vol">Vol: {fmtVolume(d.volume)}</span>
-                    </div>
-                  );
-                })()}
+                {/* Hover tooltip */}
+                {hovered && (
+                  <div className="gcp-hover-pill">
+                    <span className="gcp-hover-date">{hovered.date}</span>
+                    <span className="gcp-hover-val" style={{ color: trendColor }}>
+                      {fmtPrice(hovered.close, cur)}
+                    </span>
+                    <span className="gcp-hover-vol">Vol {fmtVolume(hovered.volume)}</span>
+                  </div>
+                )}
               </div>
 
-              {/* ── Range Selectors (bottom, Groww-style) ── */}
+              {/* ── Bottom bar: range + chart type ── */}
               <div className="gcp-ranges">
-                {["2w", "1m", "3m", "1y"].map((r) => (
+                <div className="gcp-range-group">
+                  {["2w", "1m", "3m", "1y"].map((r) => (
+                    <button
+                      key={r}
+                      className={`gcp-range-btn ${volumeRange === r ? "active" : ""}`}
+                      onClick={() => setVolumeRange(r as any)}
+                    >
+                      {r.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <div className="gcp-type-group" role="group" aria-label="Chart type">
                   <button
-                    key={r}
-                    className={`gcp-range-btn ${volumeRange === r ? "active" : ""}`}
-                    onClick={() => setVolumeRange(r as any)}
+                    className={`gcp-type-btn ${isPrice ? "active" : ""}`}
+                    onClick={() => setExpandedChart("price")}
+                    aria-pressed={isPrice}
                   >
-                    {r.toUpperCase()}
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /></svg>
+                    Price
                   </button>
-                ))}
-                {/* Chart type toggle */}
-                <button
-                  className="gcp-range-btn gcp-type-toggle"
-                  onClick={() => setExpandedChart(expandedChart === "price" ? "volume" : "price")}
-                  title={expandedChart === "price" ? "Switch to Volume" : "Switch to Price"}
-                >
-                  {expandedChart === "price" ? "📊" : "📈"}
-                </button>
+                  <button
+                    className={`gcp-type-btn ${!isPrice ? "active" : ""}`}
+                    onClick={() => setExpandedChart("volume")}
+                    aria-pressed={!isPrice}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+                    Volume
+                  </button>
+                </div>
               </div>
             </div>
           </>

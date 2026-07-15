@@ -4846,7 +4846,15 @@ th.sortable:hover {
   background: var(--surface-solid);
   display: flex;
   flex-direction: column;
-  animation: gcpSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Mobile: full-screen, slides up from the bottom */
+@media (max-width: 768px) {
+  .groww-chart-popup {
+    inset: 0;
+    border-radius: 0;
+    animation: gcpSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 @keyframes gcpSlideUp {
@@ -4854,15 +4862,8 @@ th.sortable:hover {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Mobile: full-screen */
-@media (max-width: 768px) {
-  .groww-chart-popup {
-    inset: 0;
-    border-radius: 0;
-  }
-}
-
-/* Desktop: centered card */
+/* Desktop: centered card that fades + zooms in place (keeps the centering
+   transform so it doesn't drift to a corner) */
 @media (min-width: 769px) {
   .groww-chart-popup {
     top: 50%;
@@ -4875,7 +4876,13 @@ th.sortable:hover {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
     max-height: 90vh;
     overflow: hidden;
+    animation: gcpZoomIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
+}
+
+@keyframes gcpZoomIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 /* ── Header ── */
@@ -4933,6 +4940,7 @@ th.sortable:hover {
   color: var(--text);
   letter-spacing: -0.02em;
   line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 .gcp-change {
   font-size: 13px;
@@ -4940,6 +4948,7 @@ th.sortable:hover {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 .gcp-change.up   { color: #10b981; }
 .gcp-change.down { color: #ef4444; }
@@ -4954,168 +4963,228 @@ th.sortable:hover {
   letter-spacing: 0.03em;
 }
 
-/* ── Chart Area (edge-to-edge on mobile, padded on desktop) ── */
+/* ── Chart area: absolute plot + label gutters, aligned by construction ── */
 .gcp-chart-area {
   flex: 1;
   position: relative;
-  min-height: 200px;
-  padding: 8px 0;
+  min-height: 240px;
 }
 
-.gcp-svg-container {
-  width: 100%;
-  height: 100%;
+.gcp-plot {
+  position: absolute;
+  top: 16px;
+  left: 22px;
+  right: 80px;
+  bottom: 36px;
 }
 
 .gcp-svg {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
-/* Axis Styling (Desktop Only) */
-.gcp-y-axis, .gcp-x-axis {
-  display: none;
+/* Data-point dots — real circles via HTML so the stretched SVG can't warp them */
+.gcp-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: var(--dot, #10b981);
+  border: 2.5px solid var(--surface-solid);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  pointer-events: none;
+  z-index: 3;
+}
+.gcp-dot--pulse::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: var(--dot, #10b981);
+  opacity: 0.22;
+  animation: gcpPulse 2s ease-out infinite;
+}
+@keyframes gcpPulse {
+  0%   { transform: scale(0.55); opacity: 0.3; }
+  100% { transform: scale(2.3); opacity: 0; }
 }
 
-/* Desktop: give chart a fixed generous height and padding for axis */
+/* Y axis (right gutter) */
+.gcp-y-axis {
+  position: absolute;
+  top: 16px;
+  bottom: 36px;
+  right: 0;
+  width: 80px;
+  border-left: 1px solid var(--border);
+}
+.gcp-y-axis .gcp-axis-label {
+  position: absolute;
+  left: 10px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.gcp-price-tag {
+  position: absolute;
+  left: 7px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  z-index: 2;
+}
+.gcp-price-tag.up   { background: #10b981; }
+.gcp-price-tag.down { background: #ef4444; }
+
+/* X axis (bottom gutter) */
+.gcp-x-axis {
+  position: absolute;
+  left: 22px;
+  right: 80px;
+  bottom: 0;
+  height: 36px;
+  border-top: 1px solid var(--border);
+}
+.gcp-x-axis .gcp-axis-label {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Desktop: give the chart a generous fixed height */
 @media (min-width: 769px) {
   .gcp-chart-area {
-    height: 380px;
-    padding: 8px 65px 35px 16px; /* 65px on right for price axis, 35px at bottom for date axis */
-  }
-
-  .gcp-svg-container {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
-
-  .gcp-y-axis {
-    display: flex;
-    position: absolute;
-    right: 0;
-    top: 8px;
-    bottom: 35px;
-    width: 65px;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding-left: 10px;
-    border-left: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--muted);
-    font-weight: 700;
-  }
-
-  .gcp-x-axis {
-    display: flex;
-    position: absolute;
-    bottom: 0;
-    left: 16px;
-    right: 65px;
-    height: 35px;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--muted);
-    font-weight: 700;
-    padding-top: 8px;
-  }
-
-  .gcp-axis-label {
-    white-space: nowrap;
+    height: 400px;
   }
 }
 
-/* Mobile: chart fills available space but stays proportional */
+/* Mobile: tighten the label gutters so the plot keeps room */
 @media (max-width: 768px) {
-  .gcp-chart-area {
-    flex: 1;
-    min-height: 180px;
-    max-height: 50vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
   .gcp-price {
     font-size: 24px;
   }
-  .gcp-svg-container {
-    width: 100%;
-    height: 100%;
+  .gcp-plot {
+    top: 12px;
+    left: 10px;
+    right: 62px;
+    bottom: 30px;
+  }
+  .gcp-y-axis {
+    top: 12px;
+    bottom: 30px;
+    width: 62px;
+  }
+  .gcp-x-axis {
+    left: 10px;
+    right: 62px;
+    height: 30px;
   }
 }
 
-/* ── Hover Pill (floating on chart) ── */
+/* ── Hover tooltip (floating on chart) ── */
 .gcp-hover-pill {
   position: absolute;
-  top: 12px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--surface-solid);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
   white-space: nowrap;
-  z-index: 5;
+  z-index: 6;
   pointer-events: none;
 }
 .gcp-hover-date {
   font-size: 11px;
-  font-weight: 800;
-  color: var(--text);
+  font-weight: 700;
+  color: var(--muted);
 }
 .gcp-hover-val {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 .gcp-hover-vol {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Range Selectors (Groww bottom bar) ── */
+/* ── Bottom bar: range picker + chart-type segmented control ── */
 .gcp-ranges {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 16px 20px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 20px;
   border-top: 1px solid var(--border);
 }
-
-.gcp-range-btn {
+.gcp-range-group,
+.gcp-type-group {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.gcp-range-btn,
+.gcp-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   background: none;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 800;
-  padding: 8px 14px;
-  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 13px;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.15s ease;
   letter-spacing: 0.01em;
 }
-.gcp-range-btn:hover {
-  background: rgba(15, 23, 42, 0.04);
+.gcp-range-btn:hover,
+.gcp-type-btn:hover {
+  color: var(--text);
 }
-.gcp-range-btn.active {
+.gcp-range-btn.active,
+.gcp-type-btn.active {
   color: var(--accent);
-  background: rgba(99, 102, 241, 0.08);
+  background: var(--surface-solid);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.gcp-type-btn svg {
+  opacity: 0.9;
 }
 
-.gcp-type-toggle {
-  margin-left: auto;
-  font-size: 16px;
-  padding: 6px 10px;
+/* Small screens: stack the two control groups */
+@media (max-width: 480px) {
+  .gcp-ranges {
+    flex-direction: column;
+    gap: 10px;
+  }
 }
 
 /* Safe area padding on mobile (notch devices) */

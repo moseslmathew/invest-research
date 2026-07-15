@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
 import { safeUrl } from "@/lib/safe-url";
 
-export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 interface NewsItem {
   title: string;
@@ -37,7 +37,10 @@ export async function POST(req: Request) {
         const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-IN&gl=IN&ceid=IN:en`;
         
         try {
-          const res = await fetch(url, { next: { revalidate: 300 } });
+          const res = await fetch(url, { 
+            next: { revalidate: 300 },
+            signal: AbortSignal.timeout(6000)
+          });
           if (!res.ok) {
             inputData[sym] = { symbol: sym, hasFreshNews: false, news: [] };
             return;
@@ -211,6 +214,7 @@ Format the response as a JSON object:
         response_format: { type: "json_object" },
         temperature: 0.3,
       }),
+      signal: AbortSignal.timeout(12000)
     });
 
     if (!apiRes.ok) {
