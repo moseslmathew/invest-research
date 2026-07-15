@@ -23,14 +23,7 @@ export async function GET(req: Request) {
   const name = (searchParams.get("name") || "").trim();
 
   // Prioritize company name search for high quality results, fallback to ticker symbol
-  let query = name || symbol;
-  
-  // Guard against common symbol/name mismatches (e.g. AZAD.BO / Azad Maidan)
-  const lSymbol = symbol.toLowerCase();
-  const lName = name.toLowerCase();
-  if ((lSymbol.includes("azad") || lName.includes("azad")) && (lName.includes("maidan") || lName.includes("kashmir"))) {
-    query = "Azad Engineering";
-  }
+  const query = name || symbol;
 
   if (!query) {
     return NextResponse.json({ error: "Missing query" }, { status: 400 });
@@ -107,15 +100,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ articles: [] });
     }
 
-    // Filter out irrelevant geographic/entity overlaps (e.g. Azad Maidan/Kashmir)
+    // Generic relevance pre-filter to block matches on unrelated entities
     const filteredPool = articles.filter(art => {
       const lTitle = art.title.toLowerCase();
-      if (symbol.toLowerCase().includes("azad") || name.toLowerCase().includes("azad")) {
-        if (lTitle.includes("maidan") || lTitle.includes("kashmir") || lTitle.includes("stadium") || lTitle.includes("cricket ground")) {
-          return false;
-        }
+      const cleanSymbol = symbol.split(".")[0].toLowerCase();
+      
+      const stopWords = new Set([
+        "limited", "ltd", "inc", "corp", "corporation", "co", "company", 
+        "india", "plc", "sa", "group", "holdings", "solutions", "technologies"
+      ]);
+      const nameTokens = name
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .split(/\s+/)
+        .filter(t => t.length > 2 && t !== cleanSymbol && !stopWords.has(t));
+        
+      if (nameTokens.length > 0) {
+        return nameTokens.some(t => lTitle.includes(t));
       }
-      return true;
+      return lTitle.includes(cleanSymbol);
     });
 
     if (filteredPool.length === 0) {
@@ -164,7 +167,7 @@ Your goals:
 1. Filter out duplicates, irrelevant mentions, and low-value clickbait. Only select articles that add real value (e.g. key financials, major partnerships, product releases, regulatory actions, leadership shifts).
 2. For each kept article, determine the sentiment ('bullish', 'bearish', or 'neutral') and write a 1-sentence business value rationale.
 
-CRITICAL DISAMBIGUATION RULE: Distinguish the public company strictly from unrelated entities, venues, or places. For instance, if checking news for an "Azad" stock (like Azad Engineering), you MUST reject any news regarding "Azad Maidan" (the sports ground/venue) or "Azad Kashmir" (the geopolitical region). Ensure all articles kept strictly concern the business operations or stock performance of the target corporate entity.
+CRITICAL DISAMBIGUATION RULE: Strictly evaluate whether each article is about the actual corporate entity represented by the stock ticker ${symbol} (${name}). Reject any articles about unrelated geographic places, politicians/individuals sharing a name, sports venues, or different companies with overlapping names. The articles MUST directly report on the target company's business operations, financials, partnerships, products, or stock performance.
 
 Raw Articles:
 ${JSON.stringify(filteredPool.map(a => ({ uuid: a.uuid, title: a.title, publisher: a.publisher })), null, 2)}
