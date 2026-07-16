@@ -6158,8 +6158,6 @@ th.sortable:hover {
 .wl-sub-tabs-container {
   display: flex;
   margin: 0 24px 20px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
 }
 
 .wl-sub-tabs-segmented {
