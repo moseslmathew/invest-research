@@ -904,9 +904,9 @@ function NewsDrawer({
                           const paddedMax = maxPrice + (priceRange * 0.08);
                           const paddedRange = paddedMax - paddedMin || 1;
 
-                          const chartHeight = 220;
-                          const chartWidth = 520;
-                          const startX = 60;
+                          const chartHeight = 230;
+                          const chartWidth = 540;
+                          const startX = 50;
                           
                           const points = volumeHistory.map((d, index) => {
                             const x = startX + index * (chartWidth / (volumeHistory.length - 1 || 1));
@@ -935,9 +935,9 @@ function NewsDrawer({
                                 return (
                                   <g key={idx}>
                                     <line
-                                      x1="60"
+                                      x1="50"
                                       y1={yPos}
-                                      x2="580"
+                                      x2="590"
                                       y2={yPos}
                                       stroke="var(--border)"
                                       strokeWidth="1"
@@ -945,7 +945,7 @@ function NewsDrawer({
                                       opacity="0.5"
                                     />
                                     <text
-                                      x="50"
+                                      x="42"
                                       y={yPos + 4}
                                       textAnchor="end"
                                       fontSize="12.5"
@@ -1068,7 +1068,7 @@ function NewsDrawer({
                               {hoveredBarIndex !== null && (() => {
                                 const p = points[hoveredBarIndex];
                                 const tooltipWidth = 160;
-                                const tooltipX = p.x + tooltipWidth > 580 ? p.x - tooltipWidth - 10 : p.x + 10;
+                                const tooltipX = p.x + tooltipWidth > 590 ? p.x - tooltipWidth - 10 : p.x + 10;
                                 return (
                                   <g pointerEvents="none">
                                     <rect
