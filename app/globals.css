@@ -1333,6 +1333,7 @@ body {
 .col-company {
   font-weight: 600;
   white-space: nowrap;
+  text-transform: uppercase;
 }
 .col-why {
   color: var(--muted);
@@ -1531,6 +1532,7 @@ body {
   font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  text-transform: uppercase;
 }
 .company-sub {
   font-size: 12px;
