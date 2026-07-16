@@ -754,7 +754,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 0px !important;
+  padding: 0 24px !important;
   margin-bottom: 20px;
   background: transparent !important;
   border: none !important;
@@ -768,6 +768,7 @@ body {
 }
 @media (max-width: 768px) {
   .wl-bar {
+    padding: 0 16px !important;
     flex-direction: column-reverse;
     align-items: flex-start;
     gap: 14px;
@@ -2007,10 +2008,13 @@ th.col-num-r {
   }
 }
 /* The premium header bar carries the market switch on desktop, so the inline
-   hero toggle would duplicate it there. Show it only on mobile, where the
+   toggle would duplicate it there. Show the inline one only on mobile, where the
    header hides its own switch. */
+.ather-mkt--inline {
+  align-self: center;
+}
 @media (min-width: 769px) {
-  .hero-market-seg {
+  .ather-mkt--inline {
     display: none;
   }
 }
@@ -5812,9 +5816,9 @@ th.sortable:hover {
 
 /* --- Ather Style Header --- */
 .ather-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
   border: 1px solid var(--border);
   border-radius: 999px; /* Pill shape */
@@ -5828,15 +5832,10 @@ th.sortable:hover {
   transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
 }
 
-.ather-header-left {
-  display: flex;
-  align-items: center;
-  gap: 48px;
-}
-
 .ather-brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .ather-nav {
@@ -5874,6 +5873,7 @@ th.sortable:hover {
   display: flex;
   align-items: center;
   gap: 18px;
+  justify-content: flex-end;
 }
 
 /* Search — icon-only lens */
@@ -5999,6 +5999,8 @@ th.sortable:hover {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .ather-header {
+    display: flex !important;
+    justify-content: space-between !important;
     border-radius: 20px;
     padding: 8px 12px;
     top: 8px;
@@ -6009,8 +6011,8 @@ th.sortable:hover {
   .ather-menu-btn {
     display: none; /* Mobile menu drawer is redundant due to bottom-nav */
   }
-  .ather-mkt {
-    display: none; /* Hide market switcher in header on mobile since it is inside wl-bar */
+  .ather-mkt--header {
+    display: none; /* On mobile the inline toggle (in the page bars) takes over */
   }
   .ather-profile {
     border-left: none;

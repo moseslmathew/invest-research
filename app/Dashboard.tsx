@@ -29,6 +29,45 @@ const MARKETS: { id: Market; label: string; flag: string; code: string }[] = [
   { id: "IN", label: "India", flag: "🇮🇳", code: "IN" },
 ];
 
+// Currency-symbol market toggle with a sliding thumb. `variant` controls where
+// it shows: "header" (desktop bar) or "inline" (mobile / in-page bars).
+function MarketToggle({
+  market,
+  onSelect,
+  variant,
+}: {
+  market: Market;
+  onSelect: (m: Market) => void;
+  variant: "header" | "inline";
+}) {
+  return (
+    <div
+      className={`ather-mkt ather-mkt--${variant} ${market === "IN" ? "is-in" : "is-us"}`}
+      role="tablist"
+      aria-label="Market"
+    >
+      <span className="ather-mkt-thumb" aria-hidden />
+      {MARKETS.map((m) => (
+        <button
+          key={m.id}
+          role="tab"
+          aria-selected={market === m.id}
+          className={`ather-mkt-opt ${m.id === "US" ? "us" : "in"} ${
+            market === m.id ? "active" : ""
+          }`}
+          onClick={() => onSelect(m.id)}
+          title={m.label}
+        >
+          <span className="ather-mkt-sym" aria-hidden>
+            {m.id === "US" ? "$" : "₹"}
+          </span>
+          <span className="ather-mkt-code">{m.code}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Compact "3h ago" / "just now" label for the trending cache timestamp.
 function formatRelativeTime(iso: string | null): string {
   if (!iso) return "recently";
@@ -4548,26 +4587,24 @@ export default function Dashboard({
       <div className="main">
         {/* ---------- Ather Style Header Bar ---------- */}
         <header className="ather-header">
-          <div className="ather-header-left">
-            <div className="ather-brand">
-              <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
-              <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
-            </div>
-            
-            <nav className="ather-nav" aria-label="Primary Navigation">
-              {NAV.map((item) => (
-                <button
-                  key={item.id}
-                  className={`ather-nav-item ${
-                    item.view && view === item.view ? "active" : ""
-                  }`}
-                  onClick={() => navClick(item)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
+          <div className="ather-brand">
+            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
+            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
           </div>
+          
+          <nav className="ather-nav" aria-label="Primary Navigation">
+            {NAV.map((item) => (
+              <button
+                key={item.id}
+                className={`ather-nav-item ${
+                  item.view && view === item.view ? "active" : ""
+                }`}
+                onClick={() => navClick(item)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
 
           <div className="ather-header-right">
             {/* Search lens button */}
@@ -4584,30 +4621,7 @@ export default function Dashboard({
             </button>
 
             {/* Market toggle — $ (US) / ₹ (IN) with a sliding thumb */}
-            <div
-              className={`ather-mkt ${market === "IN" ? "is-in" : "is-us"}`}
-              role="tablist"
-              aria-label="Market"
-            >
-              <span className="ather-mkt-thumb" aria-hidden />
-              {MARKETS.map((m) => (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={market === m.id}
-                  className={`ather-mkt-opt ${m.id === "US" ? "us" : "in"} ${
-                    market === m.id ? "active" : ""
-                  }`}
-                  onClick={() => selectMarket(m.id)}
-                  title={m.label}
-                >
-                  <span className="ather-mkt-sym" aria-hidden>
-                    {m.id === "US" ? "$" : "₹"}
-                  </span>
-                  <span className="ather-mkt-code">{m.code}</span>
-                </button>
-              ))}
-            </div>
+            <MarketToggle market={market} onSelect={selectMarket} variant="header" />
 
             {/* User Profile */}
             <div className="ather-profile">
@@ -4705,24 +4719,7 @@ export default function Dashboard({
 
             {/* Right side: Market segments switcher & Relative updated status */}
             <div className="wl-actions-right">
-              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                {MARKETS.map((m) => (
-                  <button
-                    key={m.id}
-                    role="tab"
-                    aria-selected={market === m.id}
-                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                      market === m.id ? "active" : ""
-                    }`}
-                    onClick={() => selectMarket(m.id)}
-                  >
-                    <span className="flag" aria-hidden>
-                      {m.flag}
-                    </span>
-                    <span className="seg-code">{m.code}</span>
-                  </button>
-                ))}
-              </div>
+              <MarketToggle market={market} onSelect={selectMarket} variant="inline" />
 
               <div className="wl-status-row">
                 <span className="trending-updated">
@@ -4841,24 +4838,7 @@ export default function Dashboard({
               </span>
             </div>
             <div className="hl-header-actions">
-                  <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                    {MARKETS.map((m) => (
-                      <button
-                        key={m.id}
-                        role="tab"
-                        aria-selected={market === m.id}
-                        className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                          market === m.id ? "active" : ""
-                        }`}
-                        onClick={() => selectMarket(m.id)}
-                      >
-                        <span className="flag" aria-hidden>
-                          {m.flag}
-                        </span>
-                        <span className="seg-code">{m.code}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <MarketToggle market={market} onSelect={selectMarket} variant="inline" />
                   <span className="trending-updated">
                     {trendingRefreshing || trendingLoading ? "updating..." : `Updated ${formatRelativeTime(trendingUpdatedAt)}`}
                   </span>
@@ -4892,24 +4872,7 @@ export default function Dashboard({
               </span>
             </div>
             <div className="hl-header-actions">
-              <div className="hero-market-seg seg" role="tablist" aria-label="Market">
-                {MARKETS.map((m) => (
-                  <button
-                    key={m.id}
-                    role="tab"
-                    aria-selected={market === m.id}
-                    className={`seg-btn ${m.id === "US" ? "us" : "in"} ${
-                      market === m.id ? "active" : ""
-                    }`}
-                    onClick={() => selectMarket(m.id)}
-                  >
-                    <span className="flag" aria-hidden>
-                      {m.flag}
-                    </span>
-                    <span className="seg-code">{m.code}</span>
-                  </button>
-                ))}
-              </div>
+              <MarketToggle market={market} onSelect={selectMarket} variant="inline" />
               <span className="trending-updated">
                 {headlinesRefreshing || headlinesLoading ? "updating..." : `Updated ${formatRelativeTime(headlinesUpdatedAt)}`}
               </span>
