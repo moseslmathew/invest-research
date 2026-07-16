@@ -4186,6 +4186,7 @@ export default function Dashboard({
   const addFormRef = useRef<HTMLFormElement>(null);
   const symbolRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const watchlistIdRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const globalSearchInputRef = useRef<HTMLInputElement>(null);
 
@@ -4753,9 +4754,10 @@ export default function Dashboard({
         >
           <input type="hidden" name="market" value={market} />
           <input
+            ref={watchlistIdRef}
             type="hidden"
             name="watchlistId"
-            value={currentListId ?? ""}
+            defaultValue={currentListId ?? ""}
           />
           <input
             type="hidden"
@@ -5264,9 +5266,18 @@ export default function Dashboard({
                 disabled={view === "watchlist" && currentListId == null}
                 inputRef={globalSearchInputRef}
                 isAdding={isAddPending}
+                watchlists={personalLists}
+                onAddToWatchlist={(r, listId) => {
+                  if (watchlistIdRef.current) watchlistIdRef.current.value = String(listId);
+                  if (symbolRef.current) symbolRef.current.value = r.symbol;
+                  if (nameRef.current) nameRef.current.value = r.name;
+                  addFormRef.current?.requestSubmit();
+                  setIsGlobalSearchOpen(false);
+                }}
                 onPick={(r) => {
                   if (view === "watchlist") {
                     if (currentListId != null) {
+                      if (watchlistIdRef.current) watchlistIdRef.current.value = String(currentListId);
                       if (symbolRef.current) symbolRef.current.value = r.symbol;
                       if (nameRef.current) nameRef.current.value = r.name;
                       addFormRef.current?.requestSubmit();

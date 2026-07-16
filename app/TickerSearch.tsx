@@ -9,24 +9,34 @@ interface SearchResult {
   exchange: string;
 }
 
+interface Watchlist {
+  id: number;
+  name: string;
+}
+
 export default function TickerSearch({
   market,
   disabled,
   onPick,
   inputRef,
   isAdding,
+  watchlists,
+  onAddToWatchlist,
 }: {
   market: Market;
   disabled?: boolean;
   onPick: (r: SearchResult) => void;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   isAdding?: boolean;
+  watchlists?: Watchlist[];
+  onAddToWatchlist?: (r: SearchResult, watchlistId: number) => void;
 }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(0);
+  const [openDropdownIdx, setOpenDropdownIdx] = useState<number | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   // Debounced search.
@@ -143,13 +153,56 @@ export default function TickerSearch({
                 className={`search-item ${i === active ? "active" : ""}`}
                 onMouseEnter={() => setActive(i)}
                 onMouseDown={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest(".add-to-wl-container")) {
+                    return;
+                  }
                   e.preventDefault();
                   pick(r);
                 }}
               >
-                <span className="search-sym">{r.symbol}</span>
-                <span className="search-name">{r.name}</span>
-                <span className="search-exch">{r.exchange}</span>
+                <div className="search-item-info">
+                  <span className="search-sym">{r.symbol}</span>
+                  <span className="search-name">{r.name}</span>
+                  <span className="search-exch">{r.exchange}</span>
+                </div>
+
+                {watchlists && watchlists.length > 0 && (
+                  <div className="add-to-wl-container" onMouseDown={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="add-to-wl-trigger"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenDropdownIdx(openDropdownIdx === i ? null : i);
+                      }}
+                    >
+                      ＋ Add to List
+                    </button>
+                    {openDropdownIdx === i && (
+                      <div className="add-to-wl-dropdown">
+                        <div className="add-to-wl-dropdown-header">Add to Watchlist</div>
+                        <ul className="add-to-wl-dropdown-list">
+                          {watchlists.map((wl) => (
+                            <li
+                              key={wl.id}
+                              className="add-to-wl-dropdown-item"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onAddToWatchlist?.(r, wl.id);
+                                setOpenDropdownIdx(null);
+                              }}
+                            >
+                              {wl.name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </li>
             ))
           )}
