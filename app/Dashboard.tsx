@@ -4942,30 +4942,22 @@ export default function Dashboard({
           />
         )}
 
-        {/* Watchlist Sub-Tabs (Table vs AI Briefing) */}
+        {/* Single AI Briefing toggle — the stocks list is the default view */}
         {view === "watchlist" && currentListId != null && items.length > 0 && (
           <div className="wl-sub-tabs-container">
-            <div className="wl-sub-tabs-segmented">
-              <button
-                className={`wl-sub-tab-btn ${watchlistTab === "table" ? "active" : ""}`}
-                onClick={() => setWatchlistTab("table")}
-              >
-                <svg className="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9"></path>
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                </svg>
-                <span>Stocks List</span>
-              </button>
-              <button
-                className={`wl-sub-tab-btn ${watchlistTab === "briefing" ? "active" : ""}`}
-                onClick={() => setWatchlistTab("briefing")}
-              >
-                <svg className="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-                <span>AI Briefing</span>
-              </button>
-            </div>
+            <button
+              className={`wl-ai-btn ${watchlistTab === "briefing" ? "active" : ""}`}
+              onClick={() => setWatchlistTab(watchlistTab === "briefing" ? "table" : "briefing")}
+              aria-pressed={watchlistTab === "briefing"}
+              title={watchlistTab === "briefing" ? "Back to stocks list" : "Generate an AI scan for this watchlist"}
+            >
+              <svg className="wl-ai-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                <path d="M19 15l.7 1.9L21.6 17.6l-1.9.7L19 20.2l-.7-1.9L16.4 17.6l1.9-.7L19 15z" />
+              </svg>
+              <span>{watchlistTab === "briefing" ? "Viewing AI Scan" : "Watchlist AI Scan"}</span>
+              {watchlistTab === "briefing" && <span className="wl-ai-btn-close" aria-hidden>×</span>}
+            </button>
           </div>
         )}
 

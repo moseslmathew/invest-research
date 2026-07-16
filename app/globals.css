@@ -6159,56 +6159,71 @@ th.sortable:hover {
 /* Redesigned Watchlist sub-tabs premium segmented control */
 .wl-sub-tabs-container {
   display: flex;
+  justify-content: flex-end;
   margin: 0 24px 20px;
 }
 
-.wl-sub-tabs-segmented {
-  display: flex;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.03);
-}
-
-.wl-sub-tab-btn {
-  background: transparent;
-  border: none;
-  display: flex;
+/* Single AI Briefing toggle */
+.wl-ai-btn {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.wl-sub-tab-btn:hover {
-  color: var(--text);
-  background: rgba(15, 23, 42, 0.04);
-}
-
-.wl-sub-tab-btn.active {
-  background: var(--surface-solid) !important;
-  color: var(--accent) !important;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.08);
-  font-weight: 700;
-}
-
-.wl-sub-tab-btn .tab-icon {
-  opacity: 0.7;
-  transition: transform 0.25s ease;
-}
-
-.wl-sub-tab-btn.active .tab-icon {
-  opacity: 1;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-solid));
   color: var(--accent);
-  transform: scale(1.08);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.25s ease, box-shadow 0.25s ease, color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.wl-ai-btn:hover {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-solid));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.wl-ai-btn-icon {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wl-ai-btn:hover .wl-ai-btn-icon {
+  transform: rotate(18deg) scale(1.12);
+}
+
+/* Active = viewing the briefing: filled gradient, glowing */
+.wl-ai-btn.active {
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 55%, #2dd4bf)
+  );
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.wl-ai-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.wl-ai-btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 
