@@ -138,9 +138,11 @@ export async function POST(req: Request) {
       apiKey.startsWith("YOUR_") ||
       apiKey.trim() === "";
 
-    if (isMock) {
-      // Logic-based local fallback that returns actual parsed Google News RSS headlines
-      const briefing = itemsInput.map((item) => {
+    // News-only briefing built from the parsed Google News RSS above. Used when
+    // no OpenAI key is set, AND as a graceful fallback if the model call fails —
+    // so the tab always renders something instead of an error.
+    const buildLocalBriefing = () =>
+      itemsInput.map((item) => {
         const sym = item.symbol;
         const name = item.name || sym;
         const data = inputData[sym];
@@ -159,24 +161,17 @@ export async function POST(req: Request) {
             noNews: true,
           };
         }
-
-        // Return up to 3 fresh bulletins
-        const bullets = data.news.slice(0, 3).map((item) => ({
-          headline: item.title,
+        const bullets = data.news.slice(0, 3).map((nItem) => ({
+          headline: nItem.title,
           summary: `Recent report regarding ${name} highlights key market activity.`,
-          source: item.source,
-          url: item.url,
+          source: nItem.source,
+          url: nItem.url,
         }));
-
-        return {
-          company: name,
-          symbol: sym,
-          bullets,
-          noNews: false,
-        };
+        return { company: name, symbol: sym, bullets, noNews: false };
       });
 
-      return NextResponse.json({ briefing });
+    if (isMock) {
+      return NextResponse.json({ briefing: buildLocalBriefing() });
     }
 
     // Call OpenAI for high-fidelity briefings
@@ -209,37 +204,50 @@ Format the response as a JSON object:
   ]
 }`;
 
-    const apiRes = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a professional financial research assistant." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.3,
-      }),
-      timeout: 12000
-    });
+    // Try OpenAI for a higher-fidelity briefing; on ANY failure (timeout,
+    // non-200, empty or non-JSON output) degrade to the news-only briefing.
+    try {
+      const apiRes = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are a professional financial research assistant." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.3,
+        }),
+        timeout: 12000
+      });
 
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      console.error("OpenAI API error (watchlist-briefing):", apiRes.status, errText);
-      return NextResponse.json({ error: "Upstream briefing service is unavailable." }, { status: 502 });
+      if (!apiRes.ok) {
+        const errText = await apiRes.text();
+        console.error("OpenAI API error (watchlist-briefing):", apiRes.status, errText);
+        return NextResponse.json({ briefing: buildLocalBriefing() });
+      }
+
+      const resData = await apiRes.json();
+      const content = resData.choices?.[0]?.message?.content;
+      if (!content) {
+        console.error("watchlist-briefing: empty OpenAI response");
+        return NextResponse.json({ briefing: buildLocalBriefing() });
+      }
+
+      const parsed = JSON.parse(content);
+      // Guard against a malformed shape from the model.
+      if (!parsed || !Array.isArray(parsed.briefing)) {
+        return NextResponse.json({ briefing: buildLocalBriefing() });
+      }
+      return NextResponse.json(parsed);
+    } catch (aiErr) {
+      console.error("watchlist-briefing OpenAI fallback:", aiErr);
+      return NextResponse.json({ briefing: buildLocalBriefing() });
     }
-
-    const resData = await apiRes.json();
-    const content = resData.choices?.[0]?.message?.content;
-    if (!content) {
-      return NextResponse.json({ error: "Empty response from OpenAI" }, { status: 502 });
-    }
-
-    return NextResponse.json(JSON.parse(content));
   } catch (err) {
     console.error("watchlist-briefing route error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

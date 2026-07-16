@@ -106,7 +106,7 @@ body {
    ============================================================ */
 .app {
   display: grid;
-  grid-template-columns: 252px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   min-height: 100vh;
   width: 100%;
   max-width: 100vw;
@@ -115,6 +115,7 @@ body {
 
 @media (min-width: 901px) {
   .app {
+    grid-template-columns: 1fr;
     height: 100vh;
     overflow: hidden;
   }
@@ -134,10 +135,14 @@ body {
 /* Frosted-glass sidebar: translucent panel that lets the body gradient glow
    through, sealed with a fading light seam instead of a hard border. */
 .sidebar {
-  position: sticky;
+  position: fixed;
+  left: 0;
   top: 0;
-  align-self: start;
-  height: 100vh;
+  bottom: 0;
+  width: 252px;
+  z-index: 1500;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -5792,6 +5797,162 @@ th.sortable:hover {
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* --- Ather Style Header --- */
+.ather-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 999px; /* Pill shape */
+  padding: 8px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 16px;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ather-header-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.ather-brand {
+  display: flex;
+  align-items: center;
+}
+
+.ather-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ather-nav-item {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.ather-nav-item:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+.ather-nav-item.active {
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.08);
+  font-weight: 700;
+}
+
+.ather-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ather-search-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.ather-search-btn:hover {
+  background: var(--border);
+  color: var(--accent);
+}
+
+/* Market toggle segment */
+.ather-market-seg {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.ather-market-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ather-market-btn.active {
+  background: var(--surface-solid);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.ather-profile {
+  display: flex;
+  align-items: center;
+}
+
+.ather-menu-btn {
+  display: none; /* Hidden on desktop */
+  background: transparent;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ather-header {
+    border-radius: 20px;
+    padding: 8px 16px;
+    top: 8px;
+  }
+  .ather-nav {
+    display: none; /* Hide top nav links on mobile; let bottom nav handle them */
+  }
+  .ather-menu-btn {
+    display: none; /* Mobile menu drawer is redundant due to bottom-nav */
+  }
+  .ather-market-seg {
+    display: none; /* Hide market switcher in header on mobile since it is inside wl-bar */
+  }
+}
+
+/* Hide desktop sidebar and set single column layout */
+@media (min-width: 901px) {
+  .app {
+    grid-template-columns: 1fr !important;
+  }
+  .sidebar {
+    display: none !important;
   }
 }
 

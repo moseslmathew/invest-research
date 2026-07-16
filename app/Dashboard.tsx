@@ -4545,34 +4545,75 @@ export default function Dashboard({
 
       {/* ---------- Main ---------- */}
       <div className="main">
-        <div className="main-top">
-          <div className="brand mini">
-            <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
-            <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "56px", width: "auto", marginLeft: "-10px" }} />
+        {/* ---------- Ather Style Header Bar ---------- */}
+        <header className="ather-header">
+          <div className="ather-header-left">
+            <div className="ather-brand">
+              <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
+              <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
+            </div>
+            
+            <nav className="ather-nav" aria-label="Primary Navigation">
+              {NAV.map((item) => (
+                <button
+                  key={item.id}
+                  className={`ather-nav-item ${
+                    item.view && view === item.view ? "active" : ""
+                  }`}
+                  onClick={() => navClick(item)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
           </div>
-          
-          <div className="header-actions">
+
+          <div className="ather-header-right">
+            {/* Search lens button */}
             <button
               onClick={() => setIsGlobalSearchOpen(true)}
-              className="header-search-trigger"
+              className="ather-search-btn"
               aria-label="Search markets"
               title="Search stock (Press /)"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
             </button>
 
-            <div className="mobile-profile-wrap">
+            {/* Market switcher */}
+            <div className="ather-market-seg" role="tablist" aria-label="Market">
+              {MARKETS.map((m) => (
+                <button
+                  key={m.id}
+                  role="tab"
+                  aria-selected={market === m.id}
+                  className={`ather-market-btn ${m.id === "US" ? "us" : "in"} ${
+                    market === m.id ? "active" : ""
+                  }`}
+                  onClick={() => selectMarket(m.id)}
+                >
+                  <span className="flag" aria-hidden>
+                    {m.flag}
+                  </span>
+                  <span className="code">{m.code}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* User Profile */}
+            <div className="ather-profile">
               {user ? (
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      userButtonAvatarBox: { width: 36, height: 36 },
-                    }
-                  }} 
-                />
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <UserButton 
+                    appearance={{
+                      elements: {
+                        userButtonAvatarBox: { width: 32, height: 32 },
+                      }
+                    }} 
+                  />
+                </div>
               ) : (
                 <SignInButton mode="modal">
                   <button className="btn" style={{ padding: '6px 12px', fontSize: '12px' }}>Sign In</button>
@@ -4580,7 +4621,7 @@ export default function Dashboard({
               )}
             </div>
           </div>
-        </div>
+        </header>
 
 
 
