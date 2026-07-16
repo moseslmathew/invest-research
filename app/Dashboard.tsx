@@ -4583,22 +4583,28 @@ export default function Dashboard({
               </svg>
             </button>
 
-            {/* Market switcher */}
-            <div className="ather-market-seg" role="tablist" aria-label="Market">
+            {/* Market toggle — $ (US) / ₹ (IN) with a sliding thumb */}
+            <div
+              className={`ather-mkt ${market === "IN" ? "is-in" : "is-us"}`}
+              role="tablist"
+              aria-label="Market"
+            >
+              <span className="ather-mkt-thumb" aria-hidden />
               {MARKETS.map((m) => (
                 <button
                   key={m.id}
                   role="tab"
                   aria-selected={market === m.id}
-                  className={`ather-market-btn ${m.id === "US" ? "us" : "in"} ${
+                  className={`ather-mkt-opt ${m.id === "US" ? "us" : "in"} ${
                     market === m.id ? "active" : ""
                   }`}
                   onClick={() => selectMarket(m.id)}
+                  title={m.label}
                 >
-                  <span className="flag" aria-hidden>
-                    {m.flag}
+                  <span className="ather-mkt-sym" aria-hidden>
+                    {m.id === "US" ? "$" : "₹"}
                   </span>
-                  <span className="code">{m.code}</span>
+                  <span className="ather-mkt-code">{m.code}</span>
                 </button>
               ))}
             </div>
@@ -4938,43 +4944,28 @@ export default function Dashboard({
 
         {/* Watchlist Sub-Tabs (Table vs AI Briefing) */}
         {view === "watchlist" && currentListId != null && items.length > 0 && (
-          <div className="wl-sub-tabs" style={{ display: "flex", gap: "8px", margin: "0 24px 20px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-            <button
-              className={`wl-sub-tab ${watchlistTab === "table" ? "active" : ""}`}
-              onClick={() => setWatchlistTab("table")}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: watchlistTab === "table" ? "var(--text)" : "var(--muted)",
-                fontSize: "14px",
-                fontWeight: 750,
-                cursor: "pointer",
-                padding: "4px 8px",
-                borderBottom: watchlistTab === "table" ? "2px solid var(--accent)" : "2px solid transparent",
-                marginBottom: "-10px",
-                transition: "all 0.15s ease",
-              }}
-            >
-              📋 Stocks List
-            </button>
-            <button
-              className={`wl-sub-tab ${watchlistTab === "briefing" ? "active" : ""}`}
-              onClick={() => setWatchlistTab("briefing")}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: watchlistTab === "briefing" ? "var(--text)" : "var(--muted)",
-                fontSize: "14px",
-                fontWeight: 750,
-                cursor: "pointer",
-                padding: "4px 8px",
-                borderBottom: watchlistTab === "briefing" ? "2px solid var(--accent)" : "2px solid transparent",
-                marginBottom: "-10px",
-                transition: "all 0.15s ease",
-              }}
-            >
-              ✨ AI Briefing
-            </button>
+          <div className="wl-sub-tabs-container">
+            <div className="wl-sub-tabs-segmented">
+              <button
+                className={`wl-sub-tab-btn ${watchlistTab === "table" ? "active" : ""}`}
+                onClick={() => setWatchlistTab("table")}
+              >
+                <svg className="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+                <span>Stocks List</span>
+              </button>
+              <button
+                className={`wl-sub-tab-btn ${watchlistTab === "briefing" ? "active" : ""}`}
+                onClick={() => setWatchlistTab("briefing")}
+              >
+                <svg className="tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>AI Briefing</span>
+              </button>
+            </div>
           </div>
         )}
 

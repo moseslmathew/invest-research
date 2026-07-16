@@ -150,7 +150,7 @@ export default function TickerSearch({
                 id={`search-opt-${i}`}
                 role="option"
                 aria-selected={i === active}
-                className={`search-item ${i === active ? "active" : ""}`}
+                className={`search-item ${i === active ? "active" : ""} ${openDropdownIdx === i ? "dropdown-open" : ""}`}
                 onMouseEnter={() => setActive(i)}
                 onMouseDown={(e) => {
                   const target = e.target as HTMLElement;

@@ -1,14 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg: #fafbfe;
+  --bg: #f8fafc;
   --surface: #ffffff; /* opaque — a translucent surface over the blurred orbs read as a dim, low-res haze */
   --surface-solid: #ffffff;
-  --border: rgba(15, 23, 42, 0.08);
+  --border: rgba(15, 23, 42, 0.14);
   --text: #0f172a;
-  --text-2: #475569;
-  --muted: #64748b;
-  --muted-2: #94a3b8;
+  --text-2: #334155; /* Slate-700 body text for high contrast ADA compliance */
+  --muted: #475569;  /* Slate-600 muted text for readability */
+  --muted-2: #57657a; /* Slate-500 placeholder/secondary text */
   --us: #6366f1;
   --us-soft: rgba(99, 102, 241, 0.12);
   --in: #f59e0b;
@@ -43,10 +43,18 @@ body {
   overflow-x: hidden;
 }
 
-/* --- Animated background orbs (disabled: the blurred wash made content read
-   dim and low-res; the app ships with the crisp white surface) --- */
+/* --- Animated background orbs: subtle high-contrast premium glow behind glassmorphism layers --- */
 .bg-orbs {
-  display: none;
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.12; /* ultra-subtle, keeping text crispy */
 }
 .orb {
   position: absolute;
@@ -423,10 +431,10 @@ body {
 }
 /* --- Main column --- */
 .main {
-  max-width: 1040px;
+  max-width: 1280px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px 40px 96px;
+  padding: 24px 32px 96px;
 }
 .main-top {
   display: flex;
@@ -5884,40 +5892,83 @@ th.sortable:hover {
   background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
-/* Market toggle segment */
-.ather-market-seg {
+/* Market toggle — currency-symbol segments with a sliding thumb */
+.ather-mkt {
+  position: relative;
   display: flex;
+  align-items: center;
+  padding: 4px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
 }
 
-.ather-market-btn {
-  background: transparent;
-  border: none;
-  display: flex;
+.ather-mkt-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  /* springy glide between the two sides */
+  transition: transform 0.38s cubic-bezier(0.5, 1.35, 0.4, 1);
+  z-index: 0;
+}
+.ather-mkt.is-in .ather-mkt-thumb {
+  transform: translateX(100%);
+}
+
+.ather-mkt-opt {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 13px;
+  justify-content: center;
+  gap: 7px;
+  min-width: 60px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 5px 14px;
   border-radius: 999px;
   font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: color 0.25s ease;
+}
+.ather-mkt-opt.active {
+  color: var(--text);
+}
+
+/* Currency badge — replaces the flag, tinted to its currency when active */
+.ather-mkt-sym {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  font-weight: 800;
+  line-height: 1;
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--muted);
+  transition: color 0.25s ease, background 0.25s ease,
+    transform 0.38s cubic-bezier(0.5, 1.35, 0.4, 1);
 }
-
-.ather-market-btn:not(.active):hover {
-  color: var(--text);
+.ather-mkt-opt.us.active .ather-mkt-sym {
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  color: #16a34a;
+  transform: scale(1.08);
 }
-
-.ather-market-btn.active {
-  background: var(--surface-solid);
-  color: var(--text);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+.ather-mkt-opt.in.active .ather-mkt-sym {
+  background: color-mix(in srgb, #f97316 18%, transparent);
+  color: #ea6a09;
+  transform: scale(1.08);
 }
 
 .ather-profile {
@@ -5956,7 +6007,7 @@ th.sortable:hover {
   .ather-menu-btn {
     display: none; /* Mobile menu drawer is redundant due to bottom-nav */
   }
-  .ather-market-seg {
+  .ather-mkt {
     display: none; /* Hide market switcher in header on mobile since it is inside wl-bar */
   }
   .ather-profile {
@@ -6096,5 +6147,69 @@ th.sortable:hover {
   background: var(--border);
   color: var(--accent);
 }
+
+/* Ensure the row with an active dropdown has higher stacking context */
+.search-item.dropdown-open {
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Redesigned Watchlist sub-tabs premium segmented control */
+.wl-sub-tabs-container {
+  display: flex;
+  margin: 0 24px 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.wl-sub-tabs-segmented {
+  display: flex;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.03);
+}
+
+.wl-sub-tab-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wl-sub-tab-btn:hover {
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.wl-sub-tab-btn.active {
+  background: var(--surface-solid) !important;
+  color: var(--accent) !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.08);
+  font-weight: 700;
+}
+
+.wl-sub-tab-btn .tab-icon {
+  opacity: 0.7;
+  transition: transform 0.25s ease;
+}
+
+.wl-sub-tab-btn.active .tab-icon {
+  opacity: 1;
+  color: var(--accent);
+  transform: scale(1.08);
+}
+
 
 
