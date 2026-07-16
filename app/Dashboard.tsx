@@ -4731,7 +4731,7 @@ export default function Dashboard({
                     <path d="M19 15l.7 1.9L21.6 17.6l-1.9.7L19 20.2l-.7-1.9L16.4 17.6l1.9-.7L19 15z" />
                   </svg>
                   <span>{watchlistTab === "briefing" ? "Viewing AI Scan" : "Watchlist AI Scan"}</span>
-                  {watchlistTab === "briefing" && <span className="wl-ai-btn-close" aria-hidden>×</span>}
+                  {watchlistTab === "briefing" && <span className="wl-ai-btn-close" aria-hidden>x</span>}
                 </button>
               )}
 

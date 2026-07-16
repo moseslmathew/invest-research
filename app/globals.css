@@ -6212,14 +6212,17 @@ th.sortable:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-left: 2px;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
   border-radius: 50%;
-  font-size: 15px;
+  font-size: 10px;
+  font-weight: 800;
   line-height: 1;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
+  text-transform: none !important;
+  padding-bottom: 1px; /* tiny pixel adjustment to baseline center x */
 }
 
 
