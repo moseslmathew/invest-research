@@ -2,7 +2,7 @@
 
 :root {
   --bg: #fafbfe;
-  --surface: rgba(255, 255, 255, 0.72);
+  --surface: #ffffff; /* opaque — a translucent surface over the blurred orbs read as a dim, low-res haze */
   --surface-solid: #ffffff;
   --border: rgba(15, 23, 42, 0.08);
   --text: #0f172a;
@@ -43,13 +43,10 @@ body {
   overflow-x: hidden;
 }
 
-/* --- Animated background orbs --- */
+/* --- Animated background orbs (disabled: the blurred wash made content read
+   dim and low-res; the app ships with the crisp white surface) --- */
 .bg-orbs {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  filter: blur(0px);
+  display: none;
 }
 .orb {
   position: absolute;
@@ -906,7 +903,6 @@ body {
 /* --- Card / form --- */
 .panel {
   background: var(--surface);
-  backdrop-filter: blur(14px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -2000,9 +1996,13 @@ th.col-num-r {
     min-width: 0;
   }
 }
-@media (max-width: 900px) {
-  /* Keep .hero-market-seg visible — the global app bar switch was removed,
-     so this inline toggle is the only market control on mobile. */
+/* The premium header bar carries the market switch on desktop, so the inline
+   hero toggle would duplicate it there. Show it only on mobile, where the
+   header hides its own switch. */
+@media (min-width: 769px) {
+  .hero-market-seg {
+    display: none;
+  }
 }
 
 .ai-table-panel .ai-filter-bar {
@@ -5805,23 +5805,23 @@ th.sortable:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--surface-solid);
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
   border: 1px solid var(--border);
   border-radius: 999px; /* Pill shape */
-  padding: 8px 24px;
+  padding: 11px 16px 11px 28px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  backdrop-filter: saturate(140%) blur(14px);
   position: sticky;
   top: 16px;
   z-index: 100;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
 }
 
 .ather-header-left {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 48px;
 }
 
 .ather-brand {
@@ -5836,6 +5836,7 @@ th.sortable:hover {
 }
 
 .ather-nav-item {
+  position: relative;
   background: transparent;
   border: none;
   font-family: inherit;
@@ -5843,28 +5844,29 @@ th.sortable:hover {
   font-weight: 600;
   color: var(--text-2);
   cursor: pointer;
-  padding: 6px 16px;
+  padding: 8px 18px;
   border-radius: 999px;
-  transition: all 0.2s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
 
 .ather-nav-item:hover {
   color: var(--text);
-  background: var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .ather-nav-item.active {
   color: var(--accent);
-  background: rgba(99, 102, 241, 0.08);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-weight: 700;
 }
 
 .ather-header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
+/* Search — icon-only lens */
 .ather-search-btn {
   background: transparent;
   border: none;
@@ -5873,14 +5875,13 @@ th.sortable:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 9px;
   border-radius: 50%;
-  transition: all 0.2s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
-
 .ather-search-btn:hover {
-  background: var(--border);
   color: var(--accent);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 /* Market toggle segment */
@@ -5889,7 +5890,8 @@ th.sortable:hover {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 2px;
+  padding: 3px;
+  gap: 2px;
 }
 
 .ather-market-btn {
@@ -5898,25 +5900,38 @@ th.sortable:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
+  padding: 5px 13px;
   border-radius: 999px;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-2);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ather-market-btn:not(.active):hover {
+  color: var(--text);
 }
 
 .ather-market-btn.active {
   background: var(--surface-solid);
   color: var(--text);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
 
 .ather-profile {
   display: flex;
   align-items: center;
+  margin-left: 2px;
+}
+.ather-profile > div {
+  border-radius: 999px;
+  padding: 2px;
+  transition: box-shadow 0.18s ease;
+}
+.ather-profile > div:hover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .ather-menu-btn {
@@ -5932,7 +5947,7 @@ th.sortable:hover {
 @media (max-width: 768px) {
   .ather-header {
     border-radius: 20px;
-    padding: 8px 16px;
+    padding: 8px 12px;
     top: 8px;
   }
   .ather-nav {
@@ -5943,6 +5958,10 @@ th.sortable:hover {
   }
   .ather-market-seg {
     display: none; /* Hide market switcher in header on mobile since it is inside wl-bar */
+  }
+  .ather-profile {
+    border-left: none;
+    padding-left: 0;
   }
 }
 

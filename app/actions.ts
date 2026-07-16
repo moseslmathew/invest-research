@@ -54,7 +54,7 @@ export async function addItemAction(
     return { ok: false, message: "Could not save. Check your DB connection." };
   }
 
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   return { ok: true, message: `${symbol.toUpperCase()} added to watchlist.` };
 }
 
@@ -87,7 +87,7 @@ export async function createWatchlistAction(
     return { ok: false, message: "Could not create watchlist." };
   }
 
-  revalidatePath("/");
+  revalidatePath("/dashboard");
   return { ok: true, message: `Watchlist "${name}" created.` };
 }
 
@@ -98,7 +98,7 @@ export async function deleteItemAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("id"));
   if (Number.isFinite(id)) {
     await deleteWatchlistItem(id, userId);
-    revalidatePath("/");
+    revalidatePath("/dashboard");
   }
 }
 
@@ -109,6 +109,6 @@ export async function deleteWatchlistAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("id"));
   if (Number.isFinite(id) && id > 0) {
     await deleteWatchlist(id, userId);
-    revalidatePath("/");
+    revalidatePath("/dashboard");
   }
 }
