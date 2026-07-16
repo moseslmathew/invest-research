@@ -4717,9 +4717,23 @@ export default function Dashboard({
               )}
             </div>
 
-            {/* Right side: Market segments switcher & Relative updated status */}
+            {/* Right side: Watchlist AI Scan & Relative updated status */}
             <div className="wl-actions-right">
-              <MarketToggle market={market} onSelect={selectMarket} variant="inline" />
+              {currentListId != null && items.length > 0 && (
+                <button
+                  className={`wl-ai-btn ${watchlistTab === "briefing" ? "active" : ""}`}
+                  onClick={() => setWatchlistTab(watchlistTab === "briefing" ? "table" : "briefing")}
+                  aria-pressed={watchlistTab === "briefing"}
+                  title={watchlistTab === "briefing" ? "Back to stocks list" : "Generate an AI scan for this watchlist"}
+                >
+                  <svg className="wl-ai-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
+                    <path d="M19 15l.7 1.9L21.6 17.6l-1.9.7L19 20.2l-.7-1.9L16.4 17.6l1.9-.7L19 15z" />
+                  </svg>
+                  <span>{watchlistTab === "briefing" ? "Viewing AI Scan" : "Watchlist AI Scan"}</span>
+                  {watchlistTab === "briefing" && <span className="wl-ai-btn-close" aria-hidden>×</span>}
+                </button>
+              )}
 
               <div className="wl-status-row">
                 <span className="trending-updated">
@@ -4905,24 +4919,7 @@ export default function Dashboard({
           />
         )}
 
-        {/* Single AI Briefing toggle — the stocks list is the default view */}
-        {view === "watchlist" && currentListId != null && items.length > 0 && (
-          <div className="wl-sub-tabs-container">
-            <button
-              className={`wl-ai-btn ${watchlistTab === "briefing" ? "active" : ""}`}
-              onClick={() => setWatchlistTab(watchlistTab === "briefing" ? "table" : "briefing")}
-              aria-pressed={watchlistTab === "briefing"}
-              title={watchlistTab === "briefing" ? "Back to stocks list" : "Generate an AI scan for this watchlist"}
-            >
-              <svg className="wl-ai-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" />
-                <path d="M19 15l.7 1.9L21.6 17.6l-1.9.7L19 20.2l-.7-1.9L16.4 17.6l1.9-.7L19 15z" />
-              </svg>
-              <span>{watchlistTab === "briefing" ? "Viewing AI Scan" : "Watchlist AI Scan"}</span>
-              {watchlistTab === "briefing" && <span className="wl-ai-btn-close" aria-hidden>×</span>}
-            </button>
-          </div>
-        )}
+
 
         {view === "trending" ? (
           <TrendingList
