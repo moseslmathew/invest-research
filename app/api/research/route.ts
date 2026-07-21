@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
+import { AI_CONFIG, executeAICall, cleanJsonResponseText, AIModel } from "@/lib/ai-config";
 
 export const dynamic = "force-dynamic";
 
@@ -88,13 +89,14 @@ async function fetchVolumeHistory(symbol: string): Promise<{ date: string; volum
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const gate = await guardRequest(req, { limit: 20, windowMs: 60_000 });
   if (gate instanceof NextResponse) return gate;
   try {
     const { searchParams } = new URL(req.url);
     const symbol = (searchParams.get("symbol") || "").trim();
     const name = (searchParams.get("name") || "").trim();
+    const requestedModel = (searchParams.get("model") || AI_CONFIG.RESEARCH_MODEL) as AIModel;
 
     if (!symbol) {
       return NextResponse.json({ error: "Symbol is required" }, { status: 400 });
@@ -109,32 +111,6 @@ export async function GET(req: Request) {
       ? volumeData.reduce((prev, curr) => (curr.volume > prev.volume ? curr : prev), volumeData[0])
       : null;
 
-    const apiKey = process.env.OPENAI_API_KEY || "";
-    const isMock = !apiKey || apiKey === "your-api-key-here" || apiKey.startsWith("YOUR_") || apiKey.trim() === "";
-
-    if (isMock) {
-      // Local logic-based fallback analysis with volume insights
-      const score = headlines.length > 0 ? (symbol.length % 2 === 0 ? 72 : 48) : 55;
-      const stance = score >= 70 ? "Bullish" : score <= 48 ? "Bearish" : "Neutral";
-      const volumeConsensus = peakVolumeItem ? (peakVolumeItem.up ? "accumulation" : "distribution") : "stable";
-      
-      const bullets = [
-        "Analysis mode: Scan local news. Connect OpenAI API in your .env file to enable real-time GPT analysis.",
-        headlines[0] ? `Recent Catalyst: "${headlines[0]}"` : "No recent news catalysts found in search index.",
-        peakVolumeItem 
-          ? `Volume Analysis: Traded peak volume of ${new Intl.NumberFormat('en-US', { notation: 'compact' }).format(peakVolumeItem.volume)} on ${peakVolumeItem.date} during a price ${peakVolumeItem.up ? "UP" : "DOWN"} day, indicating potential institutional ${volumeConsensus}.`
-          : `Volume Analysis: Traded volume averages ${new Intl.NumberFormat('en-US', { notation: 'compact' }).format(avgVolume)} daily, indicating range-bound trading activity.`
-      ];
-
-      return NextResponse.json({
-        stance,
-        score,
-        summary: `[DEMO MODE] OpenAI API key is missing. Scanned ${headlines.length} news headlines and analyzed 10 trading sessions of volume data for ${symbol}. The stock exhibits a ${stance.toLowerCase()} tone with a score of ${score}/100. Volume profile displays average daily volume of ${new Intl.NumberFormat('en-US', { notation: 'compact' }).format(avgVolume)} with peak volume on ${peakVolumeItem?.date || "N/A"} signaling signs of ${volumeConsensus}.`,
-        bullets,
-      });
-    }
-
-    // Real OpenAI API call
     const prompt = `You are an expert financial research analyst.
 Analyze the following news headlines and historical volume data for ${symbol} (${name}) to provide a concise, structured research report in JSON format.
 
@@ -150,49 +126,42 @@ Please perform a volume analysis (accumulation/distribution patterns, volume bre
 
 Respond ONLY with a JSON object matching this structure:
 {
-  "stance": "Bullish" | "Bearish" | "Neutral",
-  "score": number (0 to 100),
-  "summary": "A concise paragraph summarizing the news sentiment, volume profile analysis, and overall catalyst impact.",
+  "score": 75,
+  "stance": "Bullish",
+  "summary": "Executive summary paragraph...",
   "bullets": [
-    "Highlight 1: Sentiment analysis / recent news catalyst",
-    "Highlight 2: Technical/volume analysis (e.g. volume trends, breakout, or accumulation)",
-    "Highlight 3: Synthesis / outlook based on catalysts and trading action"
+    "Highlight 1",
+    "Highlight 2",
+    "Highlight 3"
   ]
 }`;
 
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a professional financial research analyst." },
-          { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-      }),
+    const apiRes = await executeAICall({
+      model: requestedModel,
+      messages: [
+        { role: "system", content: "You are a professional financial research analyst." },
+        { role: "user", content: prompt },
+      ],
+      responseFormat: { type: "json_object" },
     });
 
     if (!apiRes.ok) {
       const errText = await apiRes.text();
-      console.error("OpenAI API error (research):", apiRes.status, errText);
-      return NextResponse.json({ error: "Upstream analysis service is unavailable." }, { status: 502 });
+      console.error("AI API error (research):", apiRes.status, errText);
+      return NextResponse.json({ error: "Upstream AI service error" }, { status: 502 });
     }
 
-    const resData = await apiRes.json();
-    const content = resData.choices?.[0]?.message?.content;
+    const data = (await apiRes.json()) as any;
+    const content = data.choices?.[0]?.message?.content;
     if (!content) {
-      return NextResponse.json({ error: "Empty response from OpenAI" }, { status: 502 });
+      throw new Error("Empty completion choice");
     }
 
-    const parsed = JSON.parse(content);
-    return NextResponse.json(parsed);
-  } catch (error) {
-    console.error("research route error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const cleanedContent = cleanJsonResponseText(content);
+    const parsed = JSON.parse(cleanedContent);
+    return NextResponse.json({ ...parsed, model: requestedModel });
+  } catch (err: any) {
+    console.error("Research API route error:", err);
+    return NextResponse.json({ error: err.message || "Failed to generate research" }, { status: 500 });
   }
 }

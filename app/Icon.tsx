@@ -22,6 +22,9 @@ export type IconName =
   | "refresh"
   | "search"
   | "logout"
+  | "grid"
+  | "swot"
+  | "calendar"
   | "microscope";
 
 // Stroke-based line icons (Lucide-style), drawn with currentColor.
@@ -71,8 +74,8 @@ export function Icon({
   if (name === "sparkles") {
     return (
       <svg {...base}>
-        <path d="M12 3l1.6 4.6L18 9l-4.4 1.4L12 15l-1.6-4.6L6 9l4.4-1.4z" />
-        <path d="M18 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />
+        <path d="M12 2L14.4 8.6L21 11L14.4 13.4L12 20L9.6 13.4L3 11L9.6 8.6L12 2Z" />
+        <path d="M19 13.5L19.9 16.1L22.5 17L19.9 17.9L19 20.5L18.1 17.9L15.5 17L18.1 16.1L19 13.5Z" strokeWidth="1.5" />
       </svg>
     );
   }
@@ -91,6 +94,48 @@ export function Icon({
         <circle cx="12" cy="5" r="1.7" />
         <circle cx="12" cy="12" r="1.7" />
         <circle cx="12" cy="19" r="1.7" />
+      </svg>
+    );
+  }
+
+  if (name === "swot") {
+    return (
+      <svg {...base}>
+        <rect x="3" y="3" width="7.5" height="7.5" rx="2" strokeWidth="1.8" />
+        <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" strokeWidth="1.8" />
+        <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" strokeWidth="1.8" />
+        <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" strokeWidth="1.8" />
+        <circle cx="6.75" cy="6.75" r="1" fill="currentColor" stroke="none" />
+        <circle cx="17.25" cy="6.75" r="1" fill="currentColor" stroke="none" />
+        <circle cx="6.75" cy="17.25" r="1" fill="currentColor" stroke="none" />
+        <circle cx="17.25" cy="17.25" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+
+  if (name === "calendar" || name === "crown") {
+    return (
+      <svg {...base}>
+        <rect x="3" y="4" width="18" height="17" rx="3" strokeWidth="1.8" />
+        <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" />
+        <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" />
+        <line x1="3" y1="9" x2="21" y2="9" strokeWidth="1.8" />
+        <circle cx="8" cy="13" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="13" r="1" fill="currentColor" stroke="none" />
+        <circle cx="16" cy="13" r="1" fill="currentColor" stroke="none" />
+        <circle cx="8" cy="17" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
+
+  if (name === "grid") {
+    // Quadrant matrix — the classic SWOT 2×2 (a square split by a cross).
+    return (
+      <svg {...base}>
+        <rect x="3" y="3" width="18" height="18" rx="2.5" />
+        <line x1="12" y1="3.5" x2="12" y2="20.5" />
+        <line x1="3.5" y1="12" x2="20.5" y2="12" />
       </svg>
     );
   }

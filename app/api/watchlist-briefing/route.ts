@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { guardRequest } from "@/lib/api-guard";
+import { AI_CONFIG } from "@/lib/ai-config";
 import { safeUrl } from "@/lib/safe-url";
 
 export const runtime = "edge";
@@ -213,15 +214,17 @@ Format the response as a JSON object:
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "You are a professional financial research assistant." },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.3,
-        }),
+        body: JSON.stringify(
+          AI_CONFIG.createBody({
+            model: AI_CONFIG.BRIEFING_MODEL,
+            messages: [
+              { role: "system", content: "You are a professional financial research assistant." },
+              { role: "user", content: prompt },
+            ],
+            responseFormat: { type: "json_object" },
+            temperature: 0.3,
+          })
+        ),
         timeout: 12000
       });
 

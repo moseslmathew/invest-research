@@ -10,6 +10,7 @@ import {
   type ActionState,
 } from "./actions";
 import TickerSearch from "./TickerSearch";
+import { AI_CONFIG, AIModel } from "@/lib/ai-config";
 import PrismWaitIcon from "./PrismWaitIcon";
 import { Icon, type IconName } from "./Icon";
 
@@ -1399,6 +1400,11 @@ function NewsDrawer({
                     <div className="ai-research-stance-meta">
                       <span className="stance-lbl">AI Stance Outlook</span>
                       <h3 className="stance-val">{researchData.stance}</h3>
+                      {researchData.model && (
+                        <span className="ai-model-badge">
+                          <Icon name="sparkles" width={11} height={11} /> {researchData.model}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -2321,6 +2327,7 @@ function AIResearchPage({
   setResearchStock: (s: { symbol: string; name: string } | null) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals" | "swot">("research");
+  const [swotSubTab, setSwotSubTab] = useState<"matrix" | "dimensions">("matrix");
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ─── data states ───
@@ -2346,6 +2353,73 @@ function AIResearchPage({
   const [swotLoading, setSwotLoading] = useState(false);
   const [swotError, setSwotError] = useState<string | null>(null);
 
+  // ─── AI Model State ───
+  const AI_MODEL_KEY = "lumina.ai_model";
+  const [selectedModel, setSelectedModel] = useState<AIModel>("gpt-5.6-luna");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AI_MODEL_KEY);
+      if (saved && (saved === "gpt-5.6-luna" || saved === "gemini-2.5-flash")) {
+        setSelectedModel(saved as AIModel);
+      }
+    } catch (e) {
+      console.error("Failed to load saved AI model", e);
+    }
+  }, []);
+
+  const handleModelChange = (model: AIModel) => {
+    setSelectedModel(model);
+    try {
+      localStorage.setItem(AI_MODEL_KEY, model);
+    } catch (e) {
+      console.error("Failed to save AI model", e);
+    }
+  };
+
+  // ─── Recent Research History ───
+  const RECENT_RESEARCH_KEY = "lumina.recent_research";
+  const [recentResearched, setRecentResearched] = useState<{ symbol: string; name: string; timestamp: number }[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_RESEARCH_KEY);
+      if (raw) {
+        setRecentResearched(JSON.parse(raw));
+      }
+    } catch (e) {
+      console.error("Failed to load recent research history", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!researchStock) return;
+    try {
+      const raw = localStorage.getItem(RECENT_RESEARCH_KEY);
+      let list: { symbol: string; name: string; timestamp: number }[] = raw ? JSON.parse(raw) : [];
+      list = list.filter((item) => item.symbol !== researchStock.symbol);
+      list.unshift({
+        symbol: researchStock.symbol,
+        name: researchStock.name,
+        timestamp: Date.now(),
+      });
+      list = list.slice(0, 6);
+      localStorage.setItem(RECENT_RESEARCH_KEY, JSON.stringify(list));
+      setRecentResearched(list);
+    } catch (e) {
+      console.error("Failed to update recent research history", e);
+    }
+  }, [researchStock?.symbol]);
+
+  const clearRecentResearched = () => {
+    try {
+      localStorage.removeItem(RECENT_RESEARCH_KEY);
+      setRecentResearched([]);
+    } catch (e) {
+      console.error("Failed to clear recent research history", e);
+    }
+  };
+
   // Reset on stock change
   useEffect(() => {
     if (!researchStock) return;
@@ -2367,50 +2441,56 @@ function AIResearchPage({
   useEffect(() => {
     if (!researchStock || activeTab !== "news") return;
     setNewsLoading(true);
+    setNewsError(null);
     const ctrl = new AbortController();
-    fetch(`/api/news?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
-      .then(r => r.json()).then(d => setNews(d.articles ?? []))
+    fetch(`/api/news?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}&model=${encodeURIComponent(selectedModel)}`, { signal: ctrl.signal })
+      .then(r => r.json()).then(d => { if (d.error) throw new Error(d.error); setNews(d.articles ?? []); })
       .catch(e => { if (e.name !== "AbortError") setNewsError(e.message); })
       .finally(() => setNewsLoading(false));
     return () => ctrl.abort();
-  }, [researchStock, activeTab]);
+  }, [researchStock, activeTab, selectedModel]);
 
   // Fetch AI research
   useEffect(() => {
     if (!researchStock || activeTab !== "research") return;
     setResearchLoading(true);
+    setResearchError(null);
     const ctrl = new AbortController();
-    fetch(`/api/research?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
-      .then(r => r.json()).then(d => setResearchData(d))
-      .catch(e => { if (e.name !== "AbortError") setResearchError(e.message); })
+    fetch(`/api/research?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}&model=${encodeURIComponent(selectedModel)}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => { if (d.error) throw new Error(d.error); setResearchData(d); })
+      .catch(e => { if (e.name !== "AbortError") setResearchError(e.message || "Failed to load AI research"); })
       .finally(() => setResearchLoading(false));
     return () => ctrl.abort();
-  }, [researchStock, activeTab]);
+  }, [researchStock, activeTab, selectedModel]);
 
   // Fetch technicals
   useEffect(() => {
     if (!researchStock || activeTab !== "technicals") return;
     setTechLoading(true);
+    setTechError(null);
     const ctrl = new AbortController();
-    fetch(`/api/technicals?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
-      .then(r => r.json()).then(d => setTechData(d))
-      .catch(e => { if (e.name !== "AbortError") setTechError(e.message); })
+    fetch(`/api/technicals?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}&model=${encodeURIComponent(selectedModel)}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => { if (d.error) throw new Error(d.error); setTechData(d); })
+      .catch(e => { if (e.name !== "AbortError") setTechError(e.message || "Failed to load technicals"); })
       .finally(() => setTechLoading(false));
     return () => ctrl.abort();
-  }, [researchStock, activeTab]);
+  }, [researchStock, activeTab, selectedModel]);
 
   // Fetch SWOT analysis
   useEffect(() => {
     if (!researchStock || activeTab !== "swot") return;
     setSwotLoading(true);
+    setSwotError(null);
     const ctrl = new AbortController();
-    fetch(`/api/swot?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
+    fetch(`/api/swot?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}&model=${encodeURIComponent(selectedModel)}`, { signal: ctrl.signal })
       .then(r => r.json())
       .then(d => { if (d.error) throw new Error(d.error); setSwotData(d); })
       .catch(e => { if (e.name !== "AbortError") setSwotError(e.message || "Failed to load SWOT analysis"); })
       .finally(() => setSwotLoading(false));
     return () => ctrl.abort();
-  }, [researchStock, activeTab]);
+  }, [researchStock, activeTab, selectedModel]);
 
   // Fetch events/insider
   useEffect(() => {
@@ -2433,10 +2513,10 @@ function AIResearchPage({
 
   const TABS: { id: typeof activeTab; label: string; icon: IconName }[] = [
     { id: "research", label: "AI Insight", icon: "sparkles" },
-    { id: "swot", label: "SWOT", icon: "search" },
+    { id: "swot", label: "SWOT", icon: "swot" },
     { id: "news", label: "News", icon: "newspaper" },
     { id: "technicals", label: "Technicals", icon: "trending" },
-    { id: "events", label: "Events & Insider", icon: "crown" },
+    { id: "events", label: "Events & IR", icon: "calendar" },
   ];
 
   return (
@@ -2450,7 +2530,7 @@ function AIResearchPage({
             Research, <span className="rp-hero-accent">distilled</span>.
           </h1>
           <p className="rp-hero-sub">
-            Search any stock to get instant AI research, key news, technicals, and insider trade signals.
+            Search any stock to get instant AI research, SWOT analysis, key news, technicals, and insider trade signals.
           </p>
 
           <div className="rp-hero-search">
@@ -2464,52 +2544,73 @@ function AIResearchPage({
                 />
               </div>
             </div>
+
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
+              <div className="rp-model-dropdown-wrap">
+                <select
+                  className="rp-model-select"
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value as AIModel)}
+                  title="Select AI Model"
+                >
+                  <option value="gpt-5.6-luna">⚡ OpenAI GPT-5.6 Luna</option>
+                  <option value="gemini-2.5-flash">✨ Google Gemini 2.5 Flash</option>
+                </select>
+                <span className="rp-model-arrow">▾</span>
+              </div>
+            </div>
           </div>
 
-          <div className="rp-hero-grid">
-            {[
-              {
-                icon: "sparkles" as IconName,
-                color: "#8b5cf6",
-                title: "AI Insight",
-                body: "Conviction score, stance and an executive brief.",
-              },
-              {
-                icon: "newspaper" as IconName,
-                color: "#0ea5e9",
-                title: "Curated news",
-                body: "Headlines filtered and tagged bullish or bearish.",
-              },
-              {
-                icon: "trending" as IconName,
-                color: "#6366f1",
-                title: "Technicals",
-                body: "RSI, MACD, moving averages and key levels.",
-              },
-              {
-                icon: "crown" as IconName,
-                color: "#10b981",
-                title: "Events & insider",
-                body: "Corporate calendar, fund flows and insider trades.",
-              },
-            ].map((f, i) => (
-              <button
-                key={f.title}
-                type="button"
-                className="rp-hero-card"
-                style={{ ["--card-accent" as string]: f.color }}
-                onClick={() => searchRef.current?.focus()}
-              >
-                <span className="rp-hero-card-icon">
-                  <Icon name={f.icon} width={18} height={18} />
+          {/* ── Recently Researched UI Element ── */}
+          {recentResearched.length > 0 && (
+            <div className="rp-recent-section">
+              <div className="rp-recent-header">
+                <span className="rp-recent-title">
+                  <Icon name="refresh" width={14} height={14} /> Recently Researched
                 </span>
-                <span className="rp-hero-card-txt">
-                  <span className="rp-hero-card-title">{f.title}</span>
-                  <span className="rp-hero-card-body">{f.body}</span>
-                </span>
-              </button>
-            ))}
-          </div>
+                <button
+                  type="button"
+                  className="rp-recent-clear-btn"
+                  onClick={clearRecentResearched}
+                >
+                  Clear History
+                </button>
+              </div>
+
+              <div className="rp-recent-grid">
+                {recentResearched.map((item) => {
+                  const q = quotes[item.symbol];
+                  const isUp = q && q.change >= 0;
+                  const cur = q?.currency || (item.symbol.endsWith(".NS") || item.symbol.endsWith(".BO") ? "INR" : "USD");
+                  return (
+                    <button
+                      key={item.symbol}
+                      type="button"
+                      className="rp-recent-card"
+                      onClick={() => setResearchStock({ symbol: item.symbol, name: item.name })}
+                    >
+                      <div className="rp-recent-card-top">
+                        <span className="rp-recent-symbol">{item.symbol}</span>
+                        {q && (
+                          <span className={`rp-recent-badge ${isUp ? "up" : "down"}`}>
+                            {isUp ? "▲" : "▼"} {q.changePct.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                      <div className="rp-recent-name">{item.name || item.symbol}</div>
+                      <div className="rp-recent-footer">
+                        <span className="rp-recent-price">
+                          {q ? fmtPrice(q.price, cur) : "View Research"}
+                        </span>
+                        <span className="rp-recent-action">Research →</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -2522,19 +2623,35 @@ function AIResearchPage({
               <h2 className="rp-head-name">{researchStock.name || researchStock.symbol}</h2>
               <span className="rp-head-ticker">{researchStock.symbol}</span>
             </div>
-            {formattedPrice && (
-              <div className="rp-head-price">
-                <span className="rp-head-price-val">{formattedPrice}</span>
-                <span className={`rp-head-chg ${isUp ? "up" : "down"}`}>
-                  {isUp ? "▲" : "▼"} {formattedChange}
-                </span>
-              </div>
-            )}
+
             <button
               className="rp-chip-close"
               onClick={() => setResearchStock(null)}
               aria-label="Close research"
             >✕</button>
+
+            <div className="rp-head-controls">
+              {formattedPrice && (
+                <div className="rp-head-price">
+                  <span className="rp-head-price-val">{formattedPrice}</span>
+                  <span className={`rp-head-chg ${isUp ? "up" : "down"}`}>
+                    {isUp ? "▲" : "▼"} {formattedChange}
+                  </span>
+                </div>
+              )}
+              <div className="rp-model-dropdown-wrap">
+                <select
+                  className="rp-model-select"
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value as AIModel)}
+                  title="Select AI Model"
+                >
+                  <option value="gpt-5.6-luna">⚡ GPT-5.6 Luna</option>
+                  <option value="gemini-2.5-flash">✨ Gemini 2.5 Flash</option>
+                </select>
+                <span className="rp-model-arrow">▾</span>
+              </div>
+            </div>
           </div>
 
           {/* Tab rail */}
@@ -2567,24 +2684,37 @@ function AIResearchPage({
                 <div className="rp-research-content">
                   {/* Stance card */}
                   <div className={`rp-stance-card ${researchData.stance?.toLowerCase()}`}>
-                    <div className="rp-stance-ring">
-                      <svg width="88" height="88" viewBox="0 0 36 36">
-                        <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path className="score-svg-progress" strokeDasharray={`${researchData.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      </svg>
-                      <div className="score-svg-text">
-                        <span className="score-num">{researchData.score}</span>
-                        <span className="score-pct">%</span>
+                    <div className="rp-stance-top">
+                      <div className="rp-stance-ring">
+                        <svg width="96" height="96" viewBox="0 0 36 36">
+                          <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <path className="score-svg-progress" strokeDasharray={`${researchData.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <div className="score-svg-text">
+                          <span className="score-num">{researchData.score}</span>
+                          <span className="score-pct">%</span>
+                        </div>
+                      </div>
+                      <div className="rp-stance-meta">
+                        <span className="rp-stance-lbl">AI Conviction Score</span>
+                        <h2 className="rp-stance-val">{researchData.stance}</h2>
+                        <p className="rp-stance-desc">Based on fundamentals, momentum &amp; market context</p>
                       </div>
                     </div>
-                    <div className="rp-stance-meta">
-                      <span className="rp-stance-lbl">AI Conviction Score</span>
-                      <h2 className="rp-stance-val">{researchData.stance}</h2>
-                      <p className="rp-stance-desc">Based on fundamentals, momentum &amp; market context</p>
+                    <div className="rp-stance-foot">
+                      <span className="rp-stance-chip">
+                        <span className="rp-stance-chip-dot" />
+                        {researchData.stance === "Bullish" ? "Positive Stance" : researchData.stance === "Bearish" ? "Cautious Outlook" : "Neutral Context"}
+                      </span>
+                      {researchData.model && (
+                        <span className="rp-stance-model">
+                          <Icon name="sparkles" width={12} height={12} /> {researchData.model}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Summary */}
+                  {/* Executive Summary */}
                   <div className="rp-card">
                     <div className="rp-card-header">
                       <span className="rp-card-icon">📋</span>
@@ -2593,17 +2723,17 @@ function AIResearchPage({
                     <p className="rp-card-body">{researchData.summary}</p>
                   </div>
 
-                  {/* Bullets */}
+                  {/* Key Takeaways */}
                   <div className="rp-card">
                     <div className="rp-card-header">
                       <span className="rp-card-icon">💡</span>
-                      <span className="rp-card-title">Key Takeaways</span>
+                      <span className="rp-card-title">Key Takeaways &amp; Catalysts</span>
                     </div>
-                    <div className="rp-bullets">
+                    <div className="rp-takeaways-grid">
                       {researchData.bullets?.map((b: string, i: number) => (
-                        <div key={i} className="rp-bullet">
-                          <span className="rp-bullet-dot">▸</span>
-                          <span>{b}</span>
+                        <div key={i} className="rp-takeaway-card">
+                          <span className="rp-takeaway-num">{i + 1}</span>
+                          <span className="rp-takeaway-text">{b}</span>
                         </div>
                       ))}
                     </div>
@@ -2627,27 +2757,89 @@ function AIResearchPage({
                 <div className="rp-error"><span>✨</span><p>SWOT analysis not generated.</p></div>
               ) : (
                 <div className="rp-research-content">
-                  {/* Overall verdict card */}
-                  <div className="rp-stance-card neutral">
-                    <div className="rp-stance-ring">
-                      <svg width="88" height="88" viewBox="0 0 36 36">
-                        <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path className="score-svg-progress" strokeDasharray={`${swotData.overallScore ?? 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                      </svg>
-                      <div className="score-svg-text">
-                        <span className="score-num">{swotData.overallScore ?? "–"}</span>
-                        <span className="score-pct">%</span>
+                  {/* Overall verdict card with decluttered sub-nav */}
+                  <div className="rp-stance-card neutral" style={{ flexDirection: "column", alignItems: "stretch", gap: "16px" }}>
+                    <div className="rp-stance-top">
+                      <div className="rp-stance-ring">
+                        <svg width="92" height="92" viewBox="0 0 36 36">
+                          <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <path className="score-svg-progress" strokeDasharray={`${swotData.overallScore ?? 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <div className="score-svg-text">
+                          <span className="score-num">{swotData.overallScore ?? "–"}</span>
+                          <span className="score-pct">%</span>
+                        </div>
+                      </div>
+                      <div className="rp-stance-meta">
+                        <span className="rp-stance-lbl">Business Quality Rating</span>
+                        <h2 className="rp-stance-val">{swotData.overallVerdict || "SWOT Analysis"}</h2>
+                        <p className="rp-stance-desc">{swotData.overview}</p>
                       </div>
                     </div>
-                    <div className="rp-stance-meta">
-                      <span className="rp-stance-lbl">Business Quality Score</span>
-                      <h2 className="rp-stance-val">{swotData.overallVerdict || "SWOT Analysis"}</h2>
-                      <p className="rp-stance-desc">{swotData.overview}</p>
+
+                    {/* Sub Tab Navigation */}
+                    <div className="swot-subnav">
+                      <button
+                        type="button"
+                        className={`swot-subtab ${swotSubTab === "matrix" ? "active" : ""}`}
+                        onClick={() => setSwotSubTab("matrix")}
+                      >
+                        <span>📊 Strategic SWOT Matrix</span>
+                      </button>
+                      {Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
+                        <button
+                          type="button"
+                          className={`swot-subtab ${swotSubTab === "dimensions" ? "active" : ""}`}
+                          onClick={() => setSwotSubTab("dimensions")}
+                        >
+                          <span>🎯 Dimension Ratings</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Dimension radar + legend */}
-                  {Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
+                  {/* Matrix View */}
+                  {swotSubTab === "matrix" && (
+                    <div className="swot-matrix">
+                      <div className="swot-grid">
+                        {([
+                          { key: "strengths", label: "Strengths", short: "S", cls: "s" },
+                          { key: "weaknesses", label: "Weaknesses", short: "W", cls: "w" },
+                          { key: "opportunities", label: "Opportunities", short: "O", cls: "o" },
+                          { key: "threats", label: "Threats", short: "T", cls: "t" },
+                        ] as const).map(q => {
+                          const items = Array.isArray(swotData[q.key]) ? swotData[q.key] : [];
+                          return (
+                            <div key={q.key} className={`swot-quad swot-quad-${q.cls}`}>
+                              <div className="swot-quad-head">
+                                <span className="swot-quad-badge">{q.short}</span>
+                                <span className="swot-quad-title">{q.label}</span>
+                                <span className="swot-quad-count">{items.length}</span>
+                              </div>
+                              <div className="swot-quad-items">
+                                {items.length > 0 ? (
+                                  items.map((item: any, i: number) => (
+                                    <div key={i} className="swot-item">
+                                      <div className="swot-item-head">
+                                        <span className="swot-item-point">{item.point}</span>
+                                        {item.category && <span className="swot-item-cat">{item.category}</span>}
+                                      </div>
+                                      <p className="swot-item-detail">{item.detail}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="swot-item-detail" style={{ opacity: 0.6 }}>No items identified.</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dimensions View */}
+                  {swotSubTab === "dimensions" && Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
                     <div className="rp-card">
                       <div className="rp-card-header">
                         <span className="rp-card-icon">🎯</span>
@@ -2678,50 +2870,6 @@ function AIResearchPage({
                       </div>
                     </div>
                   )}
-
-                  {/* SWOT matrix with Internal/External × Helpful/Harmful axes */}
-                  <div className="swot-matrix">
-                    <span className="swot-axis swot-axis-helpful">Helpful</span>
-                    <span className="swot-axis swot-axis-harmful">Harmful</span>
-                    <span className="swot-axis swot-axis-internal">Internal</span>
-                    <span className="swot-axis swot-axis-external">External</span>
-                    <div className="swot-grid">
-                      {([
-                        { key: "strengths", label: "Strengths", short: "S", icon: "💪", cls: "s" },
-                        { key: "weaknesses", label: "Weaknesses", short: "W", icon: "⚠️", cls: "w" },
-                        { key: "opportunities", label: "Opportunities", short: "O", icon: "🚀", cls: "o" },
-                        { key: "threats", label: "Threats", short: "T", icon: "🛡️", cls: "t" },
-                      ] as const).map(q => {
-                        const items = Array.isArray(swotData[q.key]) ? swotData[q.key] : [];
-                        return (
-                          <div key={q.key} className={`swot-quad swot-quad-${q.cls}`}>
-                            <div className="swot-quad-head">
-                              <span className="swot-quad-badge">{q.short}</span>
-                              <span className="swot-quad-icon">{q.icon}</span>
-                              <span className="swot-quad-title">{q.label}</span>
-                              <span className="swot-quad-count">{items.length}</span>
-                            </div>
-                            <div className="swot-quad-items">
-                              {items.length > 0 ? (
-                                items.map((item: any, i: number) => (
-                                  <div key={i} className="swot-item">
-                                    <div className="swot-item-head">
-                                      <span className="swot-item-point">{item.point}</span>
-                                      {item.category && <span className="swot-item-cat">{item.category}</span>}
-                                    </div>
-                                    <p className="swot-item-detail">{item.detail}</p>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="swot-item-detail" style={{ opacity: 0.6 }}>No items identified.</p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <span className="swot-matrix-hub">SWOT</span>
-                    </div>
-                  </div>
 
                   {swotData.demo && (
                     <p className="swot-disclaimer">Demo mode — connect an OpenAI API key to enable full AI-generated analysis.</p>
@@ -4780,7 +4928,12 @@ export default function Dashboard({
   }
 
   function navClick(item: (typeof NAV)[number]) {
-    if (item.view) selectView(item.view);
+    if (item.view) {
+      if (item.view === "research") {
+        setResearchStock(null);
+      }
+      selectView(item.view);
+    }
     setSidebarOpen(false);
   }
 
@@ -4797,7 +4950,14 @@ export default function Dashboard({
       {/* ---------- Sidebar (desktop) ---------- */}
       <aside className="sidebar">
         <div className="side-brand-card">
-          <div className="side-brand">
+          <div
+            className="side-brand"
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              setResearchStock(null);
+              selectView("research");
+            }}
+          >
             <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "72px", width: "auto", marginLeft: "-14px" }} />
             <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "72px", width: "auto", marginLeft: "-14px" }} />
           </div>
@@ -4862,7 +5022,14 @@ export default function Dashboard({
       <div className="main">
         {/* ---------- Ather Style Header Bar ---------- */}
         <header className="ather-header">
-          <div className="ather-brand">
+          <div
+            className="ather-brand"
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              setResearchStock(null);
+              selectView("research");
+            }}
+          >
             <img src="/assets/lumina-lockup-horizontal-light.svg" className="logo-light" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
             <img src="/assets/lumina-lockup-horizontal-dark.svg" className="logo-dark" alt="Lumina Logo" style={{ height: "42px", width: "auto" }} />
           </div>

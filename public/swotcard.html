@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>swot card</title>
+<style>
+:root{--bg:#f8fafc;--surface-solid:#fff;--border:rgba(15,23,42,.14);--text:#0f172a;--muted:#475569;--accent:#6366f1;--accent-strong:#4f46e5;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#eef1f6;font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding:20px}
+.rp-panel{max-width:420px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:0 0 18px 18px;padding:24px}
+.rp-research-content{display:flex;flex-direction:column;gap:16px}
+/* EXACT current globals.css rules */
+.rp-stance-card{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:24px;border-radius:18px;border:1.5px solid var(--border);background:var(--surface-solid);position:relative;box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.rp-stance-card.neutral{border-color:rgba(99,102,241,.35)}
+.rp-stance-ring{position:relative;display:grid;place-items:center;flex:none;width:96px;height:96px}
+.score-svg-bg{fill:none;stroke:var(--border);stroke-width:3.2}
+.score-svg-progress{fill:none;stroke:var(--accent);stroke-width:3.2;stroke-linecap:round;transition:stroke-dasharray .6s ease}
+.rp-stance-card.neutral .score-svg-progress{stroke:#6366f1;filter:drop-shadow(0 0 4px rgba(99,102,241,.5))}
+.score-svg-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.score-num{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+.score-pct{font-size:13px;font-weight:700;color:var(--muted)}
+.rp-stance-top{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.rp-stance-meta{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;width:100%}
+.rp-stance-lbl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.rp-stance-val{font-size:26px;font-weight:850;letter-spacing:-.02em;line-height:1.2;margin:2px 0 0;color:var(--text)}
+.rp-stance-card.neutral .rp-stance-val{color:#4f46e5}
+.rp-stance-desc{font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:4px}
+.swot-subnav{display:flex;flex-direction:column;gap:8px;width:100%}
+.swot-subtab{font-family:inherit;font-size:13px;font-weight:700;padding:12px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--text)}
+.swot-subtab.active{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.06);color:#059669}
+</style></head><body>
+<div class="rp-panel"><div class="rp-research-content">
+<div class="rp-stance-card neutral" style="flex-direction:column;align-items:stretch;gap:16px">
+  <div class="rp-stance-top">
+    <div class="rp-stance-ring">
+      <svg width="92" height="92" viewBox="0 0 36 36"><path class="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/><path class="score-svg-progress" stroke-dasharray="78, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/></svg>
+      <div class="score-svg-text"><span class="score-num">78</span><span class="score-pct">%</span></div>
+    </div>
+    <div class="rp-stance-meta">
+      <span class="rp-stance-lbl">Business Quality Rating</span>
+      <h2 class="rp-stance-val">High-Growth Innovator</h2>
+      <p class="rp-stance-desc">Ather Energy Limited is a leading Indian electric scooter manufacturer known for its premium, tech-forward products and proprietary charging infrastructure.</p>
+    </div>
+  </div>
+  <div class="swot-subnav">
+    <button class="swot-subtab active"><span>📊 Strategic SWOT Matrix</span></button>
+    <button class="swot-subtab"><span>🎯 Dimension Ratings</span></button>
+  </div>
+</div>
+</div></div>
+</body></html>
