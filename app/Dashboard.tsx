@@ -124,6 +124,15 @@ function fmtPrice(v: number, currency: string) {
     maximumFractionDigits: 2,
   }).format(v);
 }
+function getStockCurrency(st?: { symbol?: string; market?: string } | null, q?: { currency?: string } | null): string {
+  if (q?.currency) return q.currency;
+  if (!st) return "USD";
+  const sym = (st.symbol || "").toUpperCase();
+  if (st.market === "IN" || sym.endsWith(".NS") || sym.endsWith(".BO") || sym.endsWith(".BSE") || sym.endsWith(".NSE")) {
+    return "INR";
+  }
+  return "USD";
+}
 function fmtVolume(vol: number | null | undefined): string {
   if (vol == null) return "—";
   return new Intl.NumberFormat("en-US", {
@@ -514,6 +523,7 @@ function NewsDrawer({
   const [volLoading, setVolLoading] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
+  const [pinnedBarIndex, setPinnedBarIndex] = useState<number | null>(null);
   const [volumeRange, setVolumeRange] = useState<"2w" | "1m" | "3m" | "1y" | "3y" | "5y" | "all">("2w");
   const [expandedChart, setExpandedChart] = useState<"price" | "volume" | null>(null);
   // Drag-to-select a time block on the expanded chart
@@ -521,21 +531,33 @@ function NewsDrawer({
   const draggingRef = useRef(false);
   const selAnchorRef = useRef<number | null>(null);
 
-  // Reset expanded chart on stock change
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 260);
+  }, [isClosing, onClose]);
+
+  // Reset expanded chart & pinned inspection on stock or range change
   useEffect(() => {
     setExpandedChart(null);
-  }, [stock]);
+    setPinnedBarIndex(null);
+  }, [stock, volumeRange, activeTab]);
 
-  // Escape closes the expanded chart first (if open), otherwise the drawer
+  // Escape closes the expanded chart first (if open), otherwise the drawer smoothly
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       if (expandedChart) setExpandedChart(null);
-      else onClose();
+      else handleClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, expandedChart]);
+  }, [handleClose, expandedChart]);
 
   // Lock background scroll while the full-screen chart popup is open
   useEffect(() => {
@@ -751,11 +773,9 @@ function NewsDrawer({
   if (!stock) return null;
 
   const quote = quotes?.[stock.symbol];
+  const currency = getStockCurrency(stock, quote);
   const formattedPrice = quote
-    ? new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: quote.currency,
-      }).format(quote.price)
+    ? fmtPrice(quote.price, currency)
     : "";
   const isUp = quote && quote.change >= 0;
   const formattedChange = quote
@@ -764,8 +784,8 @@ function NewsDrawer({
 
   return (
     <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <div className="news-drawer" role="dialog" aria-modal="true">
+      <div className={`drawer-backdrop ${isClosing ? "closing" : ""}`} onClick={handleClose} />
+      <div className={`news-drawer ${isClosing ? "closing" : ""}`} role="dialog" aria-modal="true">
         <div className="drawer-header" style={{ alignItems: "flex-start", gap: "16px" }}>
           <div className="drawer-title-wrap" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px", flex: 1, minWidth: 0 }}>
             <h2 className="drawer-title" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{stock.name || stock.symbol}</h2>
@@ -781,7 +801,7 @@ function NewsDrawer({
               )}
             </div>
           </div>
-          <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer" style={{ flexShrink: 0, marginTop: "2px" }}>
+          <button className="drawer-close-btn" onClick={handleClose} aria-label="Close drawer" style={{ flexShrink: 0, marginTop: "2px" }}>
             ✕
           </button>
         </div>
@@ -852,7 +872,21 @@ function NewsDrawer({
                   {/* SVG Price Chart */}
                   <div className="volume-chart-section">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
-                      <h3 className="volume-chart-title" style={{ margin: 0 }}>Historical Price Chart</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <button
+                          className="chart-expand-btn"
+                          onClick={() => setExpandedChart("price")}
+                          title="Expand price chart"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 3 21 3 21 9" />
+                            <polyline points="9 21 3 21 3 15" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                            <line x1="3" y1="21" x2="10" y2="14" />
+                          </svg>
+                          <span>Expand</span>
+                        </button>
+                      </div>
                       <div className="volume-range-selectors" style={{ display: "flex", flexWrap: "wrap", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
                         {["2w", "1m", "3m", "1y", "3y", "5y", "all"].map((r) => (
                           <button
@@ -877,12 +911,15 @@ function NewsDrawer({
                         ))}
                       </div>
                     </div>
-                    <div
-                      className="volume-chart-wrapper"
-                      onClick={() => setExpandedChart("price")}
-                      style={{ cursor: "zoom-in" }}
-                      title="Click to expand price chart"
-                    >
+
+                    {pinnedBarIndex !== null && volumeHistory[pinnedBarIndex] && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.2)", borderRadius: "8px", padding: "6px 14px", marginBottom: "12px", fontSize: "12px", color: "var(--accent)" }}>
+                        <span>📌 <strong>Inspect Pin:</strong> {volumeHistory[pinnedBarIndex].date} — <strong>{fmtPrice(volumeHistory[pinnedBarIndex].close, currency)}</strong> (Vol: {fmtVolume(volumeHistory[pinnedBarIndex].volume)})</span>
+                        <button onClick={() => setPinnedBarIndex(null)} style={{ border: "none", background: "transparent", color: "var(--accent)", cursor: "pointer", fontWeight: 700, fontSize: "12px" }}>✕ Unpin</button>
+                      </div>
+                    )}
+
+                    <div className="volume-chart-wrapper">
                       <svg viewBox="0 0 600 300" className="volume-svg-chart" style={{ width: "100%", height: "100%" }}>
                         <defs>
                           <linearGradient id="priceUpGrad" x1="0" y1="0" x2="0" y2="1">
@@ -904,9 +941,9 @@ function NewsDrawer({
                           const paddedMax = maxPrice + (priceRange * 0.08);
                           const paddedRange = paddedMax - paddedMin || 1;
 
-                          const chartHeight = 230;
-                          const chartWidth = 540;
-                          const startX = 50;
+                          const chartHeight = 220;
+                          const chartWidth = 500;
+                          const startX = 85;
                           
                           const points = volumeHistory.map((d, index) => {
                             const x = startX + index * (chartWidth / (volumeHistory.length - 1 || 1));
@@ -927,6 +964,8 @@ function NewsDrawer({
                           const gridLines = niceTicks(paddedMin, paddedMax, 6)
                             .filter((v) => v >= paddedMin && v <= paddedMax);
 
+                          const activeBarIndex = pinnedBarIndex !== null ? pinnedBarIndex : hoveredBarIndex;
+
                           return (
                             <>
                               {/* Grid lines at clean, rounded price levels */}
@@ -935,9 +974,9 @@ function NewsDrawer({
                                 return (
                                   <g key={idx}>
                                     <line
-                                      x1="50"
+                                      x1="85"
                                       y1={yPos}
-                                      x2="590"
+                                      x2="585"
                                       y2={yPos}
                                       stroke="var(--border)"
                                       strokeWidth="1"
@@ -945,14 +984,14 @@ function NewsDrawer({
                                       opacity="0.5"
                                     />
                                     <text
-                                      x="42"
+                                      x="76"
                                       y={yPos + 4}
                                       textAnchor="end"
                                       fontSize="12.5"
                                       fill="var(--muted)"
                                       fontWeight="600"
                                     >
-                                      {fmtPrice(tickVal, quote?.currency || "USD")}
+                                      {fmtPrice(tickVal, currency)}
                                     </text>
                                   </g>
                                 );
@@ -971,8 +1010,8 @@ function NewsDrawer({
                                 strokeLinecap="round"
                               />
 
-                              {/* Latest-price marker (hidden while hovering a point) */}
-                              {hoveredBarIndex === null && points.length > 0 && (() => {
+                              {/* Latest-price marker (hidden while active inspection) */}
+                              {activeBarIndex === null && points.length > 0 && (() => {
                                 const last = points[points.length - 1];
                                 return (
                                   <g>
@@ -992,7 +1031,7 @@ function NewsDrawer({
                                 );
                               })()}
 
-                              {/* Interactive Hover Areas */}
+                              {/* Interactive Hover / Click Areas */}
                               {points.map((p, index) => {
                                 const rectWidth = chartWidth / (volumeHistory.length - 1 || 1);
                                 return (
@@ -1006,13 +1045,14 @@ function NewsDrawer({
                                     style={{ cursor: "pointer" }}
                                     onMouseEnter={() => setHoveredBarIndex(index)}
                                     onMouseLeave={() => setHoveredBarIndex(null)}
+                                    onClick={() => setPinnedBarIndex(prev => prev === index ? null : index)}
                                   />
                                 );
                               })}
 
-                              {/* Hover indicators */}
-                              {hoveredBarIndex !== null && (() => {
-                                const p = points[hoveredBarIndex];
+                              {/* Active inspection crosshair & marker */}
+                              {activeBarIndex !== null && points[activeBarIndex] && (() => {
+                                const p = points[activeBarIndex];
                                 return (
                                   <>
                                     <line
@@ -1020,18 +1060,18 @@ function NewsDrawer({
                                       y1="30"
                                       x2={p.x}
                                       y2="250"
-                                      stroke="var(--border)"
-                                      strokeWidth="1.5"
-                                      strokeDasharray="3 3"
+                                      stroke={pinnedBarIndex !== null ? "var(--accent)" : "var(--border)"}
+                                      strokeWidth={pinnedBarIndex !== null ? "2" : "1.5"}
+                                      strokeDasharray={pinnedBarIndex !== null ? undefined : "3 3"}
                                     />
                                     <circle
                                       cx={p.x}
                                       cy={p.y}
-                                      r="5"
+                                      r="6"
                                       fill={trendColor}
                                       stroke="var(--surface-solid)"
                                       strokeWidth="2.5"
-                                      style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.15))" }}
+                                      style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.2))" }}
                                     />
                                   </>
                                 );
@@ -1065,10 +1105,10 @@ function NewsDrawer({
                               })}
 
                               {/* Custom interactive Tooltip */}
-                              {hoveredBarIndex !== null && (() => {
-                                const p = points[hoveredBarIndex];
-                                const tooltipWidth = 160;
-                                const tooltipX = p.x + tooltipWidth > 590 ? p.x - tooltipWidth - 10 : p.x + 10;
+                              {activeBarIndex !== null && points[activeBarIndex] && (() => {
+                                const p = points[activeBarIndex];
+                                const tooltipWidth = 165;
+                                const tooltipX = p.x + tooltipWidth > 585 ? p.x - tooltipWidth - 10 : p.x + 10;
                                 return (
                                   <g pointerEvents="none">
                                     <rect
@@ -1076,23 +1116,23 @@ function NewsDrawer({
                                       y="40"
                                       width={tooltipWidth}
                                       height="88"
-                                      rx="6"
+                                      rx="8"
                                       fill="var(--surface-solid)"
-                                      stroke="var(--border)"
+                                      stroke={pinnedBarIndex !== null ? "var(--accent)" : "var(--border)"}
                                       strokeWidth="1.5"
-                                      style={{ filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))" }}
+                                      style={{ filter: "drop-shadow(0 6px 16px rgba(0, 0, 0, 0.12))" }}
                                     />
                                     <text x={tooltipX + 14} y="62" fontSize="13" fontWeight="bold" fill="var(--text)">
-                                      {p.date}
+                                      {p.date} {pinnedBarIndex !== null && "📌"}
                                     </text>
                                     <text x={tooltipX + 14} y="85" fontSize="12" fill="var(--muted)">
                                       Close: <tspan fontWeight="bold" fill={trendColor}>
-                                        {fmtPrice(p.close, quote?.currency || "USD")}
+                                        {fmtPrice(p.close, currency)}
                                       </tspan>
                                     </text>
                                     <text x={tooltipX + 14} y="108" fontSize="12" fill="var(--muted)">
                                       Volume: <tspan fontWeight="bold" fill="var(--text)">
-                                        {fmtVolume(volumeHistory[hoveredBarIndex].volume)}
+                                        {fmtVolume(volumeHistory[activeBarIndex]?.volume || 0)}
                                       </tspan>
                                     </text>
                                   </g>
@@ -1178,7 +1218,7 @@ function NewsDrawer({
 
           {activeTab === "events" && (() => {
             const events = getUpcomingEvents(stock.symbol);
-            const mfActivity = getMutualFundActivity(stock.symbol, quote?.currency || "USD");
+            const mfActivity = getMutualFundActivity(stock.symbol, currency);
             return (
               <div className="events-section" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div>
@@ -1483,15 +1523,15 @@ function NewsDrawer({
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px" }}>
                         <span style={{ color: "var(--muted)" }}>SMA (20)</span>
-                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma20}</strong>
+                        <strong style={{ color: "var(--text)" }}>{fmtPrice(techData.movingAverages?.sma20, currency)}</strong>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", borderTop: "1px dashed var(--border)", paddingTop: "8px" }}>
                         <span style={{ color: "var(--muted)" }}>SMA (50)</span>
-                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma50}</strong>
+                        <strong style={{ color: "var(--text)" }}>{fmtPrice(techData.movingAverages?.sma50, currency)}</strong>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", borderTop: "1px dashed var(--border)", paddingTop: "8px" }}>
                         <span style={{ color: "var(--muted)" }}>SMA (200)</span>
-                        <strong style={{ color: "var(--text)" }}>{quote?.currency === "INR" ? "₹" : "$"}{techData.movingAverages?.sma200}</strong>
+                        <strong style={{ color: "var(--text)" }}>{fmtPrice(techData.movingAverages?.sma200, currency)}</strong>
                       </div>
                     </div>
                   </div>
@@ -1505,14 +1545,14 @@ function NewsDrawer({
                       <div style={{ flex: 1, textAlign: "left" }}>
                         <span style={{ fontSize: "10px", color: "var(--muted)", display: "block" }}>Support Floor</span>
                         <strong style={{ fontSize: "15px", color: "var(--undervalued)" }}>
-                          {quote?.currency === "INR" ? "₹" : "$"}{techData.support}
+                          {fmtPrice(techData.support, currency)}
                         </strong>
                       </div>
                       <div style={{ width: "2px", height: "30px", background: "var(--border)" }} />
                       <div style={{ flex: 1, textAlign: "right" }}>
                         <span style={{ fontSize: "10px", color: "var(--muted)", display: "block" }}>Resistance Ceiling</span>
                         <strong style={{ fontSize: "15px", color: "var(--premium)" }}>
-                          {quote?.currency === "INR" ? "₹" : "$"}{techData.resistance}
+                          {fmtPrice(techData.resistance, currency)}
                         </strong>
                       </div>
                     </div>
@@ -1584,7 +1624,22 @@ function NewsDrawer({
                   {/* SVG Bar Chart */}
                   <div className="volume-chart-section">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
-                      <h3 className="volume-chart-title" style={{ margin: 0 }}>Daily Traded Volume</h3>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <h3 className="volume-chart-title" style={{ margin: 0 }}>Daily Traded Volume</h3>
+                        <button
+                          className="chart-expand-btn"
+                          onClick={() => setExpandedChart("volume")}
+                          title="Expand volume chart"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 3 21 3 21 9" />
+                            <polyline points="9 21 3 21 3 15" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                            <line x1="3" y1="21" x2="10" y2="14" />
+                          </svg>
+                          <span>Expand</span>
+                        </button>
+                      </div>
                       <div className="volume-range-selectors" style={{ display: "flex", flexWrap: "wrap", gap: "6px", background: "var(--bg)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border)" }}>
                         {["2w", "1m", "3m", "1y", "3y", "5y", "all"].map((r) => (
                           <button
@@ -1609,12 +1664,15 @@ function NewsDrawer({
                         ))}
                       </div>
                     </div>
-                    <div
-                      className="volume-chart-wrapper"
-                      onClick={() => setExpandedChart("volume")}
-                      style={{ cursor: "zoom-in" }}
-                      title="Click to expand volume chart"
-                    >
+
+                    {pinnedBarIndex !== null && volumeHistory[pinnedBarIndex] && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.2)", borderRadius: "8px", padding: "6px 14px", marginBottom: "12px", fontSize: "12px", color: "var(--accent)" }}>
+                        <span>📌 <strong>Inspect Pin:</strong> {volumeHistory[pinnedBarIndex].date} — Volume: <strong>{fmtVolume(volumeHistory[pinnedBarIndex].volume)}</strong> (Close: {fmtPrice(volumeHistory[pinnedBarIndex].close, currency)})</span>
+                        <button onClick={() => setPinnedBarIndex(null)} style={{ border: "none", background: "transparent", color: "var(--accent)", cursor: "pointer", fontWeight: 700, fontSize: "12px" }}>✕ Unpin</button>
+                      </div>
+                    )}
+
+                    <div className="volume-chart-wrapper">
                       <svg viewBox="0 0 600 300" className="volume-svg-chart" style={{ width: "100%", height: "100%" }}>
                         <defs>
                           <linearGradient id="volUpGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1630,10 +1688,13 @@ function NewsDrawer({
                         {(() => {
                           const maxVol = volumeStats?.peakVolume || Math.max(...volumeHistory.map(d => d.volume)) || 1;
                           const gridLines = [0, 0.25, 0.5, 0.75, 1];
-                          const chartHeight = 230;
-                          const chartWidth = 520;
-                          const barWidth = volumeHistory.length > 50 ? 5 : (volumeHistory.length > 25 ? 9 : (volumeHistory.length > 12 ? 14 : 32));
+                          const chartHeight = 220;
+                          const chartWidth = 500;
+                          const startX = 85;
+                          const barWidth = volumeHistory.length > 50 ? 5 : (volumeHistory.length > 25 ? 9 : (volumeHistory.length > 12 ? 14 : 30));
                           const spacing = (chartWidth - (volumeHistory.length * barWidth)) / (volumeHistory.length - 1 || 1);
+
+                          const activeBarIndex = pinnedBarIndex !== null ? pinnedBarIndex : hoveredBarIndex;
 
                           return (
                             <>
@@ -1643,9 +1704,9 @@ function NewsDrawer({
                                 return (
                                   <g key={idx}>
                                     <line
-                                      x1="60"
+                                      x1="85"
                                       y1={yPos}
-                                      x2="580"
+                                      x2="585"
                                       y2={yPos}
                                       stroke="var(--border)"
                                       strokeWidth="1"
@@ -1653,7 +1714,7 @@ function NewsDrawer({
                                       opacity="0.6"
                                     />
                                     <text
-                                      x="50"
+                                      x="76"
                                       y={yPos + 4}
                                       textAnchor="end"
                                       fontSize="12.5"
@@ -1668,14 +1729,16 @@ function NewsDrawer({
 
                               {volumeHistory.map((d, index) => {
                                 const barHeight = (d.volume / maxVol) * chartHeight;
-                                const xPos = 60 + index * (barWidth + spacing) + spacing / 2;
+                                const xPos = startX + index * (barWidth + spacing) + spacing / 2;
                                 const yPos = 250 - barHeight;
+                                const isSelected = activeBarIndex === index;
 
                                 return (
                                   <g
                                     key={index}
                                     onMouseEnter={() => setHoveredBarIndex(index)}
                                     onMouseLeave={() => setHoveredBarIndex(null)}
+                                    onClick={() => setPinnedBarIndex(prev => prev === index ? null : index)}
                                     style={{ cursor: "pointer" }}
                                   >
                                     <rect
@@ -1693,7 +1756,11 @@ function NewsDrawer({
                                       rx="3"
                                       fill={d.up ? "url(#volUpGrad)" : "url(#volDownGrad)"}
                                       className="volume-bar"
-                                      style={{ transition: "all 0.2s ease" }}
+                                      style={{
+                                        transition: "all 0.2s ease",
+                                        filter: isSelected ? "brightness(1.25) drop-shadow(0 0 6px rgba(99, 102, 241, 0.4))" : undefined,
+                                        opacity: activeBarIndex !== null && !isSelected ? 0.45 : 1,
+                                      }}
                                     />
                                     {(() => {
                                       let showDate = true;
@@ -1723,11 +1790,11 @@ function NewsDrawer({
                                 );
                               })}
 
-                              {hoveredBarIndex !== null && (() => {
-                                const d = volumeHistory[hoveredBarIndex];
-                                const xPos = 60 + hoveredBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
-                                const tooltipWidth = 160;
-                                const tooltipX = xPos + tooltipWidth > 580 ? xPos - tooltipWidth - 10 : xPos + 10;
+                              {activeBarIndex !== null && volumeHistory[activeBarIndex] && (() => {
+                                const d = volumeHistory[activeBarIndex];
+                                const xPos = startX + activeBarIndex * (barWidth + spacing) + spacing / 2 + barWidth / 2;
+                                const tooltipWidth = 165;
+                                const tooltipX = xPos + tooltipWidth > 585 ? xPos - tooltipWidth - 10 : xPos + 10;
                                 return (
                                   <g pointerEvents="none">
                                     <rect
@@ -1735,21 +1802,23 @@ function NewsDrawer({
                                       y="40"
                                       width={tooltipWidth}
                                       height="88"
-                                      rx="6"
+                                      rx="8"
                                       fill="var(--surface-solid)"
-                                      stroke="var(--border)"
+                                      stroke={pinnedBarIndex !== null ? "var(--accent)" : "var(--border)"}
                                       strokeWidth="1.5"
-                                      style={{ filter: "drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08))" }}
+                                      style={{ filter: "drop-shadow(0 6px 16px rgba(0, 0, 0, 0.12))" }}
                                     />
                                     <text x={tooltipX + 14} y="62" fontSize="13" fontWeight="bold" fill="var(--text)">
-                                      {d.date}
+                                      {d.date} {pinnedBarIndex !== null && "📌"}
                                     </text>
                                     <text x={tooltipX + 14} y="85" fontSize="12" fill="var(--muted)">
-                                      Volume: <tspan fontWeight="bold" fill="var(--text)">{fmtVolume(d.volume)}</tspan>
+                                      Volume: <tspan fontWeight="bold" fill="var(--text)">
+                                        {fmtVolume(d.volume)}
+                                      </tspan>
                                     </text>
                                     <text x={tooltipX + 14} y="108" fontSize="12" fill="var(--muted)">
-                                      Close: <tspan fontWeight="bold" fill={d.up ? "var(--green)" : "var(--red)"}>
-                                        {fmtPrice(d.close, quote?.currency || "USD")}
+                                      Price: <tspan fontWeight="bold" fill={d.up ? "#10b981" : "#ef4444"}>
+                                        {fmtPrice(d.close, currency)}
                                       </tspan>
                                     </text>
                                   </g>
@@ -1799,7 +1868,7 @@ function NewsDrawer({
 
       {/* ── Groww-style Chart Popup ── */}
       {expandedChart && (() => {
-        const cur = quote?.currency || "USD";
+        const cur = getStockCurrency(stock, quote);
         const isPrice = expandedChart === "price";
         const n = volumeHistory.length;
         const prices = volumeHistory.map(d => d.close);
@@ -2167,6 +2236,73 @@ function NewsDrawer({
 }
 
 /* ─────────────────────────────────────────────
+   SWOT radar — spider chart of the dimension ratings.
+   Renders concentric grid rings, axis spokes, a filled data
+   polygon and vertex dots for an at-a-glance "shape" of quality.
+   ───────────────────────────────────────────── */
+function SwotRadar({ dimensions }: { dimensions: { name: string; rating: number }[] }) {
+  const size = 260;
+  const c = size / 2;
+  const R = 92;
+  const n = dimensions.length;
+  if (n < 3) return null;
+
+  const shortLabel = (name: string) => {
+    const map: Record<string, string> = {
+      "Management Quality": "Management",
+      "Product & Service Quality": "Product",
+      "Financial Health": "Financials",
+      "Market Position & Moat": "Market",
+    };
+    return map[name] || name.split(/\s|&/)[0];
+  };
+
+  // angle for axis i (start at top, clockwise)
+  const angle = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  const pt = (i: number, radius: number) => ({
+    x: c + radius * Math.cos(angle(i)),
+    y: c + radius * Math.sin(angle(i)),
+  });
+
+  const rings = [0.25, 0.5, 0.75, 1];
+  const dataPoints = dimensions.map((d, i) => pt(i, (Math.max(0, Math.min(100, Number(d.rating) || 0)) / 100) * R));
+  const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + " Z";
+
+  const pad = 34; // horizontal breathing room so edge labels never clip
+
+  return (
+    <svg className="swot-radar" viewBox={`${-pad} 0 ${size + pad * 2} ${size}`} width="100%" role="img" aria-label="Dimension radar chart">
+      {/* grid rings */}
+      {rings.map((r, ri) => (
+        <polygon
+          key={ri}
+          className="swot-radar-ring"
+          points={dimensions.map((_, i) => { const p = pt(i, R * r); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; }).join(" ")}
+        />
+      ))}
+      {/* spokes */}
+      {dimensions.map((_, i) => { const p = pt(i, R); return <line key={i} className="swot-radar-spoke" x1={c} y1={c} x2={p.x} y2={p.y} />; })}
+      {/* data polygon */}
+      <path className="swot-radar-area" d={dataPath} />
+      {/* vertex dots */}
+      {dataPoints.map((p, i) => <circle key={i} className="swot-radar-dot" cx={p.x} cy={p.y} r={3.5} />)}
+      {/* axis labels + values */}
+      {dimensions.map((d, i) => {
+        const lp = pt(i, R + 22);
+        const cos = Math.cos(angle(i));
+        const anchor = cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle";
+        return (
+          <g key={i}>
+            <text className="swot-radar-label" x={lp.x} y={lp.y} textAnchor={anchor} dominantBaseline="middle">{shortLabel(d.name)}</text>
+            <text className="swot-radar-value" x={lp.x} y={lp.y + 12} textAnchor={anchor} dominantBaseline="middle">{Math.round(Number(d.rating) || 0)}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────
    AI Research Page — full-page research experience
    ───────────────────────────────────────────── */
 /* Compact animated prism for the research hero: a dashed beam marches into
@@ -2184,7 +2320,7 @@ function AIResearchPage({
   researchStock: { symbol: string; name: string } | null;
   setResearchStock: (s: { symbol: string; name: string } | null) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals">("research");
+  const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals" | "swot">("research");
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ─── data states ───
@@ -2206,6 +2342,10 @@ function AIResearchPage({
   const [insiderNote, setInsiderNote] = useState<string>("");
   const [insiderVerified, setInsiderVerified] = useState(false);
 
+  const [swotData, setSwotData] = useState<any | null>(null);
+  const [swotLoading, setSwotLoading] = useState(false);
+  const [swotError, setSwotError] = useState<string | null>(null);
+
   // Reset on stock change
   useEffect(() => {
     if (!researchStock) return;
@@ -2216,6 +2356,8 @@ function AIResearchPage({
     setResearchError(null);
     setTechData(null);
     setTechError(null);
+    setSwotData(null);
+    setSwotError(null);
     setInsiderTrades([]);
     setInsiderNote("");
     setInsiderVerified(false);
@@ -2257,6 +2399,19 @@ function AIResearchPage({
     return () => ctrl.abort();
   }, [researchStock, activeTab]);
 
+  // Fetch SWOT analysis
+  useEffect(() => {
+    if (!researchStock || activeTab !== "swot") return;
+    setSwotLoading(true);
+    const ctrl = new AbortController();
+    fetch(`/api/swot?symbol=${encodeURIComponent(researchStock.symbol)}&name=${encodeURIComponent(researchStock.name)}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => { if (d.error) throw new Error(d.error); setSwotData(d); })
+      .catch(e => { if (e.name !== "AbortError") setSwotError(e.message || "Failed to load SWOT analysis"); })
+      .finally(() => setSwotLoading(false));
+    return () => ctrl.abort();
+  }, [researchStock, activeTab]);
+
   // Fetch events/insider
   useEffect(() => {
     if (!researchStock || activeTab !== "events") return;
@@ -2278,6 +2433,7 @@ function AIResearchPage({
 
   const TABS: { id: typeof activeTab; label: string; icon: IconName }[] = [
     { id: "research", label: "AI Insight", icon: "sparkles" },
+    { id: "swot", label: "SWOT", icon: "search" },
     { id: "news", label: "News", icon: "newspaper" },
     { id: "technicals", label: "Technicals", icon: "trending" },
     { id: "events", label: "Events & Insider", icon: "crown" },
@@ -2457,6 +2613,125 @@ function AIResearchPage({
             </div>
           )}
 
+          {/* ── SWOT Tab ── */}
+          {activeTab === "swot" && (
+            <div className="rp-panel">
+              {swotLoading ? (
+                <div className="rp-loading">
+                  <PrismWaitIcon size={48} />
+                  <p>✨ AI is analyzing management, products, financials &amp; market position…</p>
+                </div>
+              ) : swotError ? (
+                <div className="rp-error"><span>⚠️</span><p>{swotError}</p></div>
+              ) : !swotData ? (
+                <div className="rp-error"><span>✨</span><p>SWOT analysis not generated.</p></div>
+              ) : (
+                <div className="rp-research-content">
+                  {/* Overall verdict card */}
+                  <div className="rp-stance-card neutral">
+                    <div className="rp-stance-ring">
+                      <svg width="88" height="88" viewBox="0 0 36 36">
+                        <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path className="score-svg-progress" strokeDasharray={`${swotData.overallScore ?? 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      </svg>
+                      <div className="score-svg-text">
+                        <span className="score-num">{swotData.overallScore ?? "–"}</span>
+                        <span className="score-pct">%</span>
+                      </div>
+                    </div>
+                    <div className="rp-stance-meta">
+                      <span className="rp-stance-lbl">Business Quality Score</span>
+                      <h2 className="rp-stance-val">{swotData.overallVerdict || "SWOT Analysis"}</h2>
+                      <p className="rp-stance-desc">{swotData.overview}</p>
+                    </div>
+                  </div>
+
+                  {/* Dimension radar + legend */}
+                  {Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
+                    <div className="rp-card">
+                      <div className="rp-card-header">
+                        <span className="rp-card-icon">🎯</span>
+                        <span className="rp-card-title">Dimension Assessment</span>
+                        <span className="rp-card-sub">Management · Product · Financials · Market</span>
+                      </div>
+                      <div className="swot-radar-wrap">
+                        <div className="swot-radar-box">
+                          <SwotRadar dimensions={swotData.dimensions} />
+                        </div>
+                        <div className="swot-legend">
+                          {swotData.dimensions.map((d: any, i: number) => {
+                            const r = Number(d.rating) || 0;
+                            const tone = r >= 67 ? "good" : r >= 40 ? "mid" : "weak";
+                            return (
+                              <div key={i} className="swot-legend-row">
+                                <div className="swot-legend-top">
+                                  <span className={`swot-legend-dot ${tone}`} />
+                                  <span className="swot-legend-name">{d.name}</span>
+                                  <span className={`swot-legend-rating ${tone}`}>{r}</span>
+                                </div>
+                                <span className="swot-legend-verdict">{d.verdict}</span>
+                                <p className="swot-legend-comment">{d.commentary}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SWOT matrix with Internal/External × Helpful/Harmful axes */}
+                  <div className="swot-matrix">
+                    <span className="swot-axis swot-axis-helpful">Helpful</span>
+                    <span className="swot-axis swot-axis-harmful">Harmful</span>
+                    <span className="swot-axis swot-axis-internal">Internal</span>
+                    <span className="swot-axis swot-axis-external">External</span>
+                    <div className="swot-grid">
+                      {([
+                        { key: "strengths", label: "Strengths", short: "S", icon: "💪", cls: "s" },
+                        { key: "weaknesses", label: "Weaknesses", short: "W", icon: "⚠️", cls: "w" },
+                        { key: "opportunities", label: "Opportunities", short: "O", icon: "🚀", cls: "o" },
+                        { key: "threats", label: "Threats", short: "T", icon: "🛡️", cls: "t" },
+                      ] as const).map(q => {
+                        const items = Array.isArray(swotData[q.key]) ? swotData[q.key] : [];
+                        return (
+                          <div key={q.key} className={`swot-quad swot-quad-${q.cls}`}>
+                            <div className="swot-quad-head">
+                              <span className="swot-quad-badge">{q.short}</span>
+                              <span className="swot-quad-icon">{q.icon}</span>
+                              <span className="swot-quad-title">{q.label}</span>
+                              <span className="swot-quad-count">{items.length}</span>
+                            </div>
+                            <div className="swot-quad-items">
+                              {items.length > 0 ? (
+                                items.map((item: any, i: number) => (
+                                  <div key={i} className="swot-item">
+                                    <div className="swot-item-head">
+                                      <span className="swot-item-point">{item.point}</span>
+                                      {item.category && <span className="swot-item-cat">{item.category}</span>}
+                                    </div>
+                                    <p className="swot-item-detail">{item.detail}</p>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="swot-item-detail" style={{ opacity: 0.6 }}>No items identified.</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <span className="swot-matrix-hub">SWOT</span>
+                    </div>
+                  </div>
+
+                  {swotData.demo && (
+                    <p className="swot-disclaimer">Demo mode — connect an OpenAI API key to enable full AI-generated analysis.</p>
+                  )}
+                  <p className="swot-disclaimer">AI-generated analysis for research purposes only. Not investment advice.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── News Tab ── */}
           {activeTab === "news" && (
             <div className="rp-panel">
@@ -2620,7 +2895,7 @@ function AIResearchPage({
           {/* ── Events & Insider Tab ── */}
           {activeTab === "events" && (() => {
             const events = getUpcomingEvents(researchStock.symbol);
-            const mfActivity = getMutualFundActivity(researchStock.symbol, quote?.currency || "USD");
+            const mfActivity = getMutualFundActivity(researchStock.symbol, getStockCurrency(researchStock, quote));
             return (
               <div className="rp-panel">
                 {/* Corporate events */}
@@ -5027,7 +5302,8 @@ export default function Dashboard({
               boxShadow: "0 20px 40px rgba(15, 23, 42, 0.2)",
               padding: "20px",
               zIndex: 101,
-              animation: "slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+              willChange: "transform, opacity",
+              animation: "drawerSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
