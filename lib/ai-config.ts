@@ -127,11 +127,21 @@ export async function executeAICall(options: {
       },
     };
 
-    const res = await fetch(url, {
+    let res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(geminiBody),
     });
+
+    // Fallback from pro to flash if 429 quota limit is encountered on free tier keys
+    if (!res.ok && res.status === 429 && modelName === "gemini-2.5-pro") {
+      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+      res = await fetch(fallbackUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(geminiBody),
+      });
+    }
 
     if (!res.ok) {
       return res;

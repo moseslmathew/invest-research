@@ -4859,6 +4859,13 @@ th.sortable:hover {
   width: 96px;
   height: 96px;
 }
+/* SVG always fills the ring box so it can never overflow onto the text,
+   and the absolutely-positioned score text stays perfectly centered. */
+.rp-stance-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .score-svg-bg {
   fill: none;
   stroke: var(--border);
@@ -4871,9 +4878,9 @@ th.sortable:hover {
   stroke-linecap: round;
   transition: stroke-dasharray 0.6s ease;
 }
-.rp-stance-card.bullish .score-svg-progress { stroke: #10b981; filter: drop-shadow(0 0 4px rgba(16,185,129,0.5)); }
-.rp-stance-card.bearish .score-svg-progress { stroke: #ef4444; filter: drop-shadow(0 0 4px rgba(239,68,68,0.5)); }
-.rp-stance-card.neutral .score-svg-progress { stroke: #6366f1; filter: drop-shadow(0 0 4px rgba(99,102,241,0.5)); }
+.rp-stance-card.bullish .score-svg-progress { stroke: #10b981; }
+.rp-stance-card.bearish .score-svg-progress { stroke: #ef4444; }
+.rp-stance-card.neutral .score-svg-progress { stroke: #6366f1; }
 
 .score-svg-text {
   position: absolute;
@@ -5076,46 +5083,243 @@ th.sortable:hover {
   color: var(--text);
 }
 
-/* ── SWOT Sub-Navigation ── */
-.swot-subnav {
+/* ============================================================
+   Executive Clean SWOT Redesign Styles
+   ============================================================ */
+.swot-hero-card {
+  background: var(--surface-solid);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 24px;
   display: flex;
-  gap: 10px;
-  margin-top: 16px;
-  border-top: 1px dashed var(--border);
-  padding-top: 16px;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
-.swot-subtab {
-  flex: 1;
+
+.swot-hero-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  gap: 22px;
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .swot-hero-top {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    gap: 14px;
+  }
+}
+
+.swot-dimensions-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border);
+}
+@media (max-width: 768px) {
+  .swot-dimensions-bar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .swot-dimensions-bar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.swot-dim-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.swot-dim-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.swot-dim-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.swot-dim-score {
+  font-size: 12px;
+  font-weight: 800;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.swot-dim-track {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.swot-dim-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Filter Bar ── */
+.swot-insights-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 8px;
+}
+.swot-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.swot-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-solid);
   color: var(--muted);
   font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.18s ease;
 }
-.swot-subtab:hover {
+.swot-filter-btn:hover {
   color: var(--text);
-  border-color: var(--muted);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.swot-subtab.active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+.swot-filter-btn.active {
+  background: var(--surface-solid);
   color: var(--accent-strong);
   border-color: var(--accent);
-  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
-@media (max-width: 580px) {
-  .swot-subnav {
-    flex-direction: column;
-  }
+.swot-filter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.swot-filter-dot.s { background: #10b981; }
+.swot-filter-dot.w { background: #ef4444; }
+.swot-filter-dot.o { background: #0284c7; }
+.swot-filter-dot.t { background: #8b5cf6; }
+
+/* ── Executive List View & Prominent Section Titles ── */
+.swot-executive-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.swot-section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.swot-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+}
+.swot-section-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+.swot-section-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.swot-section-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.swot-exec-card {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.swot-exec-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+.swot-exec-card.s { border-left: 4px solid #10b981; }
+.swot-exec-card.w { border-left: 4px solid #ef4444; }
+.swot-exec-card.o { border-left: 4px solid #0284c7; }
+.swot-exec-card.t { border-left: 4px solid #8b5cf6; }
+
+.swot-exec-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.swot-exec-point {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.swot-exec-cat {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
+.swot-exec-detail {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-2);
+  margin: 0;
+}
+.swot-exec-empty {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-style: italic;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  margin: 0;
 }
 
 /* ── SWOT: dimension radar ── */
@@ -5394,20 +5598,75 @@ th.sortable:hover {
 .rp-sentiment.neutral { background: rgba(100,116,139,0.1); color: var(--muted); }
 
 /* ── Technicals grid ── */
-.rp-tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-.rp-tech-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
-.rp-tech-label { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.rp-tech-val { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
-.rp-tech-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.rp-tech-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
-.rp-tech-sub { font-size: 10.5px; color: var(--muted); }
+.rp-tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+.rp-tech-card {
+  background: var(--surface-solid);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+.rp-tech-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.rp-tech-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.rp-tech-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+.rp-tech-bar {
+  width: 100%;
+  height: 7px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 2px 0;
+}
+.rp-tech-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.rp-tech-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
 
 /* ── Moving averages ── */
-.rp-ma-rows { display: flex; flex-direction: column; padding: 0 16px; }
-.rp-ma-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px 0; border-bottom: 1px dashed var(--border); }
-.rp-ma-row:last-child { border-bottom: none; }
-.rp-ma-row span { color: var(--muted); }
-.rp-ma-row strong { color: var(--text); }
+.rp-ma-rows {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 18px 10px;
+}
+.rp-ma-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.rp-ma-row:last-child {
+  border-bottom: none;
+}
 
 /* ── Events ── */
 .rp-events-list { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }

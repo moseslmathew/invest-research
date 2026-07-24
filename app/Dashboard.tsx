@@ -2328,6 +2328,7 @@ function AIResearchPage({
 }) {
   const [activeTab, setActiveTab] = useState<"news" | "valuation" | "events" | "research" | "technicals" | "swot">("research");
   const [swotSubTab, setSwotSubTab] = useState<"matrix" | "dimensions">("matrix");
+  const [swotFilter, setSwotFilter] = useState<"all" | "strengths" | "weaknesses" | "opportunities" | "threats">("all");
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ─── data states ───
@@ -2555,6 +2556,7 @@ function AIResearchPage({
                 >
                   <option value="gpt-5.6-luna">⚡ OpenAI GPT-5.6 Luna</option>
                   <option value="gemini-2.5-flash">✨ Google Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">💎 Google Gemini 2.5 Pro</option>
                 </select>
                 <span className="rp-model-arrow">▾</span>
               </div>
@@ -2648,6 +2650,7 @@ function AIResearchPage({
                 >
                   <option value="gpt-5.6-luna">⚡ GPT-5.6 Luna</option>
                   <option value="gemini-2.5-flash">✨ Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">💎 Gemini 2.5 Pro</option>
                 </select>
                 <span className="rp-model-arrow">▾</span>
               </div>
@@ -2757,9 +2760,9 @@ function AIResearchPage({
                 <div className="rp-error"><span>✨</span><p>SWOT analysis not generated.</p></div>
               ) : (
                 <div className="rp-research-content">
-                  {/* Overall verdict card with decluttered sub-nav */}
-                  <div className="rp-stance-card neutral" style={{ flexDirection: "column", alignItems: "stretch", gap: "16px" }}>
-                    <div className="rp-stance-top">
+                  {/* 1. Executive Quality & Dimension Overview Hero Card */}
+                  <div className="swot-hero-card">
+                    <div className="swot-hero-top">
                       <div className="rp-stance-ring">
                         <svg width="92" height="92" viewBox="0 0 36 36">
                           <path className="score-svg-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -2772,104 +2775,126 @@ function AIResearchPage({
                       </div>
                       <div className="rp-stance-meta">
                         <span className="rp-stance-lbl">Business Quality Rating</span>
-                        <h2 className="rp-stance-val">{swotData.overallVerdict || "SWOT Analysis"}</h2>
+                        <h2 className="rp-stance-val">{swotData.overallVerdict || "Strategic SWOT Profile"}</h2>
                         <p className="rp-stance-desc">{swotData.overview}</p>
                       </div>
                     </div>
 
-                    {/* Sub Tab Navigation */}
-                    <div className="swot-subnav">
-                      <button
-                        type="button"
-                        className={`swot-subtab ${swotSubTab === "matrix" ? "active" : ""}`}
-                        onClick={() => setSwotSubTab("matrix")}
-                      >
-                        <span>📊 Strategic SWOT Matrix</span>
-                      </button>
-                      {Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
-                        <button
-                          type="button"
-                          className={`swot-subtab ${swotSubTab === "dimensions" ? "active" : ""}`}
-                          onClick={() => setSwotSubTab("dimensions")}
-                        >
-                          <span>🎯 Dimension Ratings</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Matrix View */}
-                  {swotSubTab === "matrix" && (
-                    <div className="swot-matrix">
-                      <div className="swot-grid">
-                        {([
-                          { key: "strengths", label: "Strengths", short: "S", cls: "s" },
-                          { key: "weaknesses", label: "Weaknesses", short: "W", cls: "w" },
-                          { key: "opportunities", label: "Opportunities", short: "O", cls: "o" },
-                          { key: "threats", label: "Threats", short: "T", cls: "t" },
-                        ] as const).map(q => {
-                          const items = Array.isArray(swotData[q.key]) ? swotData[q.key] : [];
+                    {/* Integrated 4-Dimension Indicators (Management, Product, Financials, Market) */}
+                    {Array.isArray(swotData.dimensions) && swotData.dimensions.length > 0 && (
+                      <div className="swot-dimensions-bar-grid">
+                        {swotData.dimensions.map((d: any, i: number) => {
+                          const r = Number(d.rating) || 0;
+                          const color = r >= 70 ? "#10b981" : r >= 45 ? "#6366f1" : "#ef4444";
                           return (
-                            <div key={q.key} className={`swot-quad swot-quad-${q.cls}`}>
-                              <div className="swot-quad-head">
-                                <span className="swot-quad-badge">{q.short}</span>
-                                <span className="swot-quad-title">{q.label}</span>
-                                <span className="swot-quad-count">{items.length}</span>
+                            <div key={i} className="swot-dim-item">
+                              <div className="swot-dim-head">
+                                <span className="swot-dim-name">{d.name}</span>
+                                <span className="swot-dim-score" style={{ color }}>{r}/100</span>
                               </div>
-                              <div className="swot-quad-items">
-                                {items.length > 0 ? (
-                                  items.map((item: any, i: number) => (
-                                    <div key={i} className="swot-item">
-                                      <div className="swot-item-head">
-                                        <span className="swot-item-point">{item.point}</span>
-                                        {item.category && <span className="swot-item-cat">{item.category}</span>}
-                                      </div>
-                                      <p className="swot-item-detail">{item.detail}</p>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <p className="swot-item-detail" style={{ opacity: 0.6 }}>No items identified.</p>
-                                )}
+                              <div className="swot-dim-track">
+                                <div className="swot-dim-fill" style={{ width: `${r}%`, background: color }} />
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  {/* Dimensions View */}
-                  {swotSubTab === "dimensions" && Array.isArray(swotData.dimensions) && swotData.dimensions.length >= 3 && (
-                    <div className="rp-card">
-                      <div className="rp-card-header">
-                        <span className="rp-card-icon">🎯</span>
-                        <span className="rp-card-title">Dimension Assessment</span>
-                        <span className="rp-card-sub">Management · Product · Financials · Market</span>
-                      </div>
-                      <div className="swot-radar-wrap">
-                        <div className="swot-radar-box">
-                          <SwotRadar dimensions={swotData.dimensions} />
+                  {/* 2. Strategic Insights Filter & Clean Cards */}
+                  {(() => {
+                    const strengths = Array.isArray(swotData.strengths) ? swotData.strengths : [];
+                    const weaknesses = Array.isArray(swotData.weaknesses) ? swotData.weaknesses : [];
+                    const opportunities = Array.isArray(swotData.opportunities) ? swotData.opportunities : [];
+                    const threats = Array.isArray(swotData.threats) ? swotData.threats : [];
+                    const totalCount = strengths.length + weaknesses.length + opportunities.length + threats.length;
+
+                    const allSections = [
+                      { key: "strengths", title: "Strengths", dotCls: "s", items: strengths },
+                      { key: "weaknesses", title: "Weaknesses", dotCls: "w", items: weaknesses },
+                      { key: "opportunities", title: "Opportunities", dotCls: "o", items: opportunities },
+                      { key: "threats", title: "Threats", dotCls: "t", items: threats },
+                    ];
+
+                    const visibleSections = swotFilter === "all"
+                      ? allSections
+                      : allSections.filter((s) => s.key === swotFilter);
+
+                    return (
+                      <div className="swot-insights-section">
+                        <div className="swot-filter-bar">
+                          <button
+                            type="button"
+                            className={`swot-filter-btn ${swotFilter === "all" ? "active" : ""}`}
+                            onClick={() => setSwotFilter("all")}
+                          >
+                            All Insights ({totalCount})
+                          </button>
+                          <button
+                            type="button"
+                            className={`swot-filter-btn ${swotFilter === "strengths" ? "active" : ""}`}
+                            onClick={() => setSwotFilter("strengths")}
+                          >
+                            <span className="swot-filter-dot s" />
+                            Strengths ({strengths.length})
+                          </button>
+                          <button
+                            type="button"
+                            className={`swot-filter-btn ${swotFilter === "weaknesses" ? "active" : ""}`}
+                            onClick={() => setSwotFilter("weaknesses")}
+                          >
+                            <span className="swot-filter-dot w" />
+                            Weaknesses ({weaknesses.length})
+                          </button>
+                          <button
+                            type="button"
+                            className={`swot-filter-btn ${swotFilter === "opportunities" ? "active" : ""}`}
+                            onClick={() => setSwotFilter("opportunities")}
+                          >
+                            <span className="swot-filter-dot o" />
+                            Opportunities ({opportunities.length})
+                          </button>
+                          <button
+                            type="button"
+                            className={`swot-filter-btn ${swotFilter === "threats" ? "active" : ""}`}
+                            onClick={() => setSwotFilter("threats")}
+                          >
+                            <span className="swot-filter-dot t" />
+                            Threats ({threats.length})
+                          </button>
                         </div>
-                        <div className="swot-legend">
-                          {swotData.dimensions.map((d: any, i: number) => {
-                            const r = Number(d.rating) || 0;
-                            const tone = r >= 67 ? "good" : r >= 40 ? "mid" : "weak";
-                            return (
-                              <div key={i} className="swot-legend-row">
-                                <div className="swot-legend-top">
-                                  <span className={`swot-legend-dot ${tone}`} />
-                                  <span className="swot-legend-name">{d.name}</span>
-                                  <span className={`swot-legend-rating ${tone}`}>{r}</span>
-                                </div>
-                                <span className="swot-legend-verdict">{d.verdict}</span>
-                                <p className="swot-legend-comment">{d.commentary}</p>
+
+                        {/* Executive Clean Cards */}
+                        <div className="swot-executive-list">
+                          {visibleSections.map((sec) => (
+                            <div key={sec.key} className="swot-section-group">
+                              <div className="swot-section-head">
+                                <span className={`swot-filter-dot ${sec.dotCls}`} style={{ width: "9px", height: "9px" }} />
+                                <h3 className="swot-section-title">{sec.title}</h3>
+                                <span className="swot-section-count">{sec.items.length} items</span>
                               </div>
-                            );
-                          })}
+                              <div className="swot-section-cards">
+                                {sec.items.length > 0 ? (
+                                  sec.items.map((item: any, idx: number) => (
+                                    <div key={idx} className={`swot-exec-card ${sec.dotCls}`}>
+                                      <div className="swot-exec-card-head">
+                                        <h4 className="swot-exec-point">{item.point}</h4>
+                                        {item.category && <span className="swot-exec-cat">{item.category}</span>}
+                                      </div>
+                                      <p className="swot-exec-detail">{item.detail}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="swot-exec-empty">No items listed in this category.</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {swotData.demo && (
                     <p className="swot-disclaimer">Demo mode — connect an OpenAI API key to enable full AI-generated analysis.</p>
@@ -2944,97 +2969,146 @@ function AIResearchPage({
                 <div className="rp-error"><span>📊</span><p>Technical analysis not generated.</p></div>
               ) : (
                 <div className="rp-research-content">
-                  {/* Stance */}
-                  <div className={`rp-stance-card ${techData.stance?.toLowerCase().includes("buy") ? "bullish" : techData.stance?.toLowerCase().includes("sell") ? "bearish" : "neutral"}`}>
-                    <div className="rp-stance-ring" style={{ background: "transparent", border: "none" }}>
-                      <span style={{ fontSize: "36px" }}>
-                        {techData.stance?.toLowerCase().includes("strong buy") ? "🚀"
-                          : techData.stance?.toLowerCase().includes("buy") ? "📈"
-                          : techData.stance?.toLowerCase().includes("strong sell") ? "💥"
-                          : techData.stance?.toLowerCase().includes("sell") ? "📉" : "⚖️"}
-                      </span>
-                    </div>
-                    <div className="rp-stance-meta">
-                      <span className="rp-stance-lbl">Technical Consensus</span>
-                      <h2 className="rp-stance-val">{techData.stance}</h2>
-                    </div>
-                  </div>
+                  {/* Technical Stance Card */}
+                  {(() => {
+                    const stanceLower = (techData.stance || "").toLowerCase();
+                    const isBullish = stanceLower.includes("buy") || stanceLower.includes("bullish");
+                    const isBearish = stanceLower.includes("sell") || stanceLower.includes("bearish");
+                    const stanceClass = isBullish ? "bullish" : isBearish ? "bearish" : "neutral";
+                    const stanceIcon = stanceLower.includes("strong buy") ? "🚀"
+                      : isBullish ? "📈"
+                      : stanceLower.includes("strong sell") ? "💥"
+                      : isBearish ? "📉" : "⚖️";
+                    const cur = quote?.currency === "INR" ? "₹" : "$";
 
-                  {/* Indicators grid */}
-                  <div className="rp-tech-grid">
-                    <div className="rp-tech-card">
-                      <span className="rp-tech-label">RSI (14)</span>
-                      <span className="rp-tech-val">{techData.rsi}</span>
-                      <div className="rp-tech-bar">
-                        <div className="rp-tech-bar-fill" style={{ width: `${techData.rsi}%`, background: techData.rsi > 70 ? "var(--red)" : techData.rsi < 30 ? "var(--green)" : "var(--us)" }} />
-                      </div>
-                      <span className="rp-tech-sub">{techData.rsi > 70 ? "Overbought" : techData.rsi < 30 ? "Oversold" : "Neutral"}</span>
-                    </div>
-                    <div className="rp-tech-card">
-                      <span className="rp-tech-label">MACD Signal</span>
-                      <span className={`val-stance ${techData.macd?.toLowerCase().includes("bullish") ? "undervalued" : techData.macd?.toLowerCase().includes("bearish") ? "premium" : "neutral"}`} style={{ fontSize: "13px", padding: "4px 10px", borderRadius: "8px", fontWeight: 700 }}>
-                        {techData.macd}
-                      </span>
-                    </div>
-                    <div className="rp-tech-card">
-                      <span className="rp-tech-label">Support Floor</span>
-                      <span className="rp-tech-val" style={{ color: "var(--green)" }}>
-                        {quote?.currency === "INR" ? "₹" : "$"}{techData.support}
-                      </span>
-                    </div>
-                    <div className="rp-tech-card">
-                      <span className="rp-tech-label">Resistance Ceiling</span>
-                      <span className="rp-tech-val" style={{ color: "var(--red)" }}>
-                        {quote?.currency === "INR" ? "₹" : "$"}{techData.resistance}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Moving Averages */}
-                  <div className="rp-card">
-                    <div className="rp-card-header">
-                      <span className="rp-card-icon">📉</span>
-                      <span className="rp-card-title">Moving Averages</span>
-                      <span className={`val-stance ${techData.movingAverages?.trend?.toLowerCase() === "bullish" ? "undervalued" : techData.movingAverages?.trend?.toLowerCase() === "bearish" ? "premium" : "neutral"}`} style={{ marginLeft: "auto", fontSize: "11px", padding: "2px 8px", borderRadius: "4px" }}>
-                        {techData.movingAverages?.trend} Trend
-                      </span>
-                    </div>
-                    <div className="rp-ma-rows">
-                      {[["SMA (20)", techData.movingAverages?.sma20], ["SMA (50)", techData.movingAverages?.sma50], ["SMA (200)", techData.movingAverages?.sma200]].map(([lbl, val]) => (
-                        <div key={lbl as string} className="rp-ma-row">
-                          <span>{lbl}</span>
-                          <strong>{quote?.currency === "INR" ? "₹" : "$"}{val}</strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="rp-card">
-                    <div className="rp-card-header">
-                      <span className="rp-card-icon">📝</span>
-                      <span className="rp-card-title">Technical Summary</span>
-                    </div>
-                    <p className="rp-card-body">{techData.summary}</p>
-                  </div>
-
-                  {/* Bullets */}
-                  {techData.bullets?.length > 0 && (
-                    <div className="rp-card">
-                      <div className="rp-card-header">
-                        <span className="rp-card-icon">🎯</span>
-                        <span className="rp-card-title">Takeaways</span>
-                      </div>
-                      <div className="rp-bullets">
-                        {techData.bullets.map((b: string, i: number) => (
-                          <div key={i} className="rp-bullet">
-                            <span className="rp-bullet-dot">▸</span>
-                            <span>{b}</span>
+                    return (
+                      <>
+                        <div className={`rp-stance-card ${stanceClass}`}>
+                          <div className="rp-stance-top">
+                            <div className="rp-stance-ring" style={{ background: "color-mix(in srgb, var(--accent) 10%, transparent)", borderRadius: "50%", border: "1px solid var(--border)" }}>
+                              <span style={{ fontSize: "38px" }}>{stanceIcon}</span>
+                            </div>
+                            <div className="rp-stance-meta">
+                              <span className="rp-stance-lbl">Technical Consensus</span>
+                              <h2 className="rp-stance-val">{techData.stance}</h2>
+                              <p className="rp-stance-desc">Evaluated across momentum, moving averages &amp; price action</p>
+                              <div className="rp-stance-pills">
+                                <span className="rp-stance-pill">
+                                  {isBullish ? "🟢 Positive Technical Momentum" : isBearish ? "🔴 Cautious Signal" : "⚪ Neutral Consolidation"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+
+                        {/* Indicators Grid */}
+                        <div className="rp-tech-grid">
+                          <div className="rp-tech-card">
+                            <span className="rp-tech-label">RSI (14) Indicator</span>
+                            <span className="rp-tech-val">{techData.rsi}</span>
+                            <div className="rp-tech-bar">
+                              <div className="rp-tech-bar-fill" style={{ width: `${Math.min(100, Math.max(0, techData.rsi))}%`, background: techData.rsi > 70 ? "#ef4444" : techData.rsi < 30 ? "#10b981" : "#6366f1" }} />
+                            </div>
+                            <span className="rp-tech-sub" style={{ fontWeight: 700, color: techData.rsi > 70 ? "#ef4444" : techData.rsi < 30 ? "#10b981" : "var(--muted)" }}>
+                              {techData.rsi > 70 ? "🔥 Overbought Level" : techData.rsi < 30 ? "❄️ Oversold Zone" : "⚡ Neutral Momentum"}
+                            </span>
+                          </div>
+
+                          <div className="rp-tech-card">
+                            <span className="rp-tech-label">MACD Signal</span>
+                            <span className="rp-tech-val" style={{ fontSize: "16px", color: techData.macd?.toLowerCase().includes("bullish") ? "#10b981" : techData.macd?.toLowerCase().includes("bearish") ? "#ef4444" : "var(--text)" }}>
+                              {techData.macd}
+                            </span>
+                            <span className="rp-tech-sub" style={{ fontWeight: 700, marginTop: "auto" }}>
+                              {techData.macd?.toLowerCase().includes("bullish") ? "🟢 Bullish Crossover" : techData.macd?.toLowerCase().includes("bearish") ? "🔴 Bearish Signal" : "⚪ Neutral Context"}
+                            </span>
+                          </div>
+
+                          <div className="rp-tech-card">
+                            <span className="rp-tech-label">Support Floor</span>
+                            <span className="rp-tech-val" style={{ color: "#10b981" }}>
+                              {cur}{techData.support}
+                            </span>
+                            <span className="rp-tech-sub" style={{ fontWeight: 700 }}>🛡️ Key Downside Demand</span>
+                          </div>
+
+                          <div className="rp-tech-card">
+                            <span className="rp-tech-label">Resistance Ceiling</span>
+                            <span className="rp-tech-val" style={{ color: "#ef4444" }}>
+                              {cur}{techData.resistance}
+                            </span>
+                            <span className="rp-tech-sub" style={{ fontWeight: 700 }}>🎯 Overhead Target Level</span>
+                          </div>
+                        </div>
+
+                        {/* Moving Averages */}
+                        <div className="rp-card">
+                          <div className="rp-card-header">
+                            <span className="rp-card-icon">📈</span>
+                            <span className="rp-card-title">Moving Averages</span>
+                            <span
+                              className="rp-stance-pill"
+                              style={{
+                                marginLeft: "auto",
+                                background: techData.movingAverages?.trend?.toLowerCase() === "bullish" ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                                color: techData.movingAverages?.trend?.toLowerCase() === "bullish" ? "#10b981" : "#ef4444",
+                                border: "1px solid color-mix(in srgb, currentColor 30%, transparent)",
+                              }}
+                            >
+                              {techData.movingAverages?.trend?.toUpperCase()} TREND
+                            </span>
+                          </div>
+                          <div className="rp-ma-rows">
+                            {[
+                              ["SMA (20)", techData.movingAverages?.sma20, "Short-term Trend Line"],
+                              ["SMA (50)", techData.movingAverages?.sma50, "Medium-term Support"],
+                              ["SMA (200)", techData.movingAverages?.sma200, "Long-term Base Line"],
+                            ].map(([lbl, val, desc]) => (
+                              <div key={lbl as string} className="rp-ma-row">
+                                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                  <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--text)" }}>{lbl}</span>
+                                  <span style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 500 }}>{desc}</span>
+                                </div>
+                                <strong style={{ fontSize: "15px", fontWeight: 800, color: "var(--text)", fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace" }}>
+                                  {cur}{val}
+                                </strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Technical Summary */}
+                        <div className="rp-card">
+                          <div className="rp-card-header">
+                            <span className="rp-card-icon">📝</span>
+                            <span className="rp-card-title">Technical Summary</span>
+                          </div>
+                          <p className="rp-card-body">{techData.summary}</p>
+                        </div>
+
+                        {/* Numbered Takeaway Highlight Cards */}
+                        {techData.bullets?.length > 0 && (
+                          <div className="rp-card">
+                            <div className="rp-card-header">
+                              <span className="rp-card-icon">🎯</span>
+                              <span className="rp-card-title">Key Technical Takeaways</span>
+                            </div>
+                            <div className="rp-takeaways-grid">
+                              {techData.bullets.map((b: string, i: number) => {
+                                const cleanText = b.replace(/^[•\-\*]\s*/, "");
+                                return (
+                                  <div key={i} className="rp-takeaway-card">
+                                    <span className="rp-takeaway-num">{i + 1}</span>
+                                    <span className="rp-takeaway-text">{cleanText}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
